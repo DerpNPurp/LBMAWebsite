@@ -1,0 +1,527 @@
+import { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
+import { Textarea } from '../ui/textarea';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Label } from '../ui/label';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Badge } from '../ui/badge';
+import { Edit2, Trash2, MessageCircle, Send, Search, Pin, PinOff, Loader2 } from 'lucide-react';
+import { getBlogPosts, getBlogComments } from '../../lib/supabase/queries';
+import { updateBlogPost, deleteBlogPost, deleteBlogComment } from '../../lib/supabase/mutations';
+import { subscribeToBlogPosts, unsubscribe } from '../../lib/supabase/realtime';
+
+type User = {
+  id: string;
+  email: string;
+  role: 'admin' | 'family';
+  displayName: string;
+};
+
+type Comment = {
+  id: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
+};
+
+type BlogPost = {
+  id: string;
+  title: string;
+  body: string;
+  authorName: string;
+  createdAt: string;
+  comments: Comment[];
+  isPinned?: boolean;
+};
+
+const mockBlogPosts: BlogPost[] = [
+  {
+    id: '1',
+    title: 'Tips for Practicing at Home',
+    body: 'Hi everyone! I wanted to share some tips that have helped my kids practice their forms at home:\n\n1. Set aside 15-20 minutes each day\n2. Use YouTube videos to review techniques\n3. Practice in front of a mirror\n4. Make it fun with music!\n\nWhat works for your family?',
+    authorName: 'Jennifer Martinez',
+    createdAt: '2026-02-03T14:00:00Z',
+    comments: [
+      {
+        id: 'c1',
+        authorName: 'David Kim',
+        body: 'Great tips! We also use a reward chart for daily practice.',
+        createdAt: '2026-02-03T15:30:00Z'
+      },
+      {
+        id: 'c2',
+        authorName: 'Lisa Wong',
+        body: 'The mirror idea is genius! Thank you for sharing.',
+        createdAt: '2026-02-03T16:00:00Z'
+      }
+    ]
+  },
+  {
+    id: '2',
+    title: 'Anyone Carpooling to Saturday Classes?',
+    body: 'We live in the north side and are looking to coordinate carpooling for Saturday morning classes. If you\'re interested in carpooling, let me know in the comments!',
+    authorName: 'Michael Torres',
+    createdAt: '2026-02-02T19:00:00Z',
+    comments: [
+      {
+        id: 'c3',
+        authorName: 'Amanda Lee',
+        body: 'We\'re interested! We live on Oak Street.',
+        createdAt: '2026-02-02T20:00:00Z'
+      }
+    ]
+  },
+  {
+    id: '3',
+    title: 'Celebrating My Daughter\'s Yellow Belt!',
+    body: 'Just wanted to share how proud I am of Emma for earning her yellow belt yesterday! She worked so hard and it really paid off. Thank you to all the instructors for their support and encouragement!',
+    authorName: 'Karen Johnson',
+    createdAt: '2026-02-01T11:00:00Z',
+    comments: [
+      {
+        id: 'c4',
+        authorName: 'Rachel Green',
+        body: 'Congratulations Emma! 🎉',
+        createdAt: '2026-02-01T12:00:00Z'
+      },
+      {
+        id: 'c5',
+        authorName: 'Tom Anderson',
+        body: 'Way to go! My son tested yesterday too - such a proud moment!',
+        createdAt: '2026-02-01T13:00:00Z'
+      }
+    ]
+  }
+];
+
+export function AdminBlogTab({ user }: { user: User }) {
+  const [posts, setPosts] = useState<BlogPost[]>([]);
+  const [comments, setComments] = useState<{ [postId: string]: Comment[] }>({});
+  const [searchTerm, setSearchTerm] = useState('');
+  const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [commentTexts, setCommentTexts] = useState<{ [key: string]: string }>({});
+  const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  const loadPosts = async () => {
+    try {
+      setLoading(true);
+      const postsData = await getBlogPosts();
+      
+      const formatted: BlogPost[] = postsData.map((p: any) => ({
+        id: p.post_id,
+        title: p.title,
+        body: p.body,
+        authorName: p.profiles?.display_name || 'Unknown',
+        createdAt: p.created_at,
+      }));
+
+      setPosts(formatted);
+
+      // Load comments
+      const commentsMap: { [key: string]: Comment[] } = {};
+      for (const post of formatted) {
+        const commentsData = await getBlogComments(post.id);
+        commentsMap[post.id] = commentsData.map((c: any) => ({
+          id: c.comment_id,
+          authorName: c.profiles?.display_name || 'Unknown',
+          body: c.body,
+          createdAt: c.created_at,
+        }));
+      }
+      setComments(commentsMap);
+    } catch (error) {
+      console.error('Error loading blog posts:', error);
+      alert('Error loading blog posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadPosts();
+
+    const channel = subscribeToBlogPosts((payload) => {
+      if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
+        loadPosts();
+      }
+    });
+
+    return () => unsubscribe(channel);
+  }, []);
+
+  const handleTogglePin = async (id: string) => {
+    // Blog posts don't have pinning in the schema, so this is a no-op for now
+    alert('Pinning not yet implemented for blog posts');
+  };
+
+  const filteredPosts = posts.filter(post =>
+    post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    post.body.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    post.authorName.toLowerCase().includes(searchTerm.toLowerCase())
+  );
+
+  // Sort posts: pinned first, then by date
+  const sortedPosts = [...filteredPosts].sort((a, b) => {
+    if (a.isPinned && !b.isPinned) return -1;
+    if (!a.isPinned && b.isPinned) return 1;
+    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+  });
+
+  const handleUpdate = async () => {
+    if (!editingPost || !editTitle.trim() || !editBody.trim()) return;
+    setSaving(true);
+    try {
+      await updateBlogPost(editingPost.id, {
+        title: editTitle.trim(),
+        body: editBody.trim(),
+      });
+      setEditingPost(null);
+      setEditTitle('');
+      setEditBody('');
+      await loadPosts();
+      alert('Blog post updated successfully!');
+    } catch (error) {
+      alert('Error updating blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) return;
+    try {
+      await deleteBlogPost(id);
+      await loadPosts();
+      alert('Blog post deleted successfully!');
+    } catch (error) {
+      alert('Error deleting blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const handleDeleteComment = async (postId: string, commentId: string) => {
+    if (!confirm('Are you sure you want to delete this comment?')) return;
+    try {
+      await deleteBlogComment(commentId);
+      await loadPosts();
+      alert('Comment deleted successfully!');
+    } catch (error) {
+      alert('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const openEditDialog = (post: BlogPost) => {
+    setEditingPost(post);
+    setEditTitle(post.title);
+    setEditBody(post.body);
+  };
+
+  const handleAddComment = async (postId: string) => {
+    const commentText = commentTexts[postId];
+    if (!commentText?.trim() || !user) return;
+    
+    // Admins can add comments if needed, but typically families add comments
+    try {
+      // This would use createBlogComment - but admins typically don't comment
+      alert('Comments are typically added by families. Use direct messaging for admin responses.');
+      setCommentTexts({ ...commentTexts, [postId]: '' });
+    } catch (error) {
+      alert('Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  const toggleComments = (postId: string) => {
+    setExpandedComments({
+      ...expandedComments,
+      [postId]: !expandedComments[postId]
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="flex justify-between items-center">
+        <div>
+          <h2 className="text-3xl font-bold">Manage Parent Blog</h2>
+          <p className="text-muted-foreground mt-1">
+            View, edit, and moderate parent blog posts and comments
+          </p>
+        </div>
+      </div>
+
+      {/* Search */}
+      <Card>
+        <CardContent className="pt-6">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              placeholder="Search blog posts by title, content, or author..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Stats */}
+      <div className="grid md:grid-cols-3 gap-4">
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold">{posts.length}</p>
+              <p className="text-sm text-muted-foreground mt-1">Total Posts</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold">
+                {Object.values(comments).reduce((sum, commentList) => sum + commentList.length, 0)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Total Comments</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="text-center">
+              <p className="text-3xl font-bold">
+                {new Set(posts.map(p => p.authorName)).size}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1">Active Contributors</p>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Edit Dialog */}
+      <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>
+        <DialogContent className="sm:max-w-[600px]">
+          <DialogHeader>
+            <DialogTitle>Edit Blog Post</DialogTitle>
+            <DialogDescription>
+              Update the blog post content
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label>Title</Label>
+              <Input
+                placeholder="Post title..."
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label>Content</Label>
+              <Textarea
+                placeholder="Post content..."
+                value={editBody}
+                onChange={(e) => setEditBody(e.target.value)}
+                className="min-h-[200px]"
+              />
+            </div>
+            {editingPost && (
+              <div className="text-sm text-muted-foreground">
+                Posted by {editingPost.authorName} on {formatDate(editingPost.createdAt)}
+              </div>
+            )}
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setEditingPost(null)}>
+              Cancel
+            </Button>
+            <Button 
+              onClick={handleUpdate}
+              disabled={!editTitle.trim() || !editBody.trim() || saving}
+            >
+              {saving ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Saving...
+                </>
+              ) : (
+                'Save Changes'
+              )}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Blog Posts List */}
+      <div className="space-y-6">
+        {sortedPosts.length === 0 ? (
+          <Card>
+            <CardContent className="pt-6 text-center text-muted-foreground">
+              {searchTerm ? 'No posts found matching your search.' : 'No blog posts yet.'}
+            </CardContent>
+          </Card>
+        ) : (
+          sortedPosts.map((post) => {
+            const postComments = comments[post.id] || [];
+            return (
+            <Card key={post.id}>
+              <CardHeader className={post.isPinned ? 'bg-secondary/50 border-l-4 border-l-primary' : ''}>
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                      <Avatar className="h-8 w-8">
+                        <AvatarFallback>{post.authorName[0]}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className="text-sm font-medium">{post.authorName}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {formatDate(post.createdAt)}
+                        </p>
+                      </div>
+                      {post.isPinned && (
+                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                          <Pin className="w-3 h-3" />
+                          Pinned
+                        </span>
+                      )}
+                    </div>
+                    <CardTitle>{post.title}</CardTitle>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleTogglePin(post.id)}
+                      title={post.isPinned ? 'Unpin post' : 'Pin post'}
+                    >
+                      {post.isPinned ? (
+                        <PinOff className="w-4 h-4" />
+                      ) : (
+                        <Pin className="w-4 h-4" />
+                      )}
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => openEditDialog(post)}
+                    >
+                      <Edit2 className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleDelete(post.id)}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-foreground whitespace-pre-line">{post.body}</p>
+
+                {/* Comments Section */}
+                <div className="border-t pt-4 space-y-4">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => toggleComments(post.id)}
+                    className="gap-2"
+                  >
+                    <MessageCircle className="w-4 h-4" />
+                    {postComments.length} {postComments.length === 1 ? 'Comment' : 'Comments'}
+                  </Button>
+
+                  {expandedComments[post.id] && (
+                    <div className="space-y-4 pl-4 border-l-2 border-border">
+                      {postComments.map((comment) => (
+                        <div key={comment.id} className="space-y-1">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <Avatar className="h-6 w-6">
+                                <AvatarFallback className="text-xs">
+                                  {comment.authorName[0]}
+                                </AvatarFallback>
+                              </Avatar>
+                              <span className="text-sm font-medium">{comment.authorName}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {formatDate(comment.createdAt)}
+                              </span>
+                            </div>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleDeleteComment(post.id, comment.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                            </Button>
+                          </div>
+                          <p className="text-sm pl-8">{comment.body}</p>
+                        </div>
+                      ))}
+
+                      {/* Add Comment as Admin */}
+                      <div className="flex gap-2 pt-2">
+                        <Textarea
+                          placeholder="Add a comment as admin..."
+                          value={commentTexts[post.id] || ''}
+                          onChange={(e) =>
+                            setCommentTexts({
+                              ...commentTexts,
+                              [post.id]: e.target.value
+                            })
+                          }
+                          className="min-h-[80px]"
+                        />
+                        <Button
+                          onClick={() => handleAddComment(post.id)}
+                          disabled={!commentTexts[post.id]?.trim()}
+                          size="sm"
+                        >
+                          <Send className="w-4 h-4" />
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+            );
+          })
+        )}
+      </div>
+
+      {/* Info Box */}
+      <Card className="bg-secondary border-primary/20">
+        <CardContent className="pt-6">
+          <p className="text-sm">
+            <strong>Admin Note:</strong> You can edit or delete any blog post or comment. 
+            Use this power responsibly - only remove content that violates community guidelines. 
+            When in doubt, reach out to the family directly first.
+          </p>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
