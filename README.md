@@ -1,16 +1,98 @@
-# React + Vite
+# LBMAA Website
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+LBMAA (Los Banos Martial Arts Academy) web application with:
 
-Currently, two official plugins are available:
+- Public marketing site
+- Invite-based magic-link authentication
+- Family portal
+- Admin portal
+- Supabase-backed data model, messaging, and file attachments
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Tech Stack
 
-## React Compiler
+- Frontend: React + Vite
+- UI: Radix primitives + Tailwind utility classes
+- Backend services: Supabase (Auth, PostgREST, Realtime, Storage)
+- Database: PostgreSQL via Supabase SQL migrations
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## What This App Does
 
-## Expanding the ESLint configuration
+- Public pages: home, about, programs, instructors, reviews, FAQ, contact
+- Invite-only login: checks account existence before sending magic links
+- Onboarding: first-time family users complete profile + family/guardian setup
+- Family portal:
+  - Home dashboard with activity summary
+  - Announcements + comments
+  - Parent blog + comments
+  - Messaging (global + role-constrained DMs)
+  - Profile/family/student management
+- Admin portal:
+  - Communication management (announcements, blog, messaging)
+  - Family/student lifecycle management
+  - Invite family accounts
+  - Enrollment lead review support (from public contact form)
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+## Project Structure
+
+- `src/App.tsx`: route entry, auth gates, role routing
+- `src/components/public/*`: public website pages
+- `src/components/dashboard/*`: family portal tabs
+- `src/components/admin/*`: admin portal tabs
+- `src/hooks/useAuth.ts`: auth/session/bootstrap logic + access state
+- `src/hooks/useProfile.ts`: family profile aggregate data hook
+- `src/lib/supabase/client.ts`: Supabase client + timeout RPC wrappers
+- `src/lib/supabase/queries.ts`: read/query API wrappers
+- `src/lib/supabase/mutations.ts`: write/mutation API wrappers
+- `src/lib/supabase/realtime.ts`: realtime subscriptions
+- `src/lib/supabase/storage.ts`: file upload/download helpers
+- `supabase/migrations/*`: schema, RLS, policy, and RPC definitions
+
+## Routes
+
+- `/`: public website
+- `/dashboard`: protected dashboard (family users; admin can also be routed here)
+- `/admin`: protected admin-only dashboard
+- `/onboarding`: first-login setup for family users without a family record
+
+## Local Setup
+
+1. Install dependencies:
+   - `npm install`
+2. Add environment variables in `.env`:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Run development server:
+   - `npm run dev`
+
+## Scripts
+
+- `npm run dev`: start Vite development server
+- `npm run build`: production build
+- `npm run preview`: preview production build
+- `npm run lint`: run ESLint
+
+## Database and Supabase
+
+Core database schema and policies are managed through migrations in `supabase/migrations`.
+
+Notable backend features:
+
+- Invite-only account verification via `check_email_has_account`
+- Public enrollment lead intake via `submit_enrollment_lead`
+- Role-safe direct-message conversation creation via `create_or_get_dm_conversation`
+- Extensive RLS policy coverage for portal data and storage attachments
+
+## Documentation
+
+Comprehensive docs are in `docs/`:
+
+- `docs/README.md`: documentation index
+- `docs/ARCHITECTURE.md`: architecture overview
+- `docs/DESIGN.md`: product/UX and flow design
+- `docs/API.md`: frontend data API and RPC docs
+- `docs/DATABASE.md`: schema, policies, and migration guide
+
+## Notes
+
+- The repository currently contains some legacy prototype files (`src/App.jsx`, `src/main.jsx`, `src/lib/supabaseClient.js`) alongside active TypeScript codepaths (`src/App.tsx`, `src/main.tsx`).
+- The active app entry is `src/main.tsx`.

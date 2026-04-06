@@ -2,11 +2,16 @@ import { useEffect, useState } from 'react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase/client';
 import type { User, Profile } from '../lib/types';
+import { FAMILY_COLUMNS, PROFILE_COLUMNS } from '../lib/supabase/selects';
+
+type AccessState = 'ready' | 'needs_onboarding' | 'blocked';
 
 export function useAuth() {
   const [user, setUser] = useState<User>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [accessState, setAccessState] = useState<AccessState>('ready');
+  const [accessMessage, setAccessMessage] = useState<string | null>(null);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,6 +71,8 @@ export function useAuth() {
         if (session?.user) {
           await loadUserProfile(session.user);
         } else {
+          setAccessState('ready');
+          setAccessMessage(null);
           setLoading(false);
         }
       } catch (error) {
@@ -100,6 +107,8 @@ export function useAuth() {
       } else {
         setUser(null);
         setProfile(null);
+        setAccessState('ready');
+        setAccessMessage(null);
         setLoading(false);
       }
     });
@@ -115,62 +124,93 @@ export function useAuth() {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
-        .select('*')
+        .select(PROFILE_COLUMNS)
         .eq('user_id', supabaseUser.id)
-        .single();
+        .maybeSingle();
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
+        setProfile(null);
+        setUser(null);
+        setAccessState('blocked');
+        setAccessMessage(
+          'Your account is not provisioned for the portal yet. Please contact the academy for an invitation.'
+        );
+        return;
+      }
 
-        const { data: newProfile, error: createError } = await supabase
-          .from('profiles')
-          .insert({
-            user_id: supabaseUser.id,
-            role: 'family',
-            display_name: supabaseUser.email?.split('@')[0] || 'User',
-          })
-          .select()
-          .single();
+      if (!profileData) {
+        setProfile(null);
+        setUser(null);
+        setAccessState('blocked');
+        setAccessMessage(
+          'Your account is not provisioned for the portal yet. Please contact the academy for an invitation.'
+        );
+        return;
+      }
 
-        if (createError) {
-          console.error('Error creating profile:', createError);
-          // Fall back to a basic in-memory user so login still works
-          setProfile(null);
-          setUser({
-            id: supabaseUser.id,
-            email: supabaseUser.email || '',
-            role: 'family',
-            displayName: supabaseUser.email?.split('@')[0] || 'User',
-          });
+      const resolvedProfile = profileData;
+      const role = resolvedProfile.role;
+      const isActive = resolvedProfile.is_active ?? true;
+      const nextUser = {
+        id: supabaseUser.id,
+        email: supabaseUser.email || '',
+        role,
+        displayName: resolvedProfile.display_name,
+      };
+
+      if (!isActive) {
+        setProfile(resolvedProfile);
+        setUser(null);
+        setAccessState('blocked');
+        setAccessMessage('Your account has been deactivated. Please contact the academy for support.');
+        return;
+      }
+
+      if (role === 'family') {
+        const { data: familyData, error: familyError } = await supabase
+          .from('families')
+          .select(FAMILY_COLUMNS)
+          .eq('owner_user_id', supabaseUser.id)
+          .maybeSingle();
+
+        if (familyError) {
+          console.error('Error checking family onboarding:', familyError);
+          setProfile(resolvedProfile);
+          setUser(nextUser);
+          setAccessState('blocked');
+          setAccessMessage('Unable to verify onboarding status. Please try again.');
           return;
         }
 
-        setProfile(newProfile);
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          role: newProfile.role,
-          displayName: newProfile.display_name,
-        });
-      } else if (profileData) {
-        setProfile(profileData);
-        setUser({
-          id: supabaseUser.id,
-          email: supabaseUser.email || '',
-          role: profileData.role,
-          displayName: profileData.display_name,
-        });
+        if (!familyData) {
+          setProfile(resolvedProfile);
+          setUser(nextUser);
+          setAccessState('needs_onboarding');
+          setAccessMessage(null);
+          return;
+        }
+
+        const accountStatus = (familyData as { account_status?: string }).account_status ?? 'active';
+        if (accountStatus !== 'active') {
+          setProfile(resolvedProfile);
+          setUser(null);
+          setAccessState('blocked');
+          setAccessMessage('Your family portal access is currently inactive. Please contact the academy.');
+          return;
+        }
       }
+
+      setProfile(resolvedProfile);
+      setUser(nextUser);
+      setAccessState('ready');
+      setAccessMessage(null);
     } catch (error) {
       console.error('Error in loadUserProfile:', error);
-      // Worst-case fallback: user from session only
       setProfile(null);
-      setUser({
-        id: supabaseUser.id,
-        email: supabaseUser.email || '',
-        role: 'family',
-        displayName: supabaseUser.email?.split('@')[0] || 'User',
-      });
+      setUser(null);
+      setAccessState('blocked');
+      setAccessMessage('Authentication failed. Please try signing in again.');
     } finally {
       setLoading(false);
     }
@@ -180,12 +220,16 @@ export function useAuth() {
     await supabase.auth.signOut();
     setUser(null);
     setProfile(null);
+    setAccessState('ready');
+    setAccessMessage(null);
   };
 
   return {
     user,
     profile,
     loading,
+    accessState,
+    accessMessage,
     signOut,
   };
 }

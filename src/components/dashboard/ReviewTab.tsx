@@ -1,57 +1,71 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
-import { Star, Edit2, Check } from 'lucide-react';
+import { Star, Edit2, Check, Loader2 } from 'lucide-react';
+import { getUserReview } from '../../lib/supabase/queries';
+import { getFamilyByOwner } from '../../lib/supabase/queries';
+import { createReview, updateReview } from '../../lib/supabase/mutations';
+import type { User as AppUser, Review } from '../../lib/types';
 
-type User = {
-  id: string;
-  email: string;
-  role: 'admin' | 'family';
-  displayName: string;
+type ReviewTabProps = {
+  user: NonNullable<AppUser>;
 };
 
-type Review = {
-  id: string;
-  parentName: string;
-  rating: number;
-  review: string;
-  createdAt: string;
-  updatedAt?: string;
-};
-
-// Mock existing review - null means no review yet
-const mockExistingReview: Review | null = null;
-
-export function ReviewTab({ user }: { user: User }) {
-  const [existingReview, setExistingReview] = useState<Review | null>(mockExistingReview);
+export function ReviewTab({ user }: ReviewTabProps) {
+  const [existingReview, setExistingReview] = useState<Review | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [rating, setRating] = useState(existingReview?.rating || 5);
-  const [reviewText, setReviewText] = useState(existingReview?.review || '');
+  const [rating, setRating] = useState(5);
+  const [reviewText, setReviewText] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
 
-  const handleSaveReview = () => {
-    if (!reviewText.trim()) {
-      alert('Please write a review before submitting.');
-      return;
+  useEffect(() => {
+    async function load() {
+      try {
+        const data = await getUserReview(user.id);
+        setExistingReview(data);
+        if (data) {
+          setRating(data.rating);
+          setReviewText(data.review);
+        }
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load review');
+      } finally {
+        setLoading(false);
+      }
     }
+    load();
+  }, [user.id]);
 
-    const now = new Date().toISOString();
-    const review: Review = {
-      id: existingReview?.id || Date.now().toString(),
-      parentName: user.displayName,
-      rating,
-      review: reviewText.trim(),
-      createdAt: existingReview?.createdAt || now,
-      updatedAt: existingReview ? now : undefined
-    };
-
-    setExistingReview(review);
-    setIsEditing(false);
-    
-    // In production, this would save to Supabase and appear on the public ReviewsPage
-    alert('Thank you! Your review has been submitted and will appear on the public website.');
+  const handleSaveReview = async () => {
+    if (!reviewText.trim()) return;
+    setSaving(true);
+    setError(null);
+    try {
+      if (existingReview) {
+        const updated = await updateReview(existingReview.review_id, { rating, review: reviewText.trim() });
+        setExistingReview(updated);
+      } else {
+        const family = await getFamilyByOwner(user.id);
+        if (!family) throw new Error('Family profile not found. Please complete your profile first.');
+        const created = await createReview({
+          family_id: family.family_id,
+          author_user_id: user.id,
+          rating,
+          review: reviewText.trim(),
+        });
+        setExistingReview(created);
+      }
+      setIsEditing(false);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to save review');
+    } finally {
+      setSaving(false);
+    }
   };
 
   const handleEditReview = () => {
@@ -71,19 +85,25 @@ export function ReviewTab({ user }: { user: User }) {
       setReviewText('');
     }
     setIsEditing(false);
+    setError(null);
   };
 
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+  const formatDate = (dateString: string) =>
+    new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric', month: 'long', day: 'numeric',
     });
-  };
 
   const isAddingNew = !existingReview;
   const showForm = isAddingNew || isEditing;
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center py-16 text-muted-foreground">
+        <Loader2 className="w-5 h-5 animate-spin mr-3" />
+        Loading...
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -94,18 +114,19 @@ export function ReviewTab({ user }: { user: User }) {
         </p>
       </div>
 
+      {error && (
+        <div className="text-sm text-destructive bg-destructive/10 rounded-md px-4 py-2">{error}</div>
+      )}
+
       <Card>
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>
-                {isAddingNew ? 'Write a Review' : 'Your Review'}
-              </CardTitle>
+              <CardTitle>{isAddingNew ? 'Write a Review' : 'Your Review'}</CardTitle>
               <CardDescription>
-                {isAddingNew 
-                  ? 'Share your family\'s experience at LBMAA with prospective families'
-                  : 'Published on the public website'
-                }
+                {isAddingNew
+                  ? "Share your family's experience at LBMAA with prospective families"
+                  : 'Published on the public website'}
               </CardDescription>
             </div>
             {existingReview && !isEditing && (
@@ -119,7 +140,7 @@ export function ReviewTab({ user }: { user: User }) {
         <CardContent>
           {showForm ? (
             <div className="space-y-6">
-              {/* Rating Selector */}
+              {/* Rating */}
               <div className="space-y-2">
                 <Label>Rating</Label>
                 <div className="flex items-center gap-2">
@@ -147,7 +168,7 @@ export function ReviewTab({ user }: { user: User }) {
                 </div>
               </div>
 
-              {/* Review Text */}
+              {/* Review text */}
               <div className="space-y-2">
                 <Label>Your Review</Label>
                 <Textarea
@@ -156,36 +177,35 @@ export function ReviewTab({ user }: { user: User }) {
                   onChange={(e) => setReviewText(e.target.value)}
                   className="min-h-[200px]"
                 />
-                <p className="text-xs text-muted-foreground">
-                  {reviewText.length} characters
-                </p>
+                <p className="text-xs text-muted-foreground">{reviewText.length} characters</p>
               </div>
 
-              {/* Action Buttons */}
+              {/* Actions */}
               <div className="flex gap-2">
-                <Button onClick={handleSaveReview} disabled={!reviewText.trim()}>
-                  <Check className="w-4 h-4 mr-2" />
-                  {isAddingNew ? 'Submit Review' : 'Save Changes'}
+                <Button onClick={handleSaveReview} disabled={saving || !reviewText.trim()}>
+                  {saving ? (
+                    <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Saving...</>
+                  ) : (
+                    <><Check className="w-4 h-4 mr-2" />{isAddingNew ? 'Submit Review' : 'Save Changes'}</>
+                  )}
                 </Button>
                 {isEditing && (
-                  <Button variant="outline" onClick={handleCancelEdit}>
+                  <Button variant="outline" onClick={handleCancelEdit} disabled={saving}>
                     Cancel
                   </Button>
                 )}
               </div>
 
-              {/* Info */}
               <div className="p-4 bg-secondary/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Your review will be published using your name "{user.displayName}" 
-                  and will appear publicly on the LBMAA website. Reviews help prospective families learn 
-                  about our academy and the positive impact we have on students and their families.
+                  <strong>Note:</strong> Your review will be published using your name &ldquo;{user.displayName}&rdquo;
+                  and will appear publicly on the LBMAA website.
                 </p>
               </div>
             </div>
           ) : (
             <div className="space-y-4">
-              {/* Display Existing Review */}
+              {/* Stars */}
               <div className="flex items-center gap-2">
                 <div className="flex gap-0.5">
                   {[1, 2, 3, 4, 5].map((star) => (
@@ -204,17 +224,17 @@ export function ReviewTab({ user }: { user: User }) {
                 </span>
               </div>
 
+              {/* Body */}
               <div className="p-4 bg-secondary/30 rounded-lg">
                 <p className="text-sm whitespace-pre-wrap">{existingReview!.review}</p>
               </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Published by {existingReview!.parentName}</span>
+                <span>Published by {user.displayName}</span>
                 <span>
-                  {existingReview!.updatedAt 
-                    ? `Updated ${formatDate(existingReview!.updatedAt)}`
-                    : `Posted ${formatDate(existingReview!.createdAt)}`
-                  }
+                  {existingReview!.updated_at !== existingReview!.created_at
+                    ? `Updated ${formatDate(existingReview!.updated_at)}`
+                    : `Posted ${formatDate(existingReview!.created_at)}`}
                 </span>
               </div>
 
@@ -234,26 +254,18 @@ export function ReviewTab({ user }: { user: User }) {
           <CardTitle className="text-lg">Review Guidelines</CardTitle>
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-muted-foreground">
-          <div className="flex gap-2">
-            <span className="text-primary">•</span>
-            <p>Be honest and authentic about your family's experience</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-primary">•</span>
-            <p>Share specific examples of how LBMAA has impacted your children</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-primary">•</span>
-            <p>Keep your review respectful and constructive</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-primary">•</span>
-            <p>Focus on your personal experience with the instructors, programs, and community</p>
-          </div>
-          <div className="flex gap-2">
-            <span className="text-primary">•</span>
-            <p>You can edit your review anytime to keep it current</p>
-          </div>
+          {[
+            'Be honest and authentic about your family\'s experience',
+            'Share specific examples of how LBMAA has impacted your children',
+            'Keep your review respectful and constructive',
+            'Focus on your personal experience with the instructors, programs, and community',
+            'You can edit your review anytime to keep it current',
+          ].map((item) => (
+            <div key={item} className="flex gap-2">
+              <span className="text-primary">•</span>
+              <p>{item}</p>
+            </div>
+          ))}
         </CardContent>
       </Card>
     </div>

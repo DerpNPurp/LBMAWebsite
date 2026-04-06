@@ -4,6 +4,11 @@
 
 :root {
   --font-size: 16px;
+  /* Typography — Lexend + Source Sans 3 ("Corporate Trust", UI/UX Pro Max Row 16)
+     Lexend: designed for readability, excellent accessibility
+     Source Sans 3: highly legible at all sizes, warm and approachable */
+  --font-heading: 'Lexend', sans-serif;
+  --font-body: 'Source Sans 3', sans-serif;
   --background: #FAF9F6;
   --foreground: #1B1212;
   --card: #ffffff;
@@ -15,12 +20,12 @@
   --secondary: #F5E6E8;
   --secondary-foreground: #1B1212;
   --muted: #E8E6E3;
-  --muted-foreground: #303030;
+  --muted-foreground: #6B6866;
   --accent: #FFF5F5;
   --accent-foreground: #A01F23;
   --destructive: #A01F23;
   --destructive-foreground: #FAF9F6;
-  --border: rgba(27, 18, 18, 0.1);
+  --border: rgba(27, 18, 18, 0.08);
   --input: transparent;
   --input-background: #ffffff;
   --switch-background: #E8E6E3;
@@ -128,8 +133,36 @@
 
   body {
     @apply bg-background text-foreground;
+    font-family: var(--font-body);
     -webkit-font-smoothing: antialiased;
     -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-heading);
+  }
+
+  /* Accessible focus rings — keyboard users need visible indicators (UX guideline #28) */
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+}
+
+/* Reduced motion — respect user's motion preferences (UX guideline #9, HIGH severity) */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 
@@ -184,4 +217,5 @@
 
 html {
   font-size: var(--font-size);
+  scroll-behavior: smooth;
 }

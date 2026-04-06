@@ -9,7 +9,7 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Edit2, Trash2, MessageCircle, Send, Search, Pin, PinOff, Loader2 } from 'lucide-react';
 import { getBlogPosts, getBlogComments } from '../../lib/supabase/queries';
-import { updateBlogPost, deleteBlogPost, deleteBlogComment } from '../../lib/supabase/mutations';
+import { updateBlogPost, deleteBlogPost, deleteBlogComment, createBlogComment } from '../../lib/supabase/mutations';
 import { subscribeToBlogPosts, unsubscribe } from '../../lib/supabase/realtime';
 
 type User = {
@@ -224,14 +224,16 @@ export function AdminBlogTab({ user }: { user: User }) {
   const handleAddComment = async (postId: string) => {
     const commentText = commentTexts[postId];
     if (!commentText?.trim() || !user) return;
-    
-    // Admins can add comments if needed, but typically families add comments
     try {
-      // This would use createBlogComment - but admins typically don't comment
-      alert('Comments are typically added by families. Use direct messaging for admin responses.');
+      await createBlogComment({
+        post_id: postId,
+        author_user_id: user.id,
+        body: commentText.trim(),
+      });
       setCommentTexts({ ...commentTexts, [postId]: '' });
+      await loadPosts();
     } catch (error) {
-      alert('Error: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      alert('Error posting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -286,38 +288,6 @@ export function AdminBlogTab({ user }: { user: User }) {
           </div>
         </CardContent>
       </Card>
-
-      {/* Stats */}
-      <div className="grid md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-3xl font-bold">{posts.length}</p>
-              <p className="text-sm text-muted-foreground mt-1">Total Posts</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-3xl font-bold">
-                {Object.values(comments).reduce((sum, commentList) => sum + commentList.length, 0)}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Total Comments</p>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center">
-              <p className="text-3xl font-bold">
-                {new Set(posts.map(p => p.authorName)).size}
-              </p>
-              <p className="text-sm text-muted-foreground mt-1">Active Contributors</p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
 
       {/* Edit Dialog */}
       <Dialog open={!!editingPost} onOpenChange={(open) => !open && setEditingPost(null)}>

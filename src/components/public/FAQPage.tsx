@@ -1,216 +1,177 @@
-import { Card, CardContent } from '../ui/card';
-import { 
-  HelpCircle, 
-  Clock, 
-  DollarSign, 
-  Users, 
-  Award, 
-  Heart,
-  Calendar,
-  Shield
-} from 'lucide-react';
+import { ChevronDown, Phone } from 'lucide-react';
+
+// ─── Data ─────────────────────────────────────────────────────────────────────
+
+const FAQ_SECTIONS = [
+  {
+    heading: 'Getting started',
+    items: [
+      {
+        q: 'Does my child need any prior experience?',
+        a: 'None at all. Every student starts at the beginning. Our instructors meet each child where they are and work at their pace.',
+      },
+      {
+        q: 'How does the free trial class work?',
+        a: "Just come in. Your child will join a regular class alongside students at a similar level. You're welcome to watch from the sideline. After class, an instructor will share observations and answer your questions — no pressure to sign up that day.",
+      },
+      {
+        q: 'What should they wear?',
+        a: 'Comfortable athletic clothes are perfect for the trial. No uniform or equipment needed. Bare feet are required on the mat.',
+      },
+      {
+        q: 'Are there long-term contracts?',
+        a: "No. We're month-to-month. Families stay because they love it, not because they're locked in.",
+      },
+    ],
+  },
+  {
+    heading: 'Programs and age groups',
+    items: [
+      {
+        q: 'Which program is right for my child?',
+        a: "Programs are grouped by age — Little Dragons (4–6), Junior Warriors (7–12), and Teen Program (13–16). We'll help you figure out the best fit when you visit.",
+      },
+      {
+        q: 'How long is each class?',
+        a: 'Little Dragons classes run 30 minutes. Junior Warriors run 45 minutes. Teen Program classes are 60 minutes. Each is designed to match that age group\'s attention span and physical development.',
+      },
+      {
+        q: 'What if my child has special needs or learning differences?',
+        a: "Please talk to us before the trial class. Our instructors adapt their teaching to individual needs and we want every child to feel set up to succeed from day one.",
+      },
+    ],
+  },
+  {
+    heading: 'Belt progression and testing',
+    items: [
+      {
+        q: 'How do belt promotions work?',
+        a: "Students test when their instructor says they're ready — based on demonstrated skill, effort, and attitude, not a fixed schedule. We won't rush it.",
+      },
+      {
+        q: 'How long does it take to reach black belt?',
+        a: 'Typically 4–6 years of consistent training. The focus is on genuine skill and character development, not speed.',
+      },
+      {
+        q: 'What if my child misses a class?',
+        a: "Life happens. Makeup options are available and can be managed through the parent portal. Just let us know.",
+      },
+    ],
+  },
+  {
+    heading: 'Safety and environment',
+    items: [
+      {
+        q: 'Is this safe for children?',
+        a: 'Safety is the first thing we teach. All instructors are background-checked and CPR/First Aid certified. Training areas are fully padded and contact is always age-appropriate. Class ratios stay low so every child is supervised.',
+      },
+      {
+        q: 'Will my child be taught to fight?',
+        a: "They'll learn self-defense techniques, but the emphasis is on discipline, respect, and de-escalation. Students learn when — and when not — to use their skills.",
+      },
+      {
+        q: 'Do you address bullying?',
+        a: 'Yes. Anti-bullying principles are integrated throughout the curriculum — how to recognize it, how to respond, and when to ask for help.',
+      },
+    ],
+  },
+  {
+    heading: 'Practical details',
+    items: [
+      {
+        q: 'Where are you located?',
+        a: '123 Main Street, Los Banos, CA 93635. There is ample parking.',
+      },
+      {
+        q: 'What are your hours?',
+        a: 'Classes run Monday–Friday from 3:00–8:30 PM and Saturday 9:00 AM–2:00 PM.',
+      },
+      {
+        q: 'Do you offer family discounts?',
+        a: 'Yes — ask us about multi-sibling rates when you visit or get in touch.',
+      },
+      {
+        q: 'How do I stay informed about my child\'s progress?',
+        a: 'Enrolled families get access to the parent portal, where you can view belt progress, read instructor feedback, and receive announcements directly.',
+      },
+    ],
+  },
+];
+
+// ─── Sub-components ────────────────────────────────────────────────────────────
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group border-b border-border last:border-0">
+      <summary className="flex cursor-pointer items-center justify-between gap-4 min-h-[44px] py-3 text-sm font-semibold text-foreground list-none select-none">
+        {q}
+        <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <p className="pb-4 text-sm text-muted-foreground leading-relaxed pr-6">{a}</p>
+    </details>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
 
 export function FAQPage() {
-  const faqs = [
-    {
-      category: 'Getting Started',
-      icon: HelpCircle,
-      questions: [
-        {
-          q: 'How do I get started?',
-          a: 'Simply sign up for our 5-day trial for $10. This gives your child 5 days to try out classes and see if LBMAA is the right fit. No long-term commitment required for the trial period.'
-        },
-        {
-          q: 'What should my child wear to their first class?',
-          a: 'For the trial week, comfortable athletic clothing (t-shirt and sweatpants or shorts) is perfect. Bare feet are required on the mat. If your child continues after the trial, we\'ll help you get their official uniform.'
-        },
-        {
-          q: 'Do parents stay and watch?',
-          a: 'We have a comfortable viewing area where parents are welcome to watch classes. Many parents enjoy seeing their children learn and progress. However, it\'s not required – you\'re welcome to drop off and pick up if that works better for your schedule.'
-        },
-        {
-          q: 'Is there a minimum commitment?',
-          a: 'After the trial week, we offer flexible membership options. We\'ll discuss what works best for your family. Our goal is to make martial arts accessible and convenient.'
-        }
-      ]
-    },
-    {
-      category: 'Class Information',
-      icon: Clock,
-      questions: [
-        {
-          q: 'How long are classes?',
-          a: 'Little Dragons (ages 4-6): 30 minutes\nYouth Program (ages 7-12): 45 minutes\nTeen Program (ages 13-17): 60 minutes\n\nClasses are designed to match the attention span and energy level of each age group.'
-        },
-        {
-          q: 'What days and times do you offer classes?',
-          a: 'We offer classes throughout the week, including evenings and weekends to accommodate busy family schedules. Contact us for the current schedule, as class times may vary by program and enrollment.'
-        },
-        {
-          q: 'What if my child misses a class?',
-          a: 'We understand that schedules can be unpredictable. We offer makeup classes and work with families to ensure consistent training. You can manage your schedule through our parent portal.'
-        },
-        {
-          q: 'How many students are in each class?',
-          a: 'We keep class sizes small to ensure every child receives individual attention. Typically, classes have 10-15 students with multiple instructors, so the student-to-teacher ratio remains low.'
-        }
-      ]
-    },
-    {
-      category: 'Programs & Progress',
-      icon: Award,
-      questions: [
-        {
-          q: 'Which program is right for my child?',
-          a: 'Programs are based on age:\n• Little Dragons: Ages 4-6\n• Youth Program: Ages 7-12\n• Teen Program: Ages 13-17\n\nEach program is designed specifically for that age group\'s developmental stage.'
-        },
-        {
-          q: 'How long does it take to earn a black belt?',
-          a: 'The journey to black belt typically takes 4-6 years of consistent training. However, every student progresses at their own pace. The focus is on genuine skill development and character growth, not just speed.'
-        },
-        {
-          q: 'When does belt testing happen?',
-          a: 'Belt testing is held every 2-3 months for students who are ready. Instructors assess readiness based on skill level, attitude, and attendance. Not every student tests at every opportunity, and that\'s okay – we focus on individual progress.'
-        },
-        {
-          q: 'What if my child has special needs?',
-          a: 'We welcome students of all abilities and learning styles. Our instructors are trained to adapt teaching methods to individual needs. Please discuss your child\'s specific needs with us so we can ensure they have the best possible experience.'
-        }
-      ]
-    },
-    {
-      category: 'Safety & Environment',
-      icon: Shield,
-      questions: [
-        {
-          q: 'Is martial arts safe for children?',
-          a: 'Yes! Safety is our top priority. We use age-appropriate techniques, proper safety equipment, padded training areas, and close supervision. Our instructors are CPR/First Aid certified and trained in safety protocols.'
-        },
-        {
-          q: 'Will my child learn to fight?',
-          a: 'We teach self-defense and martial arts techniques, but the emphasis is on discipline, respect, and using martial arts as a last resort. Students learn when it\'s appropriate to use their skills (only in genuine self-defense) and the importance of conflict resolution.'
-        },
-        {
-          q: 'What are your safety protocols?',
-          a: 'All instructors undergo background checks, we maintain strict supervision ratios, require signed waivers, follow safety guidelines for all activities, and maintain a clean, well-maintained facility. We also have clear protocols for injuries and emergencies.'
-        },
-        {
-          q: 'Do you teach anti-bullying?',
-          a: 'Yes! Anti-bullying education is integrated into our curriculum. Students learn how to recognize bullying, strategies to avoid and de-escalate confrontations, when to seek help from adults, and how to stand up for themselves and others appropriately.'
-        }
-      ]
-    },
-    {
-      category: 'Parent Communication',
-      icon: Users,
-      questions: [
-        {
-          q: 'How do I stay informed about my child\'s progress?',
-          a: 'Our parent portal allows you to view your child\'s belt level, see instructor feedback, read announcements, access the parent blog, and communicate with instructors. You\'ll always know how your child is doing.'
-        },
-        {
-          q: 'Can I communicate with instructors?',
-          a: 'Absolutely! You can message instructors directly through the parent portal, speak with them before or after class, or schedule a meeting. We encourage open communication between parents and instructors.'
-        },
-        {
-          q: 'How do I know about schedule changes or events?',
-          a: 'All announcements, schedule changes, and upcoming events are posted in the parent portal and sent via email. You\'ll never miss important information.'
-        },
-        {
-          q: 'Can I connect with other parents?',
-          a: 'Yes! Our parent portal includes a community blog where parents can share experiences, ask questions, and connect with each other. Many families form lasting friendships through LBMAA.'
-        }
-      ]
-    },
-    {
-      category: 'Practical Information',
-      icon: Calendar,
-      questions: [
-        {
-          q: 'Where are you located?',
-          a: '123 Main Street, Los Banos, CA 93635. We have ample parking and are easily accessible from anywhere in Los Banos.'
-        },
-        {
-          q: 'What equipment does my child need?',
-          a: 'For the trial week, just comfortable clothes. If your child continues, you\'ll need:\n• Official uniform (we can help you order)\n• Belt (provided with uniform)\n• Protective gear for sparring (we\'ll discuss when the time comes)\n\nWe keep costs reasonable and offer payment plans for equipment if needed.'
-        },
-        {
-          q: 'Do you offer family discounts?',
-          a: 'Yes! We offer discounts when multiple children from the same family enroll. Ask us about family rates when you sign up.'
-        },
-        {
-          q: 'What if we need to take a break?',
-          a: 'Life happens! If you need to pause your membership temporarily (due to family vacation, medical reasons, etc.), just let us know. We work with families to find solutions that work for everyone.'
-        }
-      ]
-    }
-  ];
-
   return (
-    <div className="py-20">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold mb-6">Frequently Asked Questions</h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Everything you need to know about LBMAA. Don\'t see your question? Contact us directly!
+    <div>
+      {/* ── PAGE HEADER ── */}
+      <section className="py-14 border-b bg-slate-50">
+        <div className="container mx-auto px-6">
+          <h1 className="text-3xl md:text-4xl font-bold mb-2">Frequently asked questions</h1>
+          <p className="text-muted-foreground text-base max-w-xl">
+            Common questions from parents who are new to LBMAA. Don't see yours?{' '}
+            <span className="font-medium text-foreground">Call or message us anytime.</span>
           </p>
         </div>
+      </section>
 
-        {/* FAQ Sections */}
-        <div className="space-y-12 max-w-5xl mx-auto">
-          {faqs.map((section, sectionIndex) => (
-            <div key={sectionIndex}>
-              <div className="flex items-center gap-3 mb-6">
-                <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center">
-                  <section.icon className="w-6 h-6 text-primary" />
+      {/* ── FAQ SECTIONS ── */}
+      <section className="py-16">
+        <div className="container mx-auto px-6 max-w-3xl">
+          <div className="space-y-14">
+            {FAQ_SECTIONS.map((section) => (
+              <div key={section.heading}>
+                <h2 className="text-lg font-bold mb-1 text-foreground">{section.heading}</h2>
+                <div className="border-t border-border mt-3">
+                  {section.items.map((item) => (
+                    <FaqItem key={item.q} q={item.q} a={item.a} />
+                  ))}
                 </div>
-                <h2 className="text-3xl font-bold">{section.category}</h2>
               </div>
-              
-              <div className="space-y-4">
-                {section.questions.map((item, qIndex) => (
-                  <Card key={qIndex}>
-                    <CardContent className="p-6">
-                      <h3 className="text-lg font-bold mb-3 text-primary">{item.q}</h3>
-                      <p className="text-muted-foreground whitespace-pre-line">{item.a}</p>
-                    </CardContent>
-                  </Card>
-                ))}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
+      </section>
 
-        {/* Still Have Questions? */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <Card className="bg-primary text-primary-foreground">
-            <CardContent className="p-12 text-center">
-              <Heart className="w-16 h-16 mx-auto mb-6" />
-              <h2 className="text-3xl font-bold mb-4">Still Have Questions?</h2>
-              <p className="text-lg opacity-90 mb-6">
-                We\'re here to help! Reach out and we\'ll be happy to answer any questions you have 
-                about our programs, facility, or enrollment process.
-              </p>
-              <div className="space-y-2">
-                <p><strong>Email:</strong> info@lbmaa.com</p>
-                <p><strong>Phone:</strong> (209) 555-0123</p>
-                <p><strong>Address:</strong> 123 Main Street, Los Banos, CA 93635</p>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Trial CTA */}
-        <div className="mt-12 text-center">
-          <p className="text-lg text-muted-foreground mb-2">
-            The best way to know if LBMAA is right for your family is to experience it firsthand.
+      {/* ── CLOSING ── */}
+      <section className="py-16 bg-slate-50 border-t">
+        <div className="container mx-auto px-6 max-w-2xl text-center">
+          <h2 className="text-2xl font-bold mb-3">Still have questions?</h2>
+          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
+            We're a family-run school and we're happy to talk through anything — before you ever step
+            through the door. There's no sales pitch.
           </p>
-          <p className="text-2xl font-bold text-primary">
-            5 days for $10 - Start today
-          </p>
+          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm">
+            <a
+              href="tel:+12095550123"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 font-medium text-foreground hover:underline"
+            >
+              <Phone className="w-4 h-4 text-primary" />
+              (209) 555-0123
+            </a>
+            <span className="hidden sm:block text-muted-foreground">·</span>
+            <a
+              href="mailto:info@lbmaa.com"
+              className="inline-flex items-center gap-2 min-h-[44px] px-4 font-medium text-foreground hover:underline"
+            >
+              info@lbmaa.com
+            </a>
+          </div>
         </div>
-      </div>
+      </section>
     </div>
   );
 }

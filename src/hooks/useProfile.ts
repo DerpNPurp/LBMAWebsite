@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { useAuth } from './useAuth';
 import {
   getFamilyByOwner,
   getGuardiansByFamily,
@@ -7,7 +6,6 @@ import {
   getReviewByFamily,
 } from '../lib/supabase/queries';
 import {
-  createFamily,
   updateFamily,
   createGuardian,
   updateGuardian,
@@ -18,8 +16,12 @@ import {
 } from '../lib/supabase/mutations';
 import type { Family, Guardian, Student, Review } from '../lib/types';
 
-export function useProfile() {
-  const { user } = useAuth();
+type ProfileUser = {
+  id: string;
+  email: string;
+};
+
+export function useProfile(user: ProfileUser | null) {
   const [family, setFamily] = useState<Family | null>(null);
   const [guardians, setGuardians] = useState<Guardian[]>([]);
   const [students, setStudents] = useState<Student[]>([]);
@@ -37,19 +39,15 @@ export function useProfile() {
       setLoading(true);
       setError(null);
 
-      // Load family
-      let familyData = await getFamilyByOwner(user.id);
-      
-      // If no family exists, create one
+      const familyData = await getFamilyByOwner(user.id);
+
       if (!familyData) {
-        familyData = await createFamily({
-          owner_user_id: user.id,
-          primary_email: user.email,
-          address: null,
-          city: null,
-          state: null,
-          zip: null,
-        });
+        setFamily(null);
+        setGuardians([]);
+        setStudents([]);
+        setReview(null);
+        setError('Family profile is not set up yet.');
+        return;
       }
 
       setFamily(familyData);

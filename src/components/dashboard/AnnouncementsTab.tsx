@@ -57,6 +57,7 @@ export function AnnouncementsTab({ user }: { user: User }) {
         body: a.body,
         authorName: a.profiles?.display_name || 'Unknown',
         createdAt: a.created_at,
+        imageUrl: a.image_url || undefined,
         isPinned: a.is_pinned || false,
       }));
 

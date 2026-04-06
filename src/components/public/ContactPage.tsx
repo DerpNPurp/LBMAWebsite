@@ -1,268 +1,321 @@
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
-import { Mail, Phone, MapPin, Clock, Send } from 'lucide-react';
+import { Alert, AlertDescription } from '../ui/alert';
+import { Mail, Phone, MapPin, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
+import { submitEnrollmentLeadWithTimeout } from '../../lib/supabase/client';
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
-    name: '',
-    email: '',
+    parentName: '',
+    parentEmail: '',
     phone: '',
-    message: ''
+    studentName: '',
+    studentAge: '',
+    message: '',
   });
   const [submitted, setSubmitted] = useState(false);
+  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, this would send the form data to a server
-    console.log('Form submitted:', formData);
+    setSubmitError(null);
+    setIsSubmitting(true);
+
+    const parsedAge = formData.studentAge.trim() ? Number(formData.studentAge) : undefined;
+    if (
+      parsedAge !== undefined &&
+      (!Number.isInteger(parsedAge) || parsedAge < 3 || parsedAge > 99)
+    ) {
+      setSubmitError('Please enter a valid student age between 3 and 99.');
+      setIsSubmitting(false);
+      return;
+    }
+
+    const { data, error } = await submitEnrollmentLeadWithTimeout(
+      {
+        parentName: formData.parentName,
+        parentEmail: formData.parentEmail,
+        phone: formData.phone || undefined,
+        studentName: formData.studentName || undefined,
+        studentAge: parsedAge,
+        message: formData.message || undefined,
+        sourcePage: 'contact',
+      },
+      12000,
+    );
+
+    if (error || !data) {
+      setSubmitError(
+        error?.message || 'Unable to submit right now. Please try again or call us directly.',
+      );
+      setIsSubmitting(false);
+      return;
+    }
+
     setSubmitted(true);
-    setTimeout(() => {
-      setSubmitted(false);
-      setFormData({ name: '', email: '', phone: '', message: '' });
-    }, 3000);
+    setIsSubmitting(false);
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value
-    });
+    setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
   return (
-    <div className="py-20">
-      <div className="container mx-auto px-4">
-        {/* Header */}
-        <div className="text-center mb-16">
-          <h1 className="text-5xl font-bold mb-6">Get in Touch</h1>
-          <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
-            Have questions or ready to start your child's martial arts journey? We'd love to hear from you!
+    <div>
+
+      {/* ── PAGE HEADER ─────────────────────────────────── */}
+      <section className="py-20 border-b bg-slate-50">
+        <div className="container mx-auto px-6 max-w-3xl">
+          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-snug">
+            Get in touch.
+          </h1>
+          <p className="text-lg text-muted-foreground leading-relaxed">
+            Whether you have questions or you're ready to book a free trial class —
+            fill out the form and we'll get back to you within 24 hours.
           </p>
         </div>
+      </section>
 
-        <div className="grid gap-8 lg:grid-cols-2 max-w-6xl mx-auto">
-          {/* Contact Information */}
-          <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Contact Information</CardTitle>
-                <CardDescription>
-                  Reach out to us through any of these channels
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-6">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Phone className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1">Phone</h4>
-                    <p className="text-muted-foreground">(209) 555-0123</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Monday-Friday: 3:00 PM - 8:00 PM<br />
-                      Saturday: 9:00 AM - 2:00 PM
-                    </p>
-                  </div>
-                </div>
+      {/* ── MAIN CONTENT ────────────────────────────────── */}
+      <section className="py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-5xl mx-auto grid lg:grid-cols-5 gap-14">
 
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Mail className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1">Email</h4>
-                    <p className="text-muted-foreground">info@lbmaa.com</p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      We typically respond within 24 hours
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1">Location</h4>
-                    <p className="text-muted-foreground">
-                      123 Main Street<br />
-                      Los Banos, CA 93635
-                    </p>
-                    <p className="text-sm text-muted-foreground mt-1">
-                      Ample parking available
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center flex-shrink-0">
-                    <Clock className="w-6 h-6 text-primary" />
-                  </div>
-                  <div>
-                    <h4 className="font-bold mb-1">Facility Hours</h4>
-                    <div className="text-muted-foreground text-sm space-y-1">
-                      <p>Monday - Friday: 3:00 PM - 8:30 PM</p>
-                      <p>Saturday: 9:00 AM - 2:00 PM</p>
-                      <p>Sunday: Closed</p>
+            {/* ── Left: Contact info ── */}
+            <div className="lg:col-span-2 space-y-8">
+              <div>
+                <h2 className="font-semibold text-base mb-5">Contact information</h2>
+                <div className="space-y-5">
+                  <div className="flex items-start gap-3">
+                    <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium mb-0.5">Phone</p>
+                      <a
+                        href="tel:+12095550123"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        (209) 555-0123
+                      </a>
                     </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
 
-            <Card className="bg-primary text-primary-foreground">
-              <CardContent className="p-8">
-                <h3 className="text-2xl font-bold mb-4">Visit Us!</h3>
-                <p className="mb-4 opacity-90">
-                  Want to see our facility in person? Drop by during our open hours! 
-                  We're always happy to give tours and answer questions.
-                </p>
-                <p className="text-sm opacity-75">
-                  No appointment necessary during class hours. If you'd like a private tour 
-                  outside of class times, just give us a call to schedule.
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-
-          {/* Contact Form */}
-          <div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Send Us a Message</CardTitle>
-                <CardDescription>
-                  Fill out the form below and we'll get back to you soon
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {submitted ? (
-                  <div className="py-12 text-center">
-                    <div className="w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                      <Send className="w-8 h-8 text-primary" />
+                  <div className="flex items-start gap-3">
+                    <Mail className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium mb-0.5">Email</p>
+                      <a
+                        href="mailto:info@lbmaa.com"
+                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+                      >
+                        info@lbmaa.com
+                      </a>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        We typically respond within 24 hours
+                      </p>
                     </div>
-                    <h3 className="text-2xl font-bold mb-2">Message Sent!</h3>
-                    <p className="text-muted-foreground">
-                      Thank you for reaching out. We'll respond to your message within 24 hours.
-                    </p>
                   </div>
-                ) : (
-                  <form onSubmit={handleSubmit} className="space-y-6">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Your Name *</Label>
-                      <Input
-                        id="name"
-                        name="name"
-                        placeholder="John Smith"
-                        value={formData.name}
-                        onChange={handleChange}
-                        required
-                      />
+
+                  <div className="flex items-start gap-3">
+                    <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium mb-0.5">Location</p>
+                      <p className="text-sm text-muted-foreground">
+                        123 Main Street<br />
+                        Los Banos, CA 93635
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-0.5">
+                        Drop-ins welcome during class hours
+                      </p>
                     </div>
+                  </div>
 
-                    <div className="space-y-2">
-                      <Label htmlFor="email">Email Address *</Label>
-                      <Input
-                        id="email"
-                        name="email"
-                        type="email"
-                        placeholder="john@example.com"
-                        value={formData.email}
-                        onChange={handleChange}
-                        required
-                      />
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium mb-0.5">Hours</p>
+                      <div className="text-sm text-muted-foreground space-y-0.5">
+                        <p>Mon–Fri: 3:00 – 8:30 PM</p>
+                        <p>Saturday: 9:00 AM – 2:00 PM</p>
+                        <p>Sunday: Closed</p>
+                      </div>
                     </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone Number</Label>
-                      <Input
-                        id="phone"
-                        name="phone"
-                        type="tel"
-                        placeholder="(209) 555-0123"
-                        value={formData.phone}
-                        onChange={handleChange}
-                      />
-                    </div>
-
-                    <div className="space-y-2">
-                      <Label htmlFor="message">Message *</Label>
-                      <Textarea
-                        id="message"
-                        name="message"
-                        placeholder="Tell us about your child and what you're looking for..."
-                        rows={6}
-                        value={formData.message}
-                        onChange={handleChange}
-                        required
-                      />
-                    </div>
-
-                    <Button type="submit" className="w-full" size="lg">
-                      <Send className="w-4 h-4 mr-2" />
-                      Send Message
-                    </Button>
-
-                    <p className="text-xs text-muted-foreground text-center">
-                      * Required fields
-                    </p>
-                  </form>
-                )}
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        {/* Map Placeholder */}
-        <div className="mt-16 max-w-6xl mx-auto">
-          <Card>
-            <CardContent className="p-0">
-              <div className="bg-secondary/30 h-96 flex items-center justify-center">
-                <div className="text-center text-muted-foreground">
-                  <MapPin className="w-12 h-12 mx-auto mb-3" />
-                  <p className="font-bold">123 Main Street, Los Banos, CA 93635</p>
-                  <p className="text-sm mt-1">Map would be embedded here</p>
+                  </div>
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </div>
 
-        {/* Additional Info */}
-        <div className="mt-12 max-w-6xl mx-auto">
-          <div className="grid gap-6 md:grid-cols-3">
-            <Card className="text-center">
-              <CardContent className="p-6">
-                <h4 className="font-bold mb-2">Quick Response</h4>
-                <p className="text-sm text-muted-foreground">
-                  We aim to respond to all inquiries within 24 hours
-                </p>
-              </CardContent>
-            </Card>
+              {/* Reassurance — moved here to reduce hesitation */}
+              <div className="border-t pt-6 space-y-3">
+                {[
+                  'First class is free — no commitment',
+                  'We respond within 24 hours',
+                  "We're here to help, not to sell",
+                ].map((point) => (
+                  <div key={point} className="flex items-center gap-2.5 text-sm text-muted-foreground">
+                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
+                    <span>{point}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-            <Card className="text-center">
-              <CardContent className="p-6">
-                <h4 className="font-bold mb-2">Free Trial Available</h4>
-                <p className="text-sm text-muted-foreground">
-                  Ask about our 5-day trial program for just $10
-                </p>
-              </CardContent>
-            </Card>
+            {/* ── Right: Form ── */}
+            <div className="lg:col-span-3">
+              <div className="bg-white border border-border rounded-xl p-8 shadow-sm">
+              {submitted ? (
+                <div className="py-16 text-center">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
+                    <CheckCircle2 className="w-7 h-7 text-primary" />
+                  </div>
+                  <h3 className="text-xl font-bold mb-2">We got your message.</h3>
+                  <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
+                    We'll be in touch within 24 hours to answer your questions and get your
+                    child scheduled for a free trial class.
+                  </p>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-5">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="parentName">Your name *</Label>
+                    <Input
+                      id="parentName"
+                      name="parentName"
+                      placeholder="Maria Garcia"
+                      value={formData.parentName}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                      required
+                    />
+                  </div>
 
-            <Card className="text-center">
-              <CardContent className="p-6">
-                <h4 className="font-bold mb-2">No Pressure</h4>
-                <p className="text-sm text-muted-foreground">
-                  We're here to answer questions, not push sales
-                </p>
-              </CardContent>
-            </Card>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="parentEmail">Email address *</Label>
+                    <Input
+                      id="parentEmail"
+                      name="parentEmail"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={formData.parentEmail}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                      required
+                    />
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="phone">
+                      Phone number{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <Input
+                      id="phone"
+                      name="phone"
+                      type="tel"
+                      placeholder="(209) 555-0100"
+                      value={formData.phone}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="studentName">
+                        Child's name{' '}
+                        <span className="text-muted-foreground font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="studentName"
+                        name="studentName"
+                        placeholder="Alex"
+                        value={formData.studentName}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-1.5">
+                      <Label htmlFor="studentAge">
+                        Child's age{' '}
+                        <span className="text-muted-foreground font-normal">(optional)</span>
+                      </Label>
+                      <Input
+                        id="studentAge"
+                        name="studentAge"
+                        type="number"
+                        min={3}
+                        max={99}
+                        placeholder="9"
+                        value={formData.studentAge}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="message">
+                      Questions or notes{' '}
+                      <span className="text-muted-foreground font-normal">(optional)</span>
+                    </Label>
+                    <Textarea
+                      id="message"
+                      name="message"
+                      placeholder="Preferred schedule, any questions you have, or what you're hoping your child gets out of martial arts."
+                      rows={4}
+                      value={formData.message}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+
+                  {submitError && (
+                    <Alert variant="destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <AlertDescription>{submitError}</AlertDescription>
+                    </Alert>
+                  )}
+
+                  <Button
+                    type="submit"
+                    className="w-full font-semibold"
+                    size="lg"
+                    disabled={isSubmitting}
+                  >
+                    {isSubmitting ? 'Sending...' : 'Send Message'}
+                  </Button>
+
+                  <p className="text-xs text-muted-foreground text-center">
+                    * Required. We'll never share your information.
+                  </p>
+                </form>
+              )}
+              </div>
+            </div>
           </div>
         </div>
-      </div>
+      </section>
+
+      {/* ── MAP ─────────────────────────────────────────── */}
+      <section className="border-t">
+        <div className="container mx-auto px-6 py-12">
+          <div className="max-w-5xl mx-auto overflow-hidden rounded-xl border">
+            <iframe
+              title="LBMAA Location"
+              src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=Los+Banos,CA"
+              width="100%"
+              height="340"
+              style={{ border: 0, display: 'block' }}
+              allowFullScreen
+              loading="lazy"
+              referrerPolicy="no-referrer-when-downgrade"
+            />
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }

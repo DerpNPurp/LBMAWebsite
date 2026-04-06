@@ -4,19 +4,29 @@ import { PublicWebsite } from './components/PublicWebsite';
 import { LoginModal } from './components/LoginModal';
 import { Dashboard } from './components/Dashboard';
 import { AdminDashboard } from './components/AdminDashboard';
+import { FirstLoginOnboarding } from './components/FirstLoginOnboarding';
+import { DashboardV2 } from './experimental/DashboardV2';
+import { AdminDashboardV2 } from './experimental/AdminDashboardV2';
+import { FamilyDashboardV2 } from './components/dashboard/FamilyDashboardV2';
 import { useAuth } from './hooks/useAuth';
+import { Alert, AlertDescription } from './components/ui/alert';
+import { AlertCircle } from 'lucide-react';
 
 function ProtectedRoute({
   children,
   user,
   loading,
+  accessState,
   requireAdmin = false,
 }: {
   children: React.ReactNode;
   user: ReturnType<typeof useAuth>['user'];
   loading: ReturnType<typeof useAuth>['loading'];
+  accessState: ReturnType<typeof useAuth>['accessState'];
   requireAdmin?: boolean;
 }) {
+  const location = useLocation();
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -32,6 +42,14 @@ function ProtectedRoute({
     return <Navigate to="/" replace />;
   }
 
+  if (accessState === 'blocked') {
+    return <Navigate to="/" replace />;
+  }
+
+  if (accessState === 'needs_onboarding' && location.pathname !== '/onboarding') {
+    return <Navigate to="/onboarding" replace />;
+  }
+
   if (requireAdmin && user.role !== 'admin') {
     return <Navigate to="/dashboard" replace />;
   }
@@ -40,7 +58,7 @@ function ProtectedRoute({
 }
 
 function AppRoutes() {
-  const { user, loading, signOut } = useAuth();
+  const { user, loading, accessState, accessMessage, signOut } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
   const location = useLocation();
 
@@ -52,8 +70,11 @@ function AppRoutes() {
     await signOut();
   };
 
-  // Redirect logged-in users from public home to dashboard (e.g. after magic link)
+  // Redirect logged-in users from public home to onboarding/dashboard after magic link.
   if (user && location.pathname === '/') {
+    if (accessState === 'needs_onboarding') {
+      return <Navigate to="/onboarding" replace />;
+    }
     return <Navigate to={user.role === 'admin' ? '/admin' : '/dashboard'} replace />;
   }
 
@@ -65,6 +86,14 @@ function AppRoutes() {
           path="/"
           element={
             <>
+              {accessMessage && (
+                <div className="max-w-3xl mx-auto mt-6 px-4">
+                  <Alert variant="destructive">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{accessMessage}</AlertDescription>
+                  </Alert>
+                </div>
+              )}
               <PublicWebsite onLogin={handleLoginClick} />
               {showLoginModal && (
                 <LoginModal onClose={() => setShowLoginModal(false)} />
@@ -75,7 +104,7 @@ function AppRoutes() {
         <Route
           path="/dashboard"
           element={
-            <ProtectedRoute user={user} loading={loading}>
+            <ProtectedRoute user={user} loading={loading} accessState={accessState}>
               {user?.role === 'admin' ? (
                 <AdminDashboard user={user} onLogout={handleLogout} />
               ) : (
@@ -87,8 +116,51 @@ function AppRoutes() {
         <Route
           path="/admin"
           element={
-            <ProtectedRoute user={user} loading={loading} requireAdmin>
+            <ProtectedRoute user={user} loading={loading} accessState={accessState} requireAdmin>
               {user && <AdminDashboard user={user} onLogout={handleLogout} />}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/onboarding"
+          element={
+            <ProtectedRoute user={user} loading={loading} accessState={accessState}>
+              {user?.role === 'family' ? (
+                <FirstLoginOnboarding user={user} onComplete={async () => {
+                  window.location.assign('/dashboard');
+                }} onLogout={handleLogout} />
+              ) : (
+                <Navigate to="/dashboard" replace />
+              )}
+            </ProtectedRoute>
+          }
+        />
+        {/* Experimental routes — new sidebar-based UI prototypes */}
+        <Route
+          path="/experimental/dashboard"
+          element={
+            <ProtectedRoute user={user} loading={loading} accessState={accessState}>
+              {user?.role === 'admin' ? (
+                <AdminDashboardV2 user={user} onLogout={handleLogout} />
+              ) : (
+                <DashboardV2 user={user!} onLogout={handleLogout} />
+              )}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/experimental/admin"
+          element={
+            <ProtectedRoute user={user} loading={loading} accessState={accessState} requireAdmin>
+              {user && <AdminDashboardV2 user={user} onLogout={handleLogout} />}
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/experimental/dashboard-v2"
+          element={
+            <ProtectedRoute user={user} loading={loading} accessState={accessState}>
+              <FamilyDashboardV2 user={user!} onLogout={handleLogout} />
             </ProtectedRoute>
           }
         />
