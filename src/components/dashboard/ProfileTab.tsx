@@ -6,13 +6,11 @@ import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Plus, Edit2, User, Users, Home, Trash2, Star, Check, MessageSquare, Loader2 } from 'lucide-react';
+import { Plus, Edit2, User, Users, Home, Trash2, Star, Check, Loader2 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
 import { createReview, updateReview } from '../../lib/supabase/mutations';
-import { getUserReview } from '../../lib/supabase/queries';
-import type { Guardian as GuardianType, Student as StudentType } from '../../lib/types';
 
 type User = {
   id: string;
@@ -78,7 +76,7 @@ export function ProfileTab({ user }: { user: User }) {
     addStudent,
     updateStudent,
     removeStudent,
-  } = useProfile();
+  } = useProfile(user);
 
   const [isEditingFamily, setIsEditingFamily] = useState(false);
   const [isAddingStudent, setIsAddingStudent] = useState(false);
@@ -112,31 +110,40 @@ export function ProfileTab({ user }: { user: User }) {
   const [reviewText, setReviewText] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
   const [reviewLoading, setReviewLoading] = useState(false);
+  const [editingFamilyData, setEditingFamilyData] = useState({
+    address: '',
+    city: '',
+    state: '',
+    zip: '',
+  });
 
-  // Load review on mount
   useEffect(() => {
-    const loadReview = async () => {
-      if (!user) return;
-      try {
-        const reviewData = await getUserReview(user.id);
-        if (reviewData) {
-          setExistingReview({
-            id: reviewData.review_id,
-            parentName: user.displayName,
-            rating: reviewData.rating,
-            review: reviewData.review,
-            createdAt: reviewData.created_at,
-            updatedAt: reviewData.updated_at,
-          });
-          setRating(reviewData.rating);
-          setReviewText(reviewData.review);
-        }
-      } catch (error) {
-        console.error('Error loading review:', error);
-      }
-    };
-    loadReview();
-  }, [user]);
+    if (!dbReview) {
+      setExistingReview(null);
+      return;
+    }
+    setExistingReview({
+      id: dbReview.review_id,
+      parentName: user.displayName,
+      rating: dbReview.rating,
+      review: dbReview.review,
+      createdAt: dbReview.created_at,
+      updatedAt: dbReview.updated_at,
+    });
+    setRating(dbReview.rating);
+    setReviewText(dbReview.review);
+  }, [dbReview, user.displayName]);
+
+  useEffect(() => {
+    if (family) {
+      setEditingFamilyData({
+        address: family.address || '',
+        city: family.city || '',
+        state: family.state || '',
+        zip: family.zip || '',
+      });
+    }
+  }, [family]);
 
   // Convert database types to UI types
   const guardians: Guardian[] = dbGuardians.map(g => ({
@@ -186,24 +193,6 @@ export function ProfileTab({ user }: { user: User }) {
     return age;
   };
 
-  const [editingFamilyData, setEditingFamilyData] = useState({
-    address: '',
-    city: '',
-    state: '',
-    zip: '',
-  });
-
-  useEffect(() => {
-    if (family) {
-      setEditingFamilyData({
-        address: family.address || '',
-        city: family.city || '',
-        state: family.state || '',
-        zip: family.zip || '',
-      });
-    }
-  }, [family]);
-
   const handleSaveFamily = async () => {
     if (!family) return;
     setSaving(true);
@@ -227,21 +216,14 @@ export function ProfileTab({ user }: { user: User }) {
     setSaving(true);
     try {
       if (editingStudent) {
-        // Find the database student ID
-        const dbStudent = dbStudents.find(s => 
-          s.first_name === editingStudent.firstName && 
-          s.last_name === editingStudent.lastName
-        );
-        if (dbStudent) {
-          await updateStudent(dbStudent.student_id, {
-            first_name: editingStudent.firstName,
-            last_name: editingStudent.lastName,
-            date_of_birth: editingStudent.dateOfBirth || null,
-            belt_level: editingStudent.beltLevel || null,
-            status: editingStudent.status,
-            notes: editingStudent.notes || null,
-          });
-        }
+        await updateStudent(editingStudent.id, {
+          first_name: editingStudent.firstName,
+          last_name: editingStudent.lastName,
+          date_of_birth: editingStudent.dateOfBirth || null,
+          belt_level: editingStudent.beltLevel || null,
+          status: editingStudent.status,
+          notes: editingStudent.notes || null,
+        });
         setEditingStudent(null);
       } else {
         // Add new student
@@ -277,21 +259,14 @@ export function ProfileTab({ user }: { user: User }) {
     setSaving(true);
     try {
       if (editingGuardian) {
-        // Find the database guardian ID
-        const dbGuardian = dbGuardians.find(g => 
-          g.first_name === editingGuardian.firstName && 
-          g.last_name === editingGuardian.lastName
-        );
-        if (dbGuardian) {
-          await updateGuardian(dbGuardian.guardian_id, {
-            first_name: editingGuardian.firstName,
-            last_name: editingGuardian.lastName,
-            email: editingGuardian.email || null,
-            phone_number: editingGuardian.phoneNumber || null,
-            relationship: editingGuardian.relationship || null,
-            is_primary_contact: editingGuardian.isPrimaryContact,
-          });
-        }
+        await updateGuardian(editingGuardian.id, {
+          first_name: editingGuardian.firstName,
+          last_name: editingGuardian.lastName,
+          email: editingGuardian.email || null,
+          phone_number: editingGuardian.phoneNumber || null,
+          relationship: editingGuardian.relationship || null,
+          is_primary_contact: editingGuardian.isPrimaryContact,
+        });
         setEditingGuardian(null);
       } else {
         // Add new guardian

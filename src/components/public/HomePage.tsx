@@ -1,289 +1,381 @@
 import { Button } from '../ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { 
-  Award, 
-  Users, 
-  Heart, 
-  Target, 
+import {
   Shield,
+  Users,
+  Heart,
   Star,
-  Clock,
-  MapPin,
-  BookOpen,
-  Infinity
+  ChevronDown,
+  CheckCircle2,
+  Sparkles,
+  Zap,
+  ArrowRight,
 } from 'lucide-react';
 
 type HomePageProps = {
-  onLogin: () => void;
+  onRequestEnrollment: () => void;
 };
 
-export function HomePage({ onLogin }: HomePageProps) {
+// ─── Data ────────────────────────────────────────────────────────────────────
+
+const PROGRAMS = [
+  {
+    icon: Sparkles,
+    name: 'Little Dragons',
+    ages: 'Ages 4–6',
+    description:
+      'Fun, movement-based classes where young children learn to listen, follow direction, and move with confidence. Big growth in small bodies.',
+  },
+  {
+    icon: Shield,
+    name: 'Junior Warriors',
+    ages: 'Ages 7–12',
+    description:
+      'Structured classes with real belt progression. Students develop focus, self-discipline, and the ability to work hard toward a goal.',
+  },
+  {
+    icon: Zap,
+    name: 'Teen Program',
+    ages: 'Ages 13–16',
+    description:
+      'Advanced training, leadership responsibilities, and genuine self-defense skills. A positive peer environment during the years it matters most.',
+  },
+];
+
+const TESTIMONIALS = [
+  {
+    quote:
+      'My son has completely changed since joining. He listens better, focuses in school, and actually looks forward to going to class.',
+    name: 'Maria G.',
+    detail: 'Parent of a 9-year-old',
+  },
+  {
+    quote:
+      'The instructors are patient and genuinely care. My daughter went from shy to confident in just a few months.',
+    name: 'James T.',
+    detail: 'Parent of a 7-year-old',
+  },
+  {
+    quote:
+      'We tried another school first. LBMAA is different — it feels like a real community. Best decision we made for our kids.',
+    name: 'Priya S.',
+    detail: 'Parent of two students',
+  },
+];
+
+const FAQ = [
+  {
+    q: 'Does my child need any experience?',
+    a: "None at all. Every student starts at the beginning. Our instructors work at each child's pace.",
+  },
+  {
+    q: 'What should they wear to the trial class?',
+    a: 'Just comfortable athletic clothes. No uniform or equipment needed.',
+  },
+  {
+    q: 'Are there long-term contracts?',
+    a: "No. We're month-to-month. We want families here because they love it, not because they're locked in.",
+  },
+  {
+    q: 'How do belt promotions work?',
+    a: "Students test when their instructor says they're ready — based on skill, not a fixed schedule.",
+  },
+  {
+    q: 'Is this safe for kids with no martial arts background?',
+    a: 'Safety is the first thing we teach. Classes are supervised, training areas are fully padded, and contact is always age-appropriate.',
+  },
+];
+
+// ─── Sub-components ───────────────────────────────────────────────────────────
+
+function FaqItem({ q, a }: { q: string; a: string }) {
+  return (
+    <details className="group border-b border-border last:border-0">
+      {/* min-h-[44px] ensures touch target meets 44×44px guideline (UX rule #22) */}
+      <summary className="flex cursor-pointer items-center justify-between gap-4 min-h-[44px] py-3 text-sm font-semibold text-foreground list-none select-none">
+        {q}
+        <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
+      </summary>
+      <p className="pb-4 text-sm text-muted-foreground leading-relaxed pr-6">{a}</p>
+    </details>
+  );
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export function HomePage({ onRequestEnrollment }: HomePageProps) {
   return (
     <div>
-      {/* Hero Section */}
-      <section className="relative bg-foreground text-background">
-        <div className="absolute inset-0 opacity-20">
+
+      {/* ── HERO ────────────────────────────────────────── */}
+      <section className="relative min-h-[88svh] flex items-center">
+        {/* Background photo with lighter overlay so it breathes */}
+        <div className="absolute inset-0">
           <ImageWithFallback
-            src="https://images.unsplash.com/photo-1769095211505-fbcbf6530f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&ixid=M3w3Nzg4Nzd8MHwxfHNlYXJjaHwxfHxtYXJ0aWFsJTIwYXJ0cyUyMHRyYWluaW5nJTIwY2hpbGRyZW4lMjBkaXNjaXBsaW5lfGVufDF8fHx8MTc3MDg0NDE2Nnww&ixlib=rb-4.1.0&q=80&w=1080&utm_source=figma&utm_medium=referral"
-            alt="Martial Arts Training"
+            src="https://images.unsplash.com/photo-1769095211505-fbcbf6530f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
+            alt="Children training martial arts at LBMAA"
             className="w-full h-full object-cover"
           />
+          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/10" />
+          {/* Bottom fade — bleeds the photo into the white page below */}
+          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white" />
         </div>
-        
-        <div className="relative container mx-auto px-4 py-32">
-          <div className="max-w-3xl">
-            <h1 className="text-5xl md:text-6xl font-bold mb-6">
-              Building Confidence, Discipline, and Community
+
+        <div className="relative container mx-auto px-6 py-24 md:py-32">
+          <div className="max-w-xl">
+            {/* Red accent marker — controlled brand signal */}
+            <div className="w-10 h-1 bg-primary rounded-full mb-6" />
+
+            <h1 className="text-4xl md:text-5xl font-bold leading-[1.1] text-white mb-5">
+              Where Kids Build Confidence,
+              Discipline, and Respect.
             </h1>
-            <p className="text-xl mb-8 opacity-90">
-              Where bodies grow strong, minds become disciplined, and lasting friendships are forged.
+            <p className="text-base md:text-lg text-white/85 mb-10 leading-relaxed max-w-md">
+              Safe, structured martial arts for children ages 4–16 in Los Banos.
+              Family-run. No pressure. First class is free.
             </p>
-          </div>
-        </div>
-      </section>
 
-      {/* What Students Learn */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">What Your Child Will Learn</h2>
-            <p className="text-xl text-muted-foreground">
-              More than just martial arts – we build character and community
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Shield className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle>Discipline</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Self-control, focus, and respect for themselves and others
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Award className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle>Confidence</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Build self-esteem through achievement and personal growth
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Target className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle>Focus</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Improved concentration and mental clarity for school and life
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Heart className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle>Respect</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Understanding the value of courtesy, humility, and teamwork
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card className="text-center">
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <BookOpen className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle>Education</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription>
-                  Enhanced learning skills and academic performance through discipline
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* Training Structure */}
-      <section className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">How We Train</h2>
-            <p className="text-xl text-muted-foreground">
-              Structured, progressive, and age-appropriate
-            </p>
-          </div>
-          
-          <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                1
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Learn Fundamentals</h3>
-              <p className="text-muted-foreground">
-                Learn basic techniques, stances, and movements with patient, expert instruction
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                2
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Practice & Progress</h3>
-              <p className="text-muted-foreground">
-                Regular classes with individualized feedback to build skills and confidence
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-primary text-primary-foreground rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4 text-2xl font-bold">
-                3
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Achieve Excellence</h3>
-              <p className="text-muted-foreground">
-                Earn belts, build character, and become part of our martial arts family
-              </p>
-            </div>
-          </div>
-
-          <div className="flex justify-center mt-8">
-            <div className="text-center max-w-md">
-              <div className="bg-primary text-primary-foreground rounded-full w-20 h-20 flex items-center justify-center mx-auto mb-4">
-                <Infinity className="w-10 h-10" />
-              </div>
-              <h3 className="text-2xl font-bold mb-3">Eternal Mastery</h3>
-              <p className="text-muted-foreground">
-                Training never stops
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* Facility Overview */}
-      <section className="py-20">
-        <div className="container mx-auto px-4">
-          <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold mb-4">Our Facility</h2>
-            <p className="text-xl text-muted-foreground">
-              A safe, clean, and welcoming environment for students and parents alike
-            </p>
-          </div>
-          
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl mx-auto">
-            <Card>
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Shield className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle className="text-center">Safe & Secure</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Padded training areas, supervised classes, and strict safety protocols
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Star className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle className="text-center">Professional Equipment</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Top-quality mats, bags, and training gear maintained to the highest standards
-                </CardDescription>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-                  <Users className="w-8 h-8 text-primary" />
-                </div>
-                <CardTitle className="text-center">Family Friendly</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <CardDescription className="text-center">
-                  Comfortable parent lounge and viewing area with a welcoming community atmosphere
-                </CardDescription>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-20 bg-secondary/30">
-        <div className="container mx-auto px-4">
-          <Card className="bg-primary text-primary-foreground">
-            <CardContent className="p-12 text-center">
-              <h2 className="text-4xl font-bold mb-4">Ready to Get Started?</h2>
-              <p className="text-xl mb-8 opacity-90">
-                SPECIAL Join our family today and give your child the gift of confidence, discipline, and lifelong skills.
-              </p>
-              <Button 
-                size="lg" 
-                variant="secondary"
-                className="text-lg px-8 py-6"
-                onClick={onLogin}
+            <div className="flex flex-col sm:flex-row gap-3">
+              <Button
+                size="lg"
+                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-md"
+                onClick={onRequestEnrollment}
               >
-                5 Days for $20 - Start Today
+                Book a Free Trial Class
               </Button>
-              
-              <div className="mt-12 grid gap-6 md:grid-cols-3 text-left">
-                <div className="flex items-start gap-3">
-                  <Clock className="w-6 h-6 flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-bold mb-1">Flexible Schedule</h4>
-                    <p className="text-sm opacity-90">Classes available throughout the week</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <MapPin className="w-6 h-6 flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-bold mb-1">Convenient Location</h4>
-                    <p className="text-sm opacity-90">Easy access in Los Banos</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-3">
-                  <Heart className="w-6 h-6 flex-shrink-0 mt-1" />
-                  <div>
-                    <h4 className="font-bold mb-1">Caring Instructors</h4>
-                    <p className="text-sm opacity-90">Experienced, patient, and dedicated</p>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              <Button
+                size="lg"
+                variant="outline"
+                className="border-white/60 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm font-medium px-8"
+                onClick={() => {
+                  document.getElementById('programs')?.scrollIntoView({ behavior: 'smooth' });
+                }}
+              >
+                See Our Programs
+              </Button>
+            </div>
+
+            <p className="text-white/55 text-sm mt-5">
+              No commitment · No uniform needed · We'll guide you
+            </p>
+          </div>
         </div>
       </section>
+
+      {/* ── PROGRAMS ────────────────────────────────────── */}
+      <section id="programs" className="py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-xl mb-12">
+            <h2 className="text-3xl font-bold mb-3">Find the Right Class for Your Child</h2>
+            <p className="text-muted-foreground text-base leading-relaxed">
+              Every program is age-appropriate, structured, and taught by the same certified
+              instructors who know every student by name.
+            </p>
+          </div>
+
+          <div className="grid gap-5 md:grid-cols-3 max-w-4xl">
+            {PROGRAMS.map((program) => {
+              const Icon = program.icon;
+              return (
+                <div
+                  key={program.name}
+                  className="bg-white border border-border rounded-xl p-6 flex flex-col gap-4 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+                >
+                  {/* Icon + age badge in flex row */}
+                  <div className="flex items-start justify-between">
+                    <div className="w-12 h-12 rounded-xl bg-primary/8 flex items-center justify-center flex-shrink-0">
+                      <Icon className="w-6 h-6 text-primary" />
+                    </div>
+                    <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/8 px-2.5 py-1 rounded-full">
+                      {program.ages}
+                    </span>
+                  </div>
+                  <div className="flex-1">
+                    <h3 className="text-lg font-bold mb-1">{program.name}</h3>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {program.description}
+                    </p>
+                  </div>
+                  <button
+                    onClick={onRequestEnrollment}
+                    className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all duration-150 mt-auto"
+                  >
+                    Book a trial class <ArrowRight className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+
+          <p className="text-sm text-muted-foreground mt-6">
+            Not sure which program fits?{' '}
+            <button
+              onClick={onRequestEnrollment}
+              className="font-medium text-primary hover:underline inline-flex items-center min-h-[44px] px-1"
+            >
+              Contact us — we'll help you figure it out.
+            </button>
+          </p>
+        </div>
+      </section>
+
+      {/* ── WHY LBMAA ───────────────────────────────────── */}
+      <section className="py-20 bg-slate-50 border-y">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-14 items-center">
+
+            {/* Image */}
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-muted order-last md:order-first">
+              <ImageWithFallback
+                src="https://images.unsplash.com/photo-1555597673-b21d5c935865?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
+                alt="Instructor working with a young student at LBMAA"
+                className="w-full h-full object-cover"
+              />
+            </div>
+
+            {/* Text */}
+            <div>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4 leading-snug">
+                We're not just teaching martial arts.
+              </h2>
+              <p className="text-muted-foreground text-base leading-relaxed mb-7">
+                Every class at LBMAA is built around three things: safety, respect, and real
+                progress. Our instructors know every student's name, remember where they started,
+                and celebrate every step forward.
+              </p>
+
+              <ul className="space-y-3.5">
+                {[
+                  'Certified, background-checked instructors',
+                  'Small classes — every child gets individual attention',
+                  'Structured belt progression with clear milestones',
+                  'A welcoming environment for the whole family',
+                ].map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
+                    <span className="text-sm text-foreground">{point}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── WHAT TO EXPECT ──────────────────────────────── */}
+      {/* Answers "What will my child experience here?" */}
+      <section className="py-20">
+        <div className="container mx-auto px-6">
+          <div className="max-w-4xl mx-auto">
+            <h2 className="text-3xl font-bold mb-3">What to expect at your first visit</h2>
+            <p className="text-muted-foreground text-base mb-12 max-w-xl">
+              Most parents aren't sure what to expect. Here's exactly how a trial class works.
+            </p>
+
+            <div className="grid md:grid-cols-3 gap-8">
+              {[
+                {
+                  step: '01',
+                  heading: 'Arrive and meet the team',
+                  body: "You and your child will be greeted by an instructor. We'll answer any questions before the class starts.",
+                },
+                {
+                  step: '02',
+                  heading: 'Your child joins the class',
+                  body: "We pair your child with students at their level. You're welcome to watch from the side — most parents do.",
+                },
+                {
+                  step: '03',
+                  heading: 'Talk to us afterward',
+                  body: "After class we'll share what we observed and which program fits best. No pressure to sign up that day.",
+                },
+              ].map(({ step, heading, body }) => (
+                <div key={step} className="flex flex-col gap-3">
+                  <span className="text-4xl font-bold text-primary/15 leading-none">{step}</span>
+                  <h3 className="font-semibold text-base">{heading}</h3>
+                  <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ────────────────────────────────── */}
+      <section className="py-20 bg-slate-50 border-y">
+        <div className="container mx-auto px-6">
+          <div className="mb-12">
+            <h2 className="text-3xl font-bold mb-2">What LBMAA families say</h2>
+            <p className="text-muted-foreground text-base">
+              From parents who were exactly where you are right now.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3 max-w-5xl">
+            {TESTIMONIALS.map((t) => (
+              <div
+                key={t.name}
+                className="bg-white border border-border rounded-xl p-6 flex flex-col gap-4"
+              >
+                <div className="flex gap-0.5">
+                  {Array.from({ length: 5 }).map((_, i) => (
+                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+                <p className="text-sm leading-relaxed text-foreground flex-1">"{t.quote}"</p>
+                <div>
+                  <p className="text-sm font-semibold">{t.name}</p>
+                  <p className="text-xs text-muted-foreground">{t.detail}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CLOSING CTA ─────────────────────────────────── */}
+      {/* Calm, not a billboard */}
+      <section className="py-24 bg-slate-50 border-t">
+        <div className="container mx-auto px-6 text-center max-w-lg">
+          {/* Red accent line — minimal brand signal above CTA */}
+          <div className="w-8 h-0.5 bg-primary rounded-full mx-auto mb-8" />
+          <h2 className="text-3xl font-bold mb-3">Ready to see if it's a good fit?</h2>
+          <p className="text-muted-foreground text-base mb-8 leading-relaxed">
+            The first class is free. No uniform, no commitment —
+            just come and see what we're about.
+          </p>
+          <Button
+            size="lg"
+            className="px-10 font-semibold"
+            onClick={onRequestEnrollment}
+          >
+            Book a Free Trial Class
+          </Button>
+          <p className="text-sm text-muted-foreground mt-5">
+            Prefer to call first?{' '}
+            <a
+              href="tel:+12095550123"
+              className="font-medium text-foreground hover:underline"
+            >
+              (209) 555-0123
+            </a>
+          </p>
+        </div>
+      </section>
+
+      {/* ── FAQ ─────────────────────────────────────────── */}
+      <section className="py-16 bg-slate-50 border-t">
+        <div className="container mx-auto px-6 max-w-2xl">
+          <h2 className="text-2xl font-bold mb-8">Common questions</h2>
+
+          <div className="border-t border-border">
+            {FAQ.map((item) => (
+              <FaqItem key={item.q} q={item.q} a={item.a} />
+            ))}
+          </div>
+        </div>
+      </section>
+
     </div>
   );
 }

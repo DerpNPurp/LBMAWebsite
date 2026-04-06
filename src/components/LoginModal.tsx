@@ -21,7 +21,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
     e.preventDefault();
     setError(null);
     
-    if (!email.trim()) {
+    const normalizedEmail = email.trim().toLowerCase();
+
+    if (!normalizedEmail) {
       setError('Please enter your email address');
       return;
     }
@@ -30,7 +32,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
 
     try {
       const RPC_TIMEOUT_MS = 15000;
-      const { data: hasAccount, error: checkError } = await checkEmailHasAccountWithTimeout(email, RPC_TIMEOUT_MS);
+      const { data: hasAccount, error: checkError } = await checkEmailHasAccountWithTimeout(normalizedEmail, RPC_TIMEOUT_MS);
 
       if (checkError) {
         const isTimeout = checkError.message?.includes('timed out');
@@ -52,8 +54,9 @@ export function LoginModal({ onClose }: LoginModalProps) {
       }
 
       const { error: signInError } = await supabase.auth.signInWithOtp({
-        email: email.trim(),
+        email: normalizedEmail,
         options: {
+          shouldCreateUser: false,
           // Redirect users directly to the dashboard after clicking the magic link
           emailRedirectTo: `${window.location.origin}/dashboard`,
         },

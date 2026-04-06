@@ -1,15 +1,16 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Label } from '../ui/label';
-import { Plus, Edit2, Trash2, Upload, Pin, PinOff, Loader2 } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Pin, PinOff, Loader2, X } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { getAnnouncements } from '../../lib/supabase/queries';
 import { createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../../lib/supabase/mutations';
 import { subscribeToAnnouncements, unsubscribe } from '../../lib/supabase/realtime';
+import { supabase } from '../../lib/supabase/client';
 
 type User = {
   id: string;
@@ -52,8 +53,10 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
   const [newTitle, setNewTitle] = useState('');
   const [newBody, setNewBody] = useState('');
   const [selectedImage, setSelectedImage] = useState<string>('');
+  const [uploadingImage, setUploadingImage] = useState(false);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAnnouncements = async () => {
     try {
@@ -65,6 +68,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
         body: a.body,
         authorName: a.profiles?.display_name || 'Unknown',
         createdAt: a.created_at,
+        imageUrl: a.image_url || undefined,
         isPinned: a.is_pinned || false,
       }));
       setAnnouncements(formatted);
@@ -97,6 +101,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
         title: newTitle.trim(),
         body: newBody.trim(),
         is_pinned: false,
+        image_url: selectedImage || null,
       });
       resetForm();
       setIsCreateDialogOpen(false);
@@ -117,6 +122,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
         title: newTitle.trim(),
         body: newBody.trim(),
         is_pinned: editingAnnouncement.isPinned,
+        image_url: selectedImage || null,
       });
       resetForm();
       setEditingAnnouncement(null);
@@ -178,12 +184,46 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
     setEditingAnnouncement(announcement);
     setNewTitle(announcement.title);
     setNewBody(announcement.body);
-    setSelectedImage(announcement.imageUrl || '');
+    setSelectedImage(announcement.imageUrl ?? '');
   };
 
   const handleImageUpload = () => {
-    // In production, this would open file picker and upload to Supabase storage
-    alert('Image upload would be handled here. The file would be uploaded to Supabase storage and the URL saved.');
+    fileInputRef.current?.click();
+  };
+
+  const handleImageFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+      alert('Only JPG, PNG, GIF, and WebP images are allowed.');
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert('Image must be under 5 MB.');
+      return;
+    }
+
+    setUploadingImage(true);
+    try {
+      const ext = file.name.split('.').pop()?.toLowerCase() ?? 'jpg';
+      const path = `${user.id}/${Date.now()}.${ext}`;
+      const { error } = await supabase.storage
+        .from('announcement-images')
+        .upload(path, file, { cacheControl: '3600', upsert: false });
+      if (error) throw error;
+      const { data: urlData } = supabase.storage
+        .from('announcement-images')
+        .getPublicUrl(path);
+      setSelectedImage(urlData.publicUrl);
+    } catch (err) {
+      alert('Image upload failed: ' + (err instanceof Error ? err.message : 'Unknown error'));
+    } finally {
+      setUploadingImage(false);
+      // Reset input so same file can be re-selected
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
   };
 
   const formatDate = (dateString: string) => {
@@ -196,6 +236,45 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
       minute: '2-digit'
     });
   };
+
+  const ImageUploadField = () => (
+    <div className="space-y-2">
+      <Label>Image (Optional)</Label>
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/gif,image/webp"
+        className="hidden"
+        onChange={handleImageFileChange}
+      />
+      {selectedImage ? (
+        <div className="space-y-2">
+          <img src={selectedImage} alt="Preview" className="w-full max-h-48 object-cover rounded-md border" />
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setSelectedImage('')}
+            className="gap-1 text-destructive hover:text-destructive"
+          >
+            <X className="w-3 h-3" /> Remove image
+          </Button>
+        </div>
+      ) : (
+        <Button
+          variant="outline"
+          onClick={handleImageUpload}
+          disabled={uploadingImage}
+          className="w-full"
+        >
+          {uploadingImage ? (
+            <><Loader2 className="w-4 h-4 mr-2 animate-spin" />Uploading...</>
+          ) : (
+            <><Upload className="w-4 h-4 mr-2" />Upload Image</>
+          )}
+        </Button>
+      )}
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -236,20 +315,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
                   className="min-h-[200px]"
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Image (Optional)</Label>
-                <Button 
-                  variant="outline" 
-                  onClick={handleImageUpload}
-                  className="w-full"
-                >
-                  <Upload className="w-4 h-4 mr-2" />
-                  Upload Image
-                </Button>
-                {selectedImage && (
-                  <p className="text-sm text-muted-foreground">Image selected</p>
-                )}
-              </div>
+              <ImageUploadField />
             </div>
             <div className="flex justify-end gap-2">
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
@@ -389,7 +455,14 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
                 </div>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-3">
+              {announcement.imageUrl && (
+                <img
+                  src={announcement.imageUrl}
+                  alt=""
+                  className="w-full max-h-64 object-cover rounded-md"
+                />
+              )}
               <p className="text-foreground whitespace-pre-line">{announcement.body}</p>
             </CardContent>
           </Card>

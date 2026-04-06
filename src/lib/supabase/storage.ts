@@ -9,7 +9,7 @@ const BUCKET_NAME = 'message-attachments';
 export async function uploadFile(
   file: File,
   path: string
-): Promise<{ path: string; url: string }> {
+): Promise<{ path: string }> {
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)
     .upload(path, file, {
@@ -19,14 +19,8 @@ export async function uploadFile(
 
   if (error) throw error;
 
-  // Get public URL (or signed URL if bucket is private)
-  const { data: urlData } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(data.path);
-
   return {
     path: data.path,
-    url: urlData.publicUrl,
   };
 }
 
@@ -35,11 +29,7 @@ export async function uploadFile(
 // ============================================
 
 export async function getFileUrl(path: string): Promise<string> {
-  const { data } = supabase.storage
-    .from(BUCKET_NAME)
-    .getPublicUrl(path);
-
-  return data.publicUrl;
+  return getSignedUrl(path);
 }
 
 export async function getSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {

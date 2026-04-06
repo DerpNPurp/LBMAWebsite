@@ -11,6 +11,8 @@ export type Profile = {
   user_id: string;
   role: UserRole;
   display_name: string;
+  is_active?: boolean;
+  deactivated_at?: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -19,6 +21,8 @@ export type Family = {
   family_id: string;
   owner_user_id: string;
   primary_email: string;
+  account_status?: 'active' | 'inactive' | 'archived';
+  deactivated_at?: string | null;
   address: string | null;
   city: string | null;
   state: string | null;
@@ -59,6 +63,7 @@ export type Announcement = {
   title: string;
   body: string;
   is_pinned: boolean;
+  image_url: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -101,6 +106,7 @@ export type Conversation = {
 export type ConversationMember = {
   conversation_id: string;
   user_id: string;
+  last_read_at?: string | null;
   created_at: string;
 };
 
@@ -121,6 +127,34 @@ export type MessageAttachment = {
   mime_type: string | null;
   size_bytes: number | null;
   created_at: string;
+};
+
+export type EnrollmentLead = {
+  lead_id: string;
+  parent_name: string;
+  parent_email: string;
+  phone: string | null;
+  student_name: string | null;
+  student_age: number | null;
+  message: string;
+  source_page: string;
+  notification_status: 'queued' | 'sent' | 'failed';
+  notified_at: string | null;
+  status: 'new' | 'approved' | 'appointment_scheduled' | 'enrolled' | 'closed';
+  approved_at: string | null;
+  approval_email_sent_at: string | null;
+  created_at: string;
+};
+
+export type StudentFeedback = {
+  feedback_id: string;
+  student_id: string;
+  author_user_id: string;
+  event_title: string;
+  event_date: string | null;
+  body: string;
+  created_at: string;
+  updated_at: string;
 };
 
 export type Review = {

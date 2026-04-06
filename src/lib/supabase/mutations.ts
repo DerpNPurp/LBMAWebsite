@@ -12,8 +12,20 @@ import type {
   ConversationMember,
   Message,
   MessageAttachment,
+  EnrollmentLead,
+  StudentFeedback,
   Review,
 } from '../types';
+import {
+  CONVERSATION_COLUMNS,
+  CONVERSATION_MEMBER_COLUMNS,
+  FAMILY_COLUMNS,
+  GUARDIAN_COLUMNS,
+  MESSAGE_ATTACHMENT_COLUMNS,
+  MESSAGE_COLUMNS,
+  PROFILE_COLUMNS,
+  STUDENT_COLUMNS,
+} from './selects';
 
 // ============================================
 // PROFILES
@@ -24,7 +36,7 @@ export async function updateProfile(userId: string, updates: Partial<Profile>): 
     .from('profiles')
     .update(updates)
     .eq('user_id', userId)
-    .select()
+    .select(PROFILE_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -39,7 +51,7 @@ export async function createFamily(family: Omit<Family, 'family_id' | 'created_a
   const { data, error } = await supabase
     .from('families')
     .insert(family)
-    .select()
+    .select(FAMILY_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -51,7 +63,27 @@ export async function updateFamily(familyId: string, updates: Partial<Family>): 
     .from('families')
     .update(updates)
     .eq('family_id', familyId)
-    .select()
+    .select(FAMILY_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function setFamilyAccountStatus(
+  familyId: string,
+  accountStatus: 'active' | 'inactive' | 'archived'
+): Promise<Family> {
+  const updates: Partial<Family> = {
+    account_status: accountStatus,
+    deactivated_at: accountStatus === 'active' ? null : new Date().toISOString(),
+  };
+
+  const { data, error } = await supabase
+    .from('families')
+    .update(updates)
+    .eq('family_id', familyId)
+    .select(FAMILY_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -75,7 +107,7 @@ export async function createGuardian(guardian: Omit<Guardian, 'guardian_id' | 'c
   const { data, error } = await supabase
     .from('guardians')
     .insert(guardian)
-    .select()
+    .select(GUARDIAN_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -87,7 +119,7 @@ export async function updateGuardian(guardianId: string, updates: Partial<Guardi
     .from('guardians')
     .update(updates)
     .eq('guardian_id', guardianId)
-    .select()
+    .select(GUARDIAN_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -111,7 +143,7 @@ export async function createStudent(student: Omit<Student, 'student_id' | 'creat
   const { data, error } = await supabase
     .from('students')
     .insert(student)
-    .select()
+    .select(STUDENT_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -123,11 +155,25 @@ export async function updateStudent(studentId: string, updates: Partial<Student>
     .from('students')
     .update(updates)
     .eq('student_id', studentId)
-    .select()
+    .select(STUDENT_COLUMNS)
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function updateStudentsByFamily(
+  familyId: string,
+  updates: Partial<Student>
+): Promise<Student[]> {
+  const { data, error } = await supabase
+    .from('students')
+    .update(updates)
+    .eq('family_id', familyId)
+    .select(STUDENT_COLUMNS);
+
+  if (error) throw error;
+  return data || [];
 }
 
 export async function deleteStudent(studentId: string): Promise<void> {
@@ -283,22 +329,47 @@ export async function createConversation(conversation: Omit<Conversation, 'conve
   const { data, error } = await supabase
     .from('conversations')
     .insert(conversation)
-    .select()
+    .select(CONVERSATION_COLUMNS)
     .single();
 
   if (error) throw error;
   return data;
 }
 
+export async function createOrGetDirectConversation(otherUserId: string): Promise<string> {
+  const { data, error } = await supabase.rpc('create_or_get_dm_conversation', {
+    other_user_id: otherUserId,
+  });
+
+  if (error) throw error;
+
+  return data as string;
+}
+
 export async function addConversationMember(member: Omit<ConversationMember, 'created_at'>): Promise<ConversationMember> {
   const { data, error } = await supabase
     .from('conversation_members')
     .insert(member)
-    .select()
+    .select(CONVERSATION_MEMBER_COLUMNS)
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function markConversationAsRead(conversationId: string, userId: string): Promise<void> {
+  const { error } = await supabase
+    .from('conversation_members')
+    .update({ last_read_at: new Date().toISOString() })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', userId);
+
+  if (error) {
+    if (error.code === '42703' || error.message?.toLowerCase().includes('last_read_at')) {
+      return;
+    }
+    throw error;
+  }
 }
 
 export async function removeConversationMember(conversationId: string, userId: string): Promise<void> {
@@ -315,7 +386,7 @@ export async function createMessage(message: Omit<Message, 'message_id' | 'creat
   const { data, error } = await supabase
     .from('messages')
     .insert(message)
-    .select()
+    .select(MESSAGE_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -334,7 +405,7 @@ export async function updateMessage(messageId: string, updates: Partial<Message>
     .from('messages')
     .update(updates)
     .eq('message_id', messageId)
-    .select()
+    .select(MESSAGE_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -354,11 +425,65 @@ export async function createMessageAttachment(attachment: Omit<MessageAttachment
   const { data, error } = await supabase
     .from('message_attachments')
     .insert(attachment)
+    .select(MESSAGE_ATTACHMENT_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+// ============================================
+// ENROLLMENT LEADS
+// ============================================
+
+export async function updateLeadStatus(
+  leadId: string,
+  status: EnrollmentLead['status']
+): Promise<void> {
+  const { error } = await supabase
+    .from('enrollment_leads')
+    .update({ status })
+    .eq('lead_id', leadId);
+
+  if (error) throw error;
+}
+
+// ============================================
+// STUDENT FEEDBACK
+// ============================================
+
+export async function createStudentFeedback(
+  feedback: Omit<StudentFeedback, 'feedback_id' | 'created_at' | 'updated_at'>
+): Promise<StudentFeedback> {
+  const { data, error } = await supabase
+    .from('student_feedback')
+    .insert(feedback)
     .select()
     .single();
 
   if (error) throw error;
   return data;
+}
+
+export async function updateStudentFeedback(feedbackId: string, updates: Partial<StudentFeedback>): Promise<StudentFeedback> {
+  const { data, error } = await supabase
+    .from('student_feedback')
+    .update(updates)
+    .eq('feedback_id', feedbackId)
+    .select()
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteStudentFeedback(feedbackId: string): Promise<void> {
+  const { error } = await supabase
+    .from('student_feedback')
+    .delete()
+    .eq('feedback_id', feedbackId);
+
+  if (error) throw error;
 }
 
 // ============================================
@@ -395,4 +520,14 @@ export async function deleteReview(reviewId: string): Promise<void> {
     .eq('review_id', reviewId);
 
   if (error) throw error;
+}
+
+export async function registerInvitedEmail(email: string): Promise<string> {
+  const normalizedEmail = email.trim().toLowerCase();
+  const { data, error } = await supabase.rpc('register_invited_email', {
+    invited_email: normalizedEmail,
+  });
+
+  if (error) throw error;
+  return data as string;
 }

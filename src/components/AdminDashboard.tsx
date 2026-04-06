@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Button } from './ui/button';
 import { AdminAnnouncementsTab } from './admin/AdminAnnouncementsTab';
@@ -6,8 +6,9 @@ import { AdminUsersTab } from './admin/AdminUsersTab';
 import { AdminMessagesTab } from './admin/AdminMessagesTab';
 import { AdminBlogTab } from './admin/AdminBlogTab';
 import { FeedbackTab as AdminFeedbackTab } from './admin/FeedbackTab';
+import { AdminEnrollmentLeadsTab } from './admin/AdminEnrollmentLeadsTab';
 import { AdminProfileTab } from './admin/AdminProfileTab';
-import { LogOut, Bell, Users, MessageSquare, Shield, BookOpen, MessagesSquare, UserCog, Award, UserCircle } from 'lucide-react';
+import { LogOut, Bell, Users, MessageSquare, Shield, BookOpen, MessagesSquare, UserCog, Award, UserCircle, ClipboardList } from 'lucide-react';
 import { Badge } from './ui/badge';
 import { Avatar, AvatarFallback } from './ui/avatar';
 import {
@@ -18,6 +19,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { getUnreadMessageCount } from '../lib/supabase/queries';
 
 type User = {
   id: string;
@@ -31,13 +33,26 @@ type AdminDashboardProps = {
   onLogout: () => void;
 };
 
-type MainSection = 'communications' | 'management';
+type MainSection = 'communications' | 'management' | 'leads';
 
 export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
   const [activeSection, setActiveSection] = useState<MainSection>('communications');
   const [activeTab, setActiveTab] = useState('announcements');
-  const [unreadMessages] = useState(5); // Mock unread count
+  const [unreadMessages, setUnreadMessages] = useState(0);
   const [showProfile, setShowProfile] = useState(false);
+
+  useEffect(() => {
+    const loadUnreadMessages = async () => {
+      try {
+        const count = await getUnreadMessageCount(user.id);
+        setUnreadMessages(count);
+      } catch (error) {
+        console.error('Failed to load unread message count:', error);
+      }
+    };
+
+    loadUnreadMessages();
+  }, [user.id]);
 
   const getInitials = (name: string) => {
     return name
@@ -114,8 +129,8 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             <Button
               variant={activeSection === 'management' ? 'default' : 'ghost'}
               className={`rounded-none border-b-2 ${
-                activeSection === 'management' 
-                  ? 'border-primary' 
+                activeSection === 'management'
+                  ? 'border-primary'
                   : 'border-transparent'
               }`}
               onClick={() => {
@@ -125,6 +140,18 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
             >
               <UserCog className="w-4 h-4 mr-2" />
               Management
+            </Button>
+            <Button
+              variant={activeSection === 'leads' ? 'default' : 'ghost'}
+              className={`rounded-none border-b-2 ${
+                activeSection === 'leads'
+                  ? 'border-primary'
+                  : 'border-transparent'
+              }`}
+              onClick={() => setActiveSection('leads')}
+            >
+              <ClipboardList className="w-4 h-4 mr-2" />
+              Enrollment Leads
             </Button>
           </div>
         </div>
@@ -167,9 +194,13 @@ export function AdminDashboard({ user, onLogout }: AdminDashboardProps) {
                 </TabsContent>
 
                 <TabsContent value="messages">
-                  <AdminMessagesTab user={user} />
+                  <AdminMessagesTab user={user} onUnreadCountChange={setUnreadMessages} />
                 </TabsContent>
               </Tabs>
+            )}
+
+            {activeSection === 'leads' && (
+              <AdminEnrollmentLeadsTab />
             )}
 
             {activeSection === 'management' && (
