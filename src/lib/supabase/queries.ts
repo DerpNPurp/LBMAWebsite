@@ -143,6 +143,38 @@ export async function getAllStudents(): Promise<Student[]> {
 }
 
 // ============================================
+// AUTHOR HYDRATION HELPER
+// ============================================
+
+/**
+ * Given rows with `author_user_id`, fetches display names in a single query
+ * and returns rows with a `profiles: { display_name: string | null }` field attached.
+ * Falls back gracefully if the profile fetch fails.
+ */
+async function hydrateAuthorNames<T extends { author_user_id: string }>(
+  rows: T[]
+): Promise<(T & { profiles: { display_name: string | null } })[]> {
+  const authorIds = Array.from(
+    new Set(rows.map(r => r.author_user_id).filter((id): id is string => Boolean(id)))
+  );
+  if (authorIds.length === 0) {
+    return rows.map(r => ({ ...r, profiles: { display_name: null } }));
+  }
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, display_name')
+    .in('user_id', authorIds);
+
+  const nameById = new Map(
+    (profiles ?? []).map(p => [p.user_id as string, p.display_name as string | null])
+  );
+  return rows.map(r => ({
+    ...r,
+    profiles: { display_name: nameById.get(r.author_user_id) ?? null },
+  }));
+}
+
+// ============================================
 // ANNOUNCEMENTS
 // ============================================
 
@@ -153,36 +185,9 @@ export async function getAnnouncements(): Promise<Announcement[]> {
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false });
 
-  if (error) {
-    throw error;
-  }
-  const rows = data || [];
-  if (rows.length === 0) return [];
-
-  const authorIds = Array.from(
-    new Set(
-      rows
-        .map((row: any) => row.author_user_id)
-        .filter((value: unknown): value is string => typeof value === 'string' && value.length > 0),
-    ),
-  );
-
-  if (authorIds.length === 0) return rows;
-
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('user_id, display_name')
-    .in('user_id', authorIds);
-
-  if (profilesError) {
-    return rows;
-  }
-
-  const profileById = new Map((profiles || []).map((profile: any) => [profile.user_id, profile.display_name]));
-  return rows.map((row: any) => ({
-    ...row,
-    profiles: { display_name: profileById.get(row.author_user_id) || null },
-  }));
+  if (error) throw error;
+  if (!data || data.length === 0) return [];
+  return hydrateAuthorNames(data as Announcement[]);
 }
 
 export async function getAnnouncement(announcementId: string) {
@@ -222,36 +227,9 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
     .select(BLOG_POST_COLUMNS)
     .order('created_at', { ascending: false });
 
-  if (error) {
-    throw error;
-  }
-  const rows = data || [];
-  if (rows.length === 0) return [];
-
-  const authorIds = Array.from(
-    new Set(
-      rows
-        .map((row: any) => row.author_user_id)
-        .filter((value: unknown): value is string => typeof value === 'string' && value.length > 0),
-    ),
-  );
-
-  if (authorIds.length === 0) return rows;
-
-  const { data: profiles, error: profilesError } = await supabase
-    .from('profiles')
-    .select('user_id, display_name')
-    .in('user_id', authorIds);
-
-  if (profilesError) {
-    return rows;
-  }
-
-  const profileById = new Map((profiles || []).map((profile: any) => [profile.user_id, profile.display_name]));
-  return rows.map((row: any) => ({
-    ...row,
-    profiles: { display_name: profileById.get(row.author_user_id) || null },
-  }));
+  if (error) throw error;
+  if (!data || data.length === 0) return [];
+  return hydrateAuthorNames(data as BlogPost[]);
 }
 
 export async function getBlogPost(postId: string) {

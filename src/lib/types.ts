@@ -1,5 +1,20 @@
 export type UserRole = 'admin' | 'family';
 
+export type BeltLevel =
+  | 'White Belt'
+  | 'Yellow Belt'
+  | 'Orange Belt'
+  | 'Purple Belt'
+  | 'Blue Belt'
+  | 'Green Belt'
+  | 'Brown Belt'
+  | 'Red Belt'
+  | 'Black Belt';
+
+export type Relationship = 'mother' | 'father' | 'guardian' | 'grandparent' | 'other';
+
+export type Rating = 1 | 2 | 3 | 4 | 5;
+
 export type User = {
   id: string;
   email: string;
@@ -11,8 +26,8 @@ export type Profile = {
   user_id: string;
   role: UserRole;
   display_name: string;
-  is_active?: boolean;
-  deactivated_at?: string | null;
+  is_active: boolean;
+  deactivated_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -38,7 +53,7 @@ export type Guardian = {
   last_name: string;
   email: string | null;
   phone_number: string | null;
-  relationship: string | null;
+  relationship: Relationship | null;
   is_primary_contact: boolean;
   created_at: string;
   updated_at: string;
@@ -50,7 +65,7 @@ export type Student = {
   first_name: string;
   last_name: string;
   date_of_birth: string | null;
-  belt_level: string | null;
+  belt_level: BeltLevel | null;
   status: 'active' | 'inactive';
   notes: string | null;
   created_at: string;
@@ -146,12 +161,22 @@ export type EnrollmentLead = {
   created_at: string;
 };
 
+export type FeedbackTest = {
+  test_id: string;
+  title: string;
+  test_date: string;        // "YYYY-MM-DD"
+  test_time: string | null; // "HH:MM:SS"
+  description: string | null;
+  created_by: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 export type StudentFeedback = {
   feedback_id: string;
   student_id: string;
   author_user_id: string;
-  event_title: string;
-  event_date: string | null;
+  test_id: string;
   body: string;
   created_at: string;
   updated_at: string;
@@ -161,7 +186,8 @@ export type Review = {
   review_id: string;
   family_id: string;
   author_user_id: string;
-  rating: number;
+  display_name: string | null;
+  rating: Rating;
   review: string;
   created_at: string;
   updated_at: string;
