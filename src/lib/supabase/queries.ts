@@ -14,17 +14,26 @@ import type {
   MessageAttachment,
   EnrollmentLead,
   StudentFeedback,
+  FeedbackTest,
   Review,
 } from '../types';
 import {
+  ANNOUNCEMENT_COLUMNS,
+  ANNOUNCEMENT_COMMENT_COLUMNS,
+  BLOG_COMMENT_COLUMNS,
+  BLOG_POST_COLUMNS,
   CONVERSATION_COLUMNS,
   CONVERSATION_MEMBER_COLUMNS,
+  ENROLLMENT_LEAD_COLUMNS,
   FAMILY_COLUMNS,
+  FEEDBACK_TEST_COLUMNS,
   GUARDIAN_COLUMNS,
   MESSAGE_ATTACHMENT_COLUMNS,
   MESSAGE_COLUMNS,
   PROFILE_COLUMNS,
+  REVIEW_COLUMNS,
   STUDENT_COLUMNS,
+  STUDENT_FEEDBACK_COLUMNS,
 } from './selects';
 
 // ============================================
@@ -123,6 +132,16 @@ export async function getStudentsByFamily(familyId: string): Promise<Student[]> 
   return data || [];
 }
 
+export async function getAllStudents(): Promise<Student[]> {
+  const { data, error } = await supabase
+    .from('students')
+    .select(STUDENT_COLUMNS)
+    .order('first_name', { ascending: true });
+
+  if (error) throw error;
+  return data ?? [];
+}
+
 // ============================================
 // ANNOUNCEMENTS
 // ============================================
@@ -130,7 +149,7 @@ export async function getStudentsByFamily(familyId: string): Promise<Student[]> 
 export async function getAnnouncements(): Promise<Announcement[]> {
   const { data, error } = await supabase
     .from('announcements')
-    .select('*')
+    .select(ANNOUNCEMENT_COLUMNS)
     .order('is_pinned', { ascending: false })
     .order('created_at', { ascending: false });
 
@@ -169,7 +188,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
 export async function getAnnouncement(announcementId: string) {
   const { data, error } = await supabase
     .from('announcements')
-    .select('*')
+    .select(ANNOUNCEMENT_COLUMNS)
     .eq('announcement_id', announcementId)
     .single();
 
@@ -181,7 +200,7 @@ export async function getAnnouncementComments(announcementId: string): Promise<A
   const { data, error } = await supabase
     .from('announcement_comments')
     .select(`
-      *,
+      ${ANNOUNCEMENT_COMMENT_COLUMNS},
       profiles!announcement_comments_author_user_id_fkey (
         display_name
       )
@@ -200,7 +219,7 @@ export async function getAnnouncementComments(announcementId: string): Promise<A
 export async function getBlogPosts(): Promise<BlogPost[]> {
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('*')
+    .select(BLOG_POST_COLUMNS)
     .order('created_at', { ascending: false });
 
   if (error) {
@@ -238,7 +257,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
 export async function getBlogPost(postId: string) {
   const { data, error } = await supabase
     .from('blog_posts')
-    .select('*')
+    .select(BLOG_POST_COLUMNS)
     .eq('post_id', postId)
     .single();
 
@@ -250,7 +269,7 @@ export async function getBlogComments(postId: string): Promise<BlogComment[]> {
   const { data, error } = await supabase
     .from('blog_comments')
     .select(`
-      *,
+      ${BLOG_COMMENT_COLUMNS},
       profiles!blog_comments_author_user_id_fkey (
         display_name
       )
@@ -260,6 +279,37 @@ export async function getBlogComments(postId: string): Promise<BlogComment[]> {
 
   if (error) throw error;
   return data || [];
+}
+
+/**
+ * Fetch comments for multiple posts in a single query.
+ * Returns a map of post_id → comment array.
+ */
+export async function getBlogCommentsForPosts(
+  postIds: string[]
+): Promise<Record<string, BlogComment[]>> {
+  if (postIds.length === 0) return {};
+
+  const { data, error } = await supabase
+    .from('blog_comments')
+    .select(`
+      ${BLOG_COMMENT_COLUMNS},
+      profiles!blog_comments_author_user_id_fkey (
+        display_name
+      )
+    `)
+    .in('post_id', postIds)
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+
+  const result: Record<string, BlogComment[]> = {};
+  for (const row of data ?? []) {
+    const postId = (row as BlogComment & { post_id: string }).post_id;
+    if (!result[postId]) result[postId] = [];
+    result[postId].push(row as BlogComment);
+  }
+  return result;
 }
 
 // ============================================
@@ -512,7 +562,7 @@ export async function getCommunicationCounts(userId: string): Promise<{
 export async function getEnrollmentLeads(): Promise<EnrollmentLead[]> {
   const { data, error } = await supabase
     .from('enrollment_leads')
-    .select('*')
+    .select(ENROLLMENT_LEAD_COLUMNS)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -520,10 +570,70 @@ export async function getEnrollmentLeads(): Promise<EnrollmentLead[]> {
 }
 
 // ============================================
+// FEEDBACK TESTS
+// ============================================
+
+export async function getAllFeedbackTests(): Promise<FeedbackTest[]> {
+  const { data, error } = await supabase
+    .from('feedback_tests')
+    .select(FEEDBACK_TEST_COLUMNS)
+    .order('test_date', { ascending: false });
+
+  if (error) throw error;
+  return data || [];
+}
+
+export async function getFeedbackTestsByFamily(familyId: string): Promise<FeedbackTest[]> {
+  const { data: students, error: studentsError } = await supabase
+    .from('students')
+    .select('student_id')
+    .eq('family_id', familyId);
+
+  if (studentsError) throw studentsError;
+  if (!students || students.length === 0) return [];
+
+  const studentIds = students.map((s: any) => s.student_id);
+
+  // Single join: student_feedback → feedback_tests, deduped client-side
+  const { data, error } = await supabase
+    .from('student_feedback')
+    .select(`test_id, feedback_tests(${FEEDBACK_TEST_COLUMNS})`)
+    .in('student_id', studentIds);
+
+  if (error) throw error;
+
+  const testMap = new Map<string, FeedbackTest>();
+  for (const row of (data || []) as any[]) {
+    const test = row.feedback_tests as FeedbackTest | null;
+    if (test) testMap.set(test.test_id, test);
+  }
+
+  return Array.from(testMap.values()).sort((a, b) => b.test_date.localeCompare(a.test_date));
+}
+
+// ============================================
 // STUDENT FEEDBACK
 // ============================================
 
-export async function getStudentFeedbackByFamily(familyId: string): Promise<(StudentFeedback & { profiles: { display_name: string | null } | null })[]> {
+type FeedbackWithRelations = StudentFeedback & {
+  profiles: { display_name: string | null } | null;
+};
+
+async function attachAuthorNames(rows: StudentFeedback[]): Promise<FeedbackWithRelations[]> {
+  if (rows.length === 0) return [];
+  const authorIds = Array.from(new Set(rows.map((r) => r.author_user_id)));
+  const { data: profiles } = await supabase
+    .from('profiles')
+    .select('user_id, display_name')
+    .in('user_id', authorIds);
+  const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name]));
+  return rows.map((r) => ({
+    ...r,
+    profiles: { display_name: nameMap.get(r.author_user_id) ?? null },
+  }));
+}
+
+export async function getStudentFeedbackByFamily(familyId: string): Promise<FeedbackWithRelations[]> {
   const { data: students, error: studentsError } = await supabase
     .from('students')
     .select('student_id')
@@ -536,32 +646,22 @@ export async function getStudentFeedbackByFamily(familyId: string): Promise<(Stu
 
   const { data, error } = await supabase
     .from('student_feedback')
-    .select(`
-      *,
-      profiles!student_feedback_author_user_id_fkey (
-        display_name
-      )
-    `)
+    .select(STUDENT_FEEDBACK_COLUMNS)
     .in('student_id', studentIds)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return attachAuthorNames(data || []);
 }
 
-export async function getAllStudentFeedback(): Promise<(StudentFeedback & { profiles: { display_name: string | null } | null })[]> {
+export async function getAllStudentFeedback(): Promise<FeedbackWithRelations[]> {
   const { data, error } = await supabase
     .from('student_feedback')
-    .select(`
-      *,
-      profiles!student_feedback_author_user_id_fkey (
-        display_name
-      )
-    `)
+    .select(STUDENT_FEEDBACK_COLUMNS)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
-  return data || [];
+  return attachAuthorNames(data || []);
 }
 
 // ============================================
@@ -571,15 +671,7 @@ export async function getAllStudentFeedback(): Promise<(StudentFeedback & { prof
 export async function getReviews(): Promise<Review[]> {
   const { data, error } = await supabase
     .from('reviews')
-    .select(`
-      *,
-      families!reviews_family_id_fkey (
-        primary_email
-      ),
-      profiles!reviews_author_user_id_fkey (
-        display_name
-      )
-    `)
+    .select(REVIEW_COLUMNS)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
@@ -589,7 +681,7 @@ export async function getReviews(): Promise<Review[]> {
 export async function getReviewByFamily(familyId: string): Promise<Review | null> {
   const { data, error } = await supabase
     .from('reviews')
-    .select('*')
+    .select(REVIEW_COLUMNS)
     .eq('family_id', familyId)
     .maybeSingle();
 
@@ -601,7 +693,7 @@ export async function getUserReview(userId: string): Promise<Review | null> {
   const { data, error } = await supabase
     .from('reviews')
     .select(`
-      *,
+      ${REVIEW_COLUMNS},
       families!reviews_family_id_fkey (
         family_id,
         primary_email
