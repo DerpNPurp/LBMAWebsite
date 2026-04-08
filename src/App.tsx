@@ -106,7 +106,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute user={user} loading={loading} accessState={accessState}>
               {user?.role === 'admin' ? (
-                <AdminDashboardV2 user={user} onLogout={handleLogout} onRefreshUser={refreshUser} />
+                <Navigate to="/admin" replace />
               ) : (
                 <DashboardV2 user={user!} onLogout={handleLogout} onRefreshUser={refreshUser} />
               )}

@@ -59,7 +59,9 @@ export async function deleteFile(path: string): Promise<void> {
 
 export function generateFilePath(userId: string, fileName: string): string {
   const timestamp = Date.now();
-  const sanitizedFileName = fileName.replace(/[^a-zA-Z0-9.-]/g, '_');
+  // Strip any directory components first to prevent path traversal
+  const basename = fileName.split('/').pop()?.split('\\').pop() ?? 'file';
+  const sanitizedFileName = basename.replace(/[^a-zA-Z0-9.-]/g, '_');
   return `${userId}/${timestamp}-${sanitizedFileName}`;
 }
 

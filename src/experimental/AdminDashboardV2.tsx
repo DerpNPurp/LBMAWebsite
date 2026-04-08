@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -48,6 +49,7 @@ type User = {
 type AdminDashboardV2Props = {
   user: User;
   onLogout: () => void;
+  onRefreshUser: () => Promise<void>;
 };
 
 type AdminTabId =
@@ -100,8 +102,10 @@ function getTabLabel(id: AdminTabId): string {
   return 'Profile';
 }
 
-export function AdminDashboardV2({ user, onLogout }: AdminDashboardV2Props) {
-  const [activeTab, setActiveTab] = useState<AdminTabId>('announcements');
+export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboardV2Props) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as AdminTabId) ?? 'announcements';
+  const setActiveTab = (tab: AdminTabId) => setSearchParams({ tab }, { replace: true });
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -257,7 +261,7 @@ export function AdminDashboardV2({ user, onLogout }: AdminDashboardV2Props) {
           {activeTab === 'feedback' && <AdminFeedbackTab />}
           {activeTab === 'leads' && <AdminEnrollmentLeadsTab />}
           {activeTab === 'profile' && (
-            <AdminProfileTab user={user} onClose={() => setActiveTab('announcements')} />
+            <AdminProfileTab user={user} onClose={() => setActiveTab('announcements')} onRefreshUser={onRefreshUser} />
           )}
         </main>
       </SidebarInset>

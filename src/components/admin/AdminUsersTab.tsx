@@ -6,9 +6,11 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '.
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Search, Eye, UserPlus, Mail, Edit2, Loader2, UserX, UserCheck, Archive } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
+import { toast } from 'sonner';
 import { registerInvitedEmail } from '../../lib/supabase/mutations';
 import { supabase } from '../../lib/supabase/client';
 import {
@@ -28,12 +30,17 @@ type User = {
 
 const beltLevels = ['White Belt', 'Yellow Belt', 'Orange Belt', 'Purple Belt', 'Blue Belt', 'Green Belt', 'Brown Belt', 'Red Belt', 'Black Belt'];
 
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
 export function AdminUsersTab({ user: _user }: { user: User }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [editingStudent, setEditingStudent] = useState<{ studentId: string; newBeltLevel: string; newStatus: StudentStatus } | null>(null);
   const [editingGuardian, setEditingGuardian] = useState<GuardianRow | null>(null);
+  const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const {
     filteredFamilies,
     filteredStudents,
@@ -58,13 +65,17 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
       await loadFamilyDetails(familyId);
       setEditingGuardian(null);
     } catch (error) {
-      alert('Error loading family details: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error loading family details: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
   const handleSendInvite = async () => {
     if (!inviteEmail.trim()) return;
     const normalizedEmail = inviteEmail.trim().toLowerCase();
+    if (!isValidEmail(normalizedEmail)) {
+      toast.error('Please enter a valid email address.');
+      return;
+    }
     try {
       await registerInvitedEmail(normalizedEmail);
       const { error } = await supabase.auth.signInWithOtp({
@@ -72,20 +83,20 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
         options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/dashboard` },
       });
       if (error) throw error;
-      alert(`Invitation prepared and sent to ${normalizedEmail}.`);
+      toast.success(`Invitation sent to ${normalizedEmail}.`);
       setInviteEmail('');
       setIsInviteDialogOpen(false);
     } catch (error) {
-      alert('Error sending invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error sending invitation: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
   const handleFamilyStatus = async (familyId: string, status: FamilyStatus) => {
     try {
       await updateFamilyStatus(familyId, status);
-      alert(status === 'active' ? 'Family reactivated successfully.' : `Family ${status} successfully. History was retained.`);
+      toast.success(status === 'active' ? 'Family reactivated.' : `Family ${status}.`);
     } catch (error) {
-      alert('Error updating family status: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error updating family status: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -101,22 +112,28 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
         status: editingStudent.newStatus,
       });
       setEditingStudent(null);
-      alert('Student updated successfully.');
+      toast.success('Student updated.');
     } catch (error) {
-      alert('Error updating student: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error updating student: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
-  const handleArchiveStudent = async (student: StudentRow) => {
-    if (!confirm(`Archive ${student.studentName}? This keeps history but removes active access.`)) return;
-    try {
-      const archiveNote = `[Archived by admin ${new Date().toISOString()}]`;
-      const nextNotes = student.notes ? `${student.notes}\n${archiveNote}` : archiveNote;
-      await saveStudent(student.studentId, { status: 'inactive', notes: nextNotes });
-      alert('Student archived with history retention.');
-    } catch (error) {
-      alert('Error archiving student: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+  const handleArchiveStudent = (student: StudentRow) => {
+    setConfirmState({
+      title: 'Archive student',
+      description: `Archive ${student.studentName}? This keeps history but removes active access.`,
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          const archiveNote = `[Archived by admin ${new Date().toISOString()}]`;
+          const nextNotes = student.notes ? `${student.notes}\n${archiveNote}` : archiveNote;
+          await saveStudent(student.studentId, { status: 'inactive', notes: nextNotes });
+          toast.success('Student archived.');
+        } catch (error) {
+          toast.error('Error archiving student: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+      },
+    });
   };
 
   const handleSaveGuardian = async () => {
@@ -130,18 +147,18 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
         relationship: editingGuardian.relationship || null,
       });
       setEditingGuardian(null);
-      alert('Guardian updated successfully.');
+      toast.success('Guardian updated.');
     } catch (error) {
-      alert('Error updating guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error updating guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
   const handleSetPrimaryGuardian = async (guardianId: string) => {
     try {
       await setPrimaryGuardian(guardianId);
-      alert('Primary guardian updated.');
+      toast.success('Primary guardian updated.');
     } catch (error) {
-      alert('Error setting primary guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error setting primary guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -254,7 +271,16 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                               View
                             </Button>
                             {family.status === 'active' ? (
-                              <Button variant="outline" size="sm" disabled={saving} onClick={() => void handleFamilyStatus(family.id, 'inactive')}>
+                              <Button variant="destructive" size="sm" disabled={saving} onClick={() =>
+                                setConfirmState({
+                                  title: 'Deactivate family',
+                                  description: `Deactivate ${family.primaryContact}? They will lose portal access. History is preserved.`,
+                                  onConfirm: () => {
+                                    setConfirmState(null);
+                                    void handleFamilyStatus(family.id, 'inactive');
+                                  },
+                                })
+                              }>
                                 <UserX className="w-4 h-4 mr-2" />
                                 Deactivate
                               </Button>
@@ -265,7 +291,16 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                               </Button>
                             )}
                             {family.status !== 'archived' && (
-                              <Button variant="outline" size="sm" disabled={saving} onClick={() => void handleFamilyStatus(family.id, 'archived')}>
+                              <Button variant="outline" size="sm" disabled={saving} onClick={() =>
+                                setConfirmState({
+                                  title: 'Archive family',
+                                  description: `Archive ${family.primaryContact}? This keeps all history but removes access permanently.`,
+                                  onConfirm: () => {
+                                    setConfirmState(null);
+                                    void handleFamilyStatus(family.id, 'archived');
+                                  },
+                                })
+                              }>
                                 <Archive className="w-4 h-4 mr-2" />
                                 Archive
                               </Button>
@@ -482,6 +517,15 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
           )}
         </DialogContent>
       </Dialog>
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.title ?? ''}
+        description={confirmState?.description ?? ''}
+        destructive
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 }

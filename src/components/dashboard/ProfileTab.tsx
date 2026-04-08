@@ -7,17 +7,13 @@ import { Label } from '../ui/label';
 import { Badge } from '../ui/badge';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Plus, Edit2, User, Users, Home, Trash2, Star, Check, Loader2 } from 'lucide-react';
+import { Plus, Edit2, User as UserIcon, Users, Home, Trash2, Star, Check, Loader2 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
-import { createReview, updateReview } from '../../lib/supabase/mutations';
-
-type User = {
-  id: string;
-  email: string;
-  role: 'admin' | 'family';
-  displayName: string;
-};
+import { createReview, updateProfile, updateReview } from '../../lib/supabase/mutations';
+import type { User, Review } from '../../lib/types';
+import { toast } from 'sonner';
 
 // Convert database types to UI types
 type Guardian = {
@@ -40,15 +36,6 @@ type Student = {
   notes: string;
 };
 
-type Review = {
-  id: string;
-  parentName: string;
-  rating: number;
-  review: string;
-  createdAt: string;
-  updatedAt?: string;
-};
-
 const beltLevels = [
   'White Belt',
   'Yellow Belt',
@@ -61,7 +48,7 @@ const beltLevels = [
   'Black Belt'
 ];
 
-export function ProfileTab({ user }: { user: User }) {
+export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; onRefreshUser: () => Promise<void> }) {
   const {
     family,
     guardians: dbGuardians,
@@ -84,6 +71,7 @@ export function ProfileTab({ user }: { user: User }) {
   const [isAddingGuardian, setIsAddingGuardian] = useState(false);
   const [editingGuardian, setEditingGuardian] = useState<Guardian | null>(null);
   const [saving, setSaving] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   const [newStudent, setNewStudent] = useState<Partial<Student>>({
     firstName: '',
@@ -122,17 +110,10 @@ export function ProfileTab({ user }: { user: User }) {
       setExistingReview(null);
       return;
     }
-    setExistingReview({
-      id: dbReview.review_id,
-      parentName: user.displayName,
-      rating: dbReview.rating,
-      review: dbReview.review,
-      createdAt: dbReview.created_at,
-      updatedAt: dbReview.updated_at,
-    });
+    setExistingReview(dbReview);
     setRating(dbReview.rating);
     setReviewText(dbReview.review);
-  }, [dbReview, user.displayName]);
+  }, [dbReview]);
 
   useEffect(() => {
     if (family) {
@@ -203,10 +184,10 @@ export function ProfileTab({ user }: { user: User }) {
         state: editingFamilyData.state || null,
         zip: editingFamilyData.zip || null,
       });
-      alert('Family information saved!');
+      toast.success('Family information saved!');
       setIsEditingFamily(false);
     } catch (error) {
-      alert('Error saving family information: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error saving family information: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSaving(false);
     }
@@ -247,9 +228,9 @@ export function ProfileTab({ user }: { user: User }) {
           setIsAddingStudent(false);
         }
       }
-      alert('Student information saved!');
+      toast.success('Student saved!');
     } catch (error) {
-      alert('Error saving student: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error saving student: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSaving(false);
     }
@@ -267,6 +248,12 @@ export function ProfileTab({ user }: { user: User }) {
           relationship: editingGuardian.relationship || null,
           is_primary_contact: editingGuardian.isPrimaryContact,
         });
+        if (editingGuardian.isPrimaryContact) {
+          await updateProfile(user.id, {
+            display_name: `${editingGuardian.firstName} ${editingGuardian.lastName}`,
+          });
+          await onRefreshUser();
+        }
         setEditingGuardian(null);
       } else {
         // Add new guardian
@@ -290,9 +277,9 @@ export function ProfileTab({ user }: { user: User }) {
           setIsAddingGuardian(false);
         }
       }
-      alert('Guardian information saved!');
+      toast.success('Guardian saved!');
     } catch (error) {
-      alert('Error saving guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error saving guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSaving(false);
     }
@@ -301,20 +288,27 @@ export function ProfileTab({ user }: { user: User }) {
   const handleSetPrimaryGuardian = async (guardianId: string) => {
     setSaving(true);
     try {
-      // Set all guardians to not primary, then set the selected one to primary
-      const updates = guardians.map(async g => {
-        const dbGuardian = dbGuardians.find(dbg => dbg.guardian_id === g.id);
-        if (dbGuardian) {
+      const updates = guardians
+        .map(g => {
+          const dbGuardian = dbGuardians.find(dbg => dbg.guardian_id === g.id);
+          if (!dbGuardian) return null;
           return updateGuardian(dbGuardian.guardian_id, {
             is_primary_contact: g.id === guardianId,
           });
-        }
-        return null;
-      });
+        })
+        .filter((p): p is Promise<unknown> => p !== null);
+
       await Promise.all(updates);
-      alert('Primary guardian updated!');
+      const newPrimary = guardians.find(g => g.id === guardianId);
+      if (newPrimary) {
+        await updateProfile(user.id, {
+          display_name: `${newPrimary.firstName} ${newPrimary.lastName}`,
+        });
+        await onRefreshUser();
+      }
+      toast.success('Primary guardian updated!');
     } catch (error) {
-      alert('Error updating primary guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error updating primary guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSaving(false);
     }
@@ -322,38 +316,43 @@ export function ProfileTab({ user }: { user: User }) {
 
   const handleRemoveGuardian = async (guardianId: string) => {
     if (guardians.length <= 1) {
-      alert('Cannot remove the only guardian. Please add another guardian first.');
-      return;
-    }
-    
-    const guardian = guardians.find(g => g.id === guardianId);
-    if (guardian?.isPrimaryContact) {
-      alert('Cannot remove the primary guardian. Please set another guardian as primary first.');
+      toast.error('Cannot remove the only guardian. Please add another first.');
       return;
     }
 
-    if (confirm('Are you sure you want to remove this guardian?')) {
-      setSaving(true);
-      try {
-        await removeGuardian(guardianId);
-        alert('Guardian removed!');
-      } catch (error) {
-        alert('Error removing guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
-      } finally {
-        setSaving(false);
-      }
+    const guardian = guardians.find(g => g.id === guardianId);
+    if (guardian?.isPrimaryContact) {
+      toast.error('Cannot remove the primary guardian. Please reassign primary first.');
+      return;
     }
+
+    setConfirmState({
+      title: 'Remove guardian',
+      description: 'Are you sure you want to remove this guardian?',
+      onConfirm: async () => {
+        setConfirmState(null);
+        setSaving(true);
+        try {
+          await removeGuardian(guardianId);
+          toast.success('Guardian removed.');
+        } catch (error) {
+          toast.error('Error removing guardian: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        } finally {
+          setSaving(false);
+        }
+      },
+    });
   };
 
   // Review handlers
   const handleSaveReview = async () => {
     if (!reviewText.trim()) {
-      alert('Please write a review before submitting.');
+      toast.error('Please write a review before submitting.');
       return;
     }
 
     if (!family) {
-      alert('Family not found. Please refresh the page.');
+      toast.error('Family not found. Please refresh the page.');
       return;
     }
 
@@ -361,18 +360,11 @@ export function ProfileTab({ user }: { user: User }) {
     try {
       if (existingReview) {
         // Update existing review
-        const updated = await updateReview(existingReview.id, {
+        const updated = await updateReview(existingReview.review_id, {
           rating,
           review: reviewText.trim(),
         });
-        setExistingReview({
-          id: updated.review_id,
-          parentName: user.displayName,
-          rating: updated.rating,
-          review: updated.review,
-          createdAt: updated.created_at,
-          updatedAt: updated.updated_at,
-        });
+        setExistingReview(updated);
       } else {
         // Create new review
         const newReview = await createReview({
@@ -381,19 +373,12 @@ export function ProfileTab({ user }: { user: User }) {
           rating,
           review: reviewText.trim(),
         });
-        setExistingReview({
-          id: newReview.review_id,
-          parentName: user.displayName,
-          rating: newReview.rating,
-          review: newReview.review,
-          createdAt: newReview.created_at,
-          updatedAt: newReview.updated_at,
-        });
+        setExistingReview(newReview);
       }
       setIsEditingReview(false);
-      alert('Thank you! Your review has been submitted and will appear on the public website.');
+      toast.success('Review submitted! It will appear on the public website.');
     } catch (error) {
-      alert('Error saving review: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error saving review: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setReviewLoading(false);
     }
@@ -619,7 +604,7 @@ export function ProfileTab({ user }: { user: User }) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <User className="w-5 h-5" />
+              <UserIcon className="w-5 h-5" />
               <CardTitle>Students</CardTitle>
             </div>
             <Button size="sm" onClick={() => setIsAddingStudent(true)}>
@@ -1093,11 +1078,11 @@ export function ProfileTab({ user }: { user: User }) {
                 </div>
 
                 <div className="flex items-center justify-between text-xs text-muted-foreground">
-                  <span>Published by {existingReview.parentName}</span>
+                  <span>Published by {user.displayName}</span>
                   <span>
-                    {existingReview.updatedAt 
-                      ? `Updated ${formatReviewDate(existingReview.updatedAt)}`
-                      : `Posted ${formatReviewDate(existingReview.createdAt)}`
+                    {existingReview.updated_at
+                      ? `Updated ${formatReviewDate(existingReview.updated_at)}`
+                      : `Posted ${formatReviewDate(existingReview.created_at)}`
                     }
                   </span>
                 </div>
@@ -1123,6 +1108,16 @@ export function ProfileTab({ user }: { user: User }) {
           </CardContent>
         </Card>
       )}
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.title ?? ''}
+        description={confirmState?.description ?? ''}
+        confirmLabel="Remove"
+        destructive
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 }
