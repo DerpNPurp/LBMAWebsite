@@ -4,11 +4,13 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
+import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Label } from '../ui/label';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Edit2, Trash2, MessageCircle, Send, Search, Pin, PinOff, Loader2 } from 'lucide-react';
-import { getBlogPosts, getBlogComments } from '../../lib/supabase/queries';
+import { toast } from 'sonner';
+import { Edit2, Trash2, MessageCircle, Send, Search, Loader2 } from 'lucide-react';
+import { getBlogPosts, getBlogCommentsForPosts } from '../../lib/supabase/queries';
 import { updateBlogPost, deleteBlogPost, deleteBlogComment, createBlogComment } from '../../lib/supabase/mutations';
 import { subscribeToBlogPosts, unsubscribe } from '../../lib/supabase/realtime';
 
@@ -33,68 +35,8 @@ type BlogPost = {
   authorName: string;
   createdAt: string;
   comments: Comment[];
-  isPinned?: boolean;
 };
 
-const mockBlogPosts: BlogPost[] = [
-  {
-    id: '1',
-    title: 'Tips for Practicing at Home',
-    body: 'Hi everyone! I wanted to share some tips that have helped my kids practice their forms at home:\n\n1. Set aside 15-20 minutes each day\n2. Use YouTube videos to review techniques\n3. Practice in front of a mirror\n4. Make it fun with music!\n\nWhat works for your family?',
-    authorName: 'Jennifer Martinez',
-    createdAt: '2026-02-03T14:00:00Z',
-    comments: [
-      {
-        id: 'c1',
-        authorName: 'David Kim',
-        body: 'Great tips! We also use a reward chart for daily practice.',
-        createdAt: '2026-02-03T15:30:00Z'
-      },
-      {
-        id: 'c2',
-        authorName: 'Lisa Wong',
-        body: 'The mirror idea is genius! Thank you for sharing.',
-        createdAt: '2026-02-03T16:00:00Z'
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Anyone Carpooling to Saturday Classes?',
-    body: 'We live in the north side and are looking to coordinate carpooling for Saturday morning classes. If you\'re interested in carpooling, let me know in the comments!',
-    authorName: 'Michael Torres',
-    createdAt: '2026-02-02T19:00:00Z',
-    comments: [
-      {
-        id: 'c3',
-        authorName: 'Amanda Lee',
-        body: 'We\'re interested! We live on Oak Street.',
-        createdAt: '2026-02-02T20:00:00Z'
-      }
-    ]
-  },
-  {
-    id: '3',
-    title: 'Celebrating My Daughter\'s Yellow Belt!',
-    body: 'Just wanted to share how proud I am of Emma for earning her yellow belt yesterday! She worked so hard and it really paid off. Thank you to all the instructors for their support and encouragement!',
-    authorName: 'Karen Johnson',
-    createdAt: '2026-02-01T11:00:00Z',
-    comments: [
-      {
-        id: 'c4',
-        authorName: 'Rachel Green',
-        body: 'Congratulations Emma! 🎉',
-        createdAt: '2026-02-01T12:00:00Z'
-      },
-      {
-        id: 'c5',
-        authorName: 'Tom Anderson',
-        body: 'Way to go! My son tested yesterday too - such a proud moment!',
-        createdAt: '2026-02-01T13:00:00Z'
-      }
-    ]
-  }
-];
 
 export function AdminBlogTab({ user }: { user: User }) {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -107,6 +49,7 @@ export function AdminBlogTab({ user }: { user: User }) {
   const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
   const loadPosts = async () => {
     try {
@@ -123,11 +66,12 @@ export function AdminBlogTab({ user }: { user: User }) {
 
       setPosts(formatted);
 
-      // Load comments
+      // Load all comments in a single query
+      const postIds = formatted.map(p => p.id);
+      const rawComments = await getBlogCommentsForPosts(postIds);
       const commentsMap: { [key: string]: Comment[] } = {};
-      for (const post of formatted) {
-        const commentsData = await getBlogComments(post.id);
-        commentsMap[post.id] = commentsData.map((c: any) => ({
+      for (const [postId, commentRows] of Object.entries(rawComments)) {
+        commentsMap[postId] = (commentRows as any[]).map(c => ({
           id: c.comment_id,
           authorName: c.profiles?.display_name || 'Unknown',
           body: c.body,
@@ -137,7 +81,7 @@ export function AdminBlogTab({ user }: { user: User }) {
       setComments(commentsMap);
     } catch (error) {
       console.error('Error loading blog posts:', error);
-      alert('Error loading blog posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error loading blog posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setLoading(false);
     }
@@ -155,23 +99,15 @@ export function AdminBlogTab({ user }: { user: User }) {
     return () => unsubscribe(channel);
   }, []);
 
-  const handleTogglePin = async (id: string) => {
-    // Blog posts don't have pinning in the schema, so this is a no-op for now
-    alert('Pinning not yet implemented for blog posts');
-  };
-
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.body.toLowerCase().includes(searchTerm.toLowerCase()) ||
     post.authorName.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  // Sort posts: pinned first, then by date
-  const sortedPosts = [...filteredPosts].sort((a, b) => {
-    if (a.isPinned && !b.isPinned) return -1;
-    if (!a.isPinned && b.isPinned) return 1;
-    return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
-  });
+  const sortedPosts = [...filteredPosts].sort((a, b) =>
+    new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
 
   const handleUpdate = async () => {
     if (!editingPost || !editTitle.trim() || !editBody.trim()) return;
@@ -185,34 +121,46 @@ export function AdminBlogTab({ user }: { user: User }) {
       setEditTitle('');
       setEditBody('');
       await loadPosts();
-      alert('Blog post updated successfully!');
+      toast.success('Blog post updated!');
     } catch (error) {
-      alert('Error updating blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error updating blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
     } finally {
       setSaving(false);
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this blog post? This action cannot be undone.')) return;
-    try {
-      await deleteBlogPost(id);
-      await loadPosts();
-      alert('Blog post deleted successfully!');
-    } catch (error) {
-      alert('Error deleting blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+  const handleDelete = (id: string) => {
+    setConfirmState({
+      title: 'Delete blog post',
+      description: 'Are you sure you want to delete this blog post? This action cannot be undone.',
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          await deleteBlogPost(id);
+          await loadPosts();
+          toast.success('Blog post deleted!');
+        } catch (error) {
+          toast.error('Error deleting blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+      },
+    });
   };
 
-  const handleDeleteComment = async (postId: string, commentId: string) => {
-    if (!confirm('Are you sure you want to delete this comment?')) return;
-    try {
-      await deleteBlogComment(commentId);
-      await loadPosts();
-      alert('Comment deleted successfully!');
-    } catch (error) {
-      alert('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
+  const handleDeleteComment = (postId: string, commentId: string) => {
+    setConfirmState({
+      title: 'Delete comment',
+      description: 'Are you sure you want to delete this comment?',
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          await deleteBlogComment(commentId);
+          await loadPosts();
+          toast.success('Comment deleted!');
+        } catch (error) {
+          toast.error('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+      },
+    });
   };
 
   const openEditDialog = (post: BlogPost) => {
@@ -233,7 +181,7 @@ export function AdminBlogTab({ user }: { user: User }) {
       setCommentTexts({ ...commentTexts, [postId]: '' });
       await loadPosts();
     } catch (error) {
-      alert('Error posting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
   };
 
@@ -356,7 +304,7 @@ export function AdminBlogTab({ user }: { user: User }) {
             const postComments = comments[post.id] || [];
             return (
             <Card key={post.id}>
-              <CardHeader className={post.isPinned ? 'bg-secondary/50 border-l-4 border-l-primary' : ''}>
+              <CardHeader>
                 <div className="flex items-start justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
@@ -369,28 +317,10 @@ export function AdminBlogTab({ user }: { user: User }) {
                           {formatDate(post.createdAt)}
                         </p>
                       </div>
-                      {post.isPinned && (
-                        <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                          <Pin className="w-3 h-3" />
-                          Pinned
-                        </span>
-                      )}
                     </div>
                     <CardTitle>{post.title}</CardTitle>
                   </div>
                   <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleTogglePin(post.id)}
-                      title={post.isPinned ? 'Unpin post' : 'Pin post'}
-                    >
-                      {post.isPinned ? (
-                        <PinOff className="w-4 h-4" />
-                      ) : (
-                        <Pin className="w-4 h-4" />
-                      )}
-                    </Button>
                     <Button
                       variant="outline"
                       size="sm"
@@ -492,6 +422,16 @@ export function AdminBlogTab({ user }: { user: User }) {
           </p>
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.title ?? ''}
+        description={confirmState?.description ?? ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 }
