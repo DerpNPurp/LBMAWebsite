@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
+import { useEffect, useRef, useState } from 'react';
+import { User as SupabaseUser, Session } from '@supabase/supabase-js';
 import { supabase } from '../lib/supabase/client';
 import type { User, Profile } from '../lib/types';
 import { FAMILY_COLUMNS, PROFILE_COLUMNS } from '../lib/supabase/selects';
@@ -7,6 +7,7 @@ import { FAMILY_COLUMNS, PROFILE_COLUMNS } from '../lib/supabase/selects';
 type AccessState = 'ready' | 'needs_onboarding' | 'blocked';
 
 export function useAuth() {
+  const loadSeqRef = useRef(0);
   const [user, setUser] = useState<User>(null);
   const [loading, setLoading] = useState(true);
   const [profile, setProfile] = useState<Profile | null>(null);
@@ -18,7 +19,7 @@ export function useAuth() {
 
     const initAuth = async () => {
       try {
-        let session: any = null;
+        let session: Session | null = null;
 
         // 1) If we arrived via magic link, explicitly set the session from the hash
         if (typeof window !== 'undefined' && window.location.hash.includes('access_token')) {
@@ -69,7 +70,7 @@ export function useAuth() {
         if (!isMounted) return;
 
         if (session?.user) {
-          await loadUserProfile(session.user);
+          await loadUserProfile(session.user, ++loadSeqRef.current);
         } else {
           setAccessState('ready');
           setAccessMessage(null);
@@ -100,9 +101,10 @@ export function useAuth() {
 
       if (session?.user) {
         // Avoid awaiting async work inside auth callback to prevent lock contention.
+        const seq = ++loadSeqRef.current;
         setTimeout(() => {
           if (!isMounted) return;
-          void loadUserProfile(session.user);
+          void loadUserProfile(session.user, seq);
         }, 0);
       } else {
         setUser(null);
@@ -120,13 +122,15 @@ export function useAuth() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const loadUserProfile = async (supabaseUser: SupabaseUser) => {
+  const loadUserProfile = async (supabaseUser: SupabaseUser, seq: number) => {
     try {
       const { data: profileData, error: profileError } = await supabase
         .from('profiles')
         .select(PROFILE_COLUMNS)
         .eq('user_id', supabaseUser.id)
         .maybeSingle();
+
+      if (seq !== loadSeqRef.current) return;
 
       if (profileError) {
         console.error('Error loading profile:', profileError);
@@ -174,6 +178,8 @@ export function useAuth() {
           .eq('owner_user_id', supabaseUser.id)
           .maybeSingle();
 
+        if (seq !== loadSeqRef.current) return;
+
         if (familyError) {
           console.error('Error checking family onboarding:', familyError);
           setProfile(resolvedProfile);
@@ -206,14 +212,24 @@ export function useAuth() {
       setAccessState('ready');
       setAccessMessage(null);
     } catch (error) {
+      if (seq !== loadSeqRef.current) return;
       console.error('Error in loadUserProfile:', error);
       setProfile(null);
       setUser(null);
       setAccessState('blocked');
       setAccessMessage('Authentication failed. Please try signing in again.');
     } finally {
-      setLoading(false);
+      if (seq === loadSeqRef.current) setLoading(false);
     }
+  };
+
+  const refreshUser = async () => {
+    const { data: { user: supabaseUser }, error } = await supabase.auth.getUser();
+    if (error) {
+      console.error('refreshUser: failed to get user', error);
+      return;
+    }
+    if (supabaseUser) await loadUserProfile(supabaseUser, ++loadSeqRef.current);
   };
 
   const signOut = async () => {
@@ -231,5 +247,6 @@ export function useAuth() {
     accessState,
     accessMessage,
     signOut,
+    refreshUser,
   };
 }
