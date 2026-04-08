@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   Sidebar,
   SidebarContent,
@@ -41,6 +42,7 @@ import {
 type DashboardV2Props = {
   user: NonNullable<User>;
   onLogout: () => void;
+  onRefreshUser: () => Promise<void>;
 };
 
 type TabId = 'home' | 'announcements' | 'blog' | 'messages' | 'feedback' | 'reviews' | 'profile';
@@ -62,8 +64,10 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
-export function DashboardV2({ user, onLogout }: DashboardV2Props) {
-  const [activeTab, setActiveTab] = useState<TabId>('home');
+export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props) {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = (searchParams.get('tab') as TabId) ?? 'home';
+  const setActiveTab = (tab: TabId) => setSearchParams({ tab }, { replace: true });
   const [unreadMessages, setUnreadMessages] = useState(0);
 
   useEffect(() => {
@@ -215,7 +219,7 @@ export function DashboardV2({ user, onLogout }: DashboardV2Props) {
           )}
           {activeTab === 'feedback' && <FeedbackTab user={user} />}
           {activeTab === 'reviews' && <ReviewTab user={user} />}
-          {activeTab === 'profile' && <ProfileTab user={user} />}
+          {activeTab === 'profile' && <ProfileTab user={user} onRefreshUser={onRefreshUser} />}
         </main>
       </SidebarInset>
     </SidebarProvider>

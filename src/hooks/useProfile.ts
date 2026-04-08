@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import {
   getFamilyByOwner,
   getGuardiansByFamily,
@@ -29,7 +29,7 @@ export function useProfile(user: ProfileUser | null) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  const loadProfile = async () => {
+  const loadProfile = useCallback(async () => {
     if (!user) {
       setLoading(false);
       return;
@@ -68,11 +68,12 @@ export function useProfile(user: ProfileUser | null) {
     } finally {
       setLoading(false);
     }
-  };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
 
   useEffect(() => {
     loadProfile();
-  }, [user]);
+  }, [loadProfile]);
 
   const saveFamily = async (updates: Partial<Family>) => {
     if (!family) throw new Error('No family found');

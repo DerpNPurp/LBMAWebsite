@@ -2,59 +2,7 @@ import { useState, useEffect } from 'react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Star, Loader2 } from 'lucide-react';
 import { getReviews } from '../../lib/supabase/queries';
-
-type Review = {
-  parentName: string;
-  rating: number;
-  date: string;
-  review: string;
-};
-
-// Placeholder reviews shown when no Supabase reviews have been submitted yet
-const PLACEHOLDER_REVIEWS: Review[] = [
-  {
-    parentName: 'Maria G.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      'My son has completely changed since joining. He listens better, focuses in school, and actually looks forward to going to class. The instructors here genuinely care about each kid.',
-  },
-  {
-    parentName: 'James T.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      'The instructors are patient and take the time to know each child individually. My daughter went from shy to confident in just a few months. Best decision we made.',
-  },
-  {
-    parentName: 'Priya S.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      "We tried another school first. LBMAA is different — it feels like a real community. The kids support each other. It's the best decision we've made for our family.",
-  },
-  {
-    parentName: 'Michael T.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      'Both my boys have trained here for over a year. The discipline and respect they\'ve learned carry into every part of their lives — school, home, friendships. Highly recommend.',
-  },
-  {
-    parentName: 'Jennifer M.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      'As a parent of a child with ADHD, I was worried about finding an activity that worked for him. LBMAA has been a game-changer. The structured environment and positive reinforcement have made a real difference.',
-  },
-  {
-    parentName: 'Carlos R.',
-    rating: 5,
-    date: 'Recently',
-    review:
-      'Clean facility, professional instructors, and a warm atmosphere. Our twins started in Little Dragons and have grown so much — not just in martial arts but in how they carry themselves.',
-  },
-];
+import type { Review } from '../../lib/types';
 
 function StarRow({ rating }: { rating: number }) {
   return (
@@ -72,10 +20,26 @@ function StarRow({ rating }: { rating: number }) {
 }
 
 function ReviewCard({ review }: { review: Review }) {
-  const initials = review.parentName
+  const parentName = review.display_name || 'LBMAA Parent';
+  const initials = parentName
     .split(' ')
+    .filter(Boolean)
     .map((n) => n[0])
     .join('');
+  const diffDays = Math.floor((Date.now() - new Date(review.created_at).getTime()) / 86400000);
+  const dateStr =
+    diffDays === 0
+      ? 'Today'
+      : diffDays === 1
+      ? '1 day ago'
+      : diffDays < 7
+      ? `${diffDays} days ago`
+      : diffDays < 30
+      ? `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`
+      : diffDays < 365
+      ? `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`
+      : `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`;
+
   return (
     <div className="bg-white border border-border rounded-xl p-6 flex flex-col gap-4">
       <div className="flex items-start gap-3">
@@ -85,10 +49,10 @@ function ReviewCard({ review }: { review: Review }) {
           </AvatarFallback>
         </Avatar>
         <div>
-          <p className="text-sm font-semibold leading-tight">{review.parentName}</p>
+          <p className="text-sm font-semibold leading-tight">{parentName}</p>
           <div className="flex items-center gap-2 mt-1">
             <StarRow rating={review.rating} />
-            <span className="text-xs text-muted-foreground">{review.date}</span>
+            <span className="text-xs text-muted-foreground">{dateStr}</span>
           </div>
         </div>
       </div>
@@ -100,43 +64,17 @@ function ReviewCard({ review }: { review: Review }) {
 export function ReviewsPage() {
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const loadReviews = async () => {
       try {
         setLoading(true);
         const data = await getReviews();
-
-        const formatted: Review[] = data.map((r: any) => {
-          const created = new Date(r.created_at);
-          const diffDays = Math.floor((Date.now() - created.getTime()) / 86400000);
-          let dateStr =
-            diffDays === 0
-              ? 'Today'
-              : diffDays === 1
-              ? '1 day ago'
-              : diffDays < 7
-              ? `${diffDays} days ago`
-              : diffDays < 30
-              ? `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`
-              : diffDays < 365
-              ? `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`
-              : `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`;
-
-          return {
-            parentName:
-              r.profiles?.display_name ||
-              r.families?.primary_email?.split('@')[0] ||
-              'LBMAA Parent',
-            rating: r.rating,
-            date: dateStr,
-            review: r.review,
-          };
-        });
-
-        setReviews(formatted.length > 0 ? formatted : PLACEHOLDER_REVIEWS);
-      } catch {
-        setReviews(PLACEHOLDER_REVIEWS);
+        setReviews(data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to load reviews.');
+        setReviews([]);
       } finally {
         setLoading(false);
       }
@@ -144,8 +82,6 @@ export function ReviewsPage() {
 
     loadReviews();
   }, []);
-
-  const displayReviews = reviews.length > 0 ? reviews : PLACEHOLDER_REVIEWS;
 
   return (
     <div>
@@ -166,10 +102,16 @@ export function ReviewsPage() {
             <div className="flex justify-center items-center py-24">
               <Loader2 className="w-6 h-6 animate-spin text-primary" aria-label="Loading reviews" />
             </div>
+          ) : error ? (
+            <div className="text-center py-24 text-muted-foreground">
+              <p>Unable to load reviews. Please try again later.</p>
+            </div>
+          ) : reviews.length === 0 ? (
+            <p className="text-muted-foreground text-sm py-12">No reviews yet — check back soon.</p>
           ) : (
             <div className="grid gap-5 md:grid-cols-2 lg:grid-cols-3 max-w-6xl">
-              {displayReviews.map((review, i) => (
-                <ReviewCard key={i} review={review} />
+              {reviews.map((review) => (
+                <ReviewCard key={review.review_id} review={review} />
               ))}
             </div>
           )}
