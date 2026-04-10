@@ -13,6 +13,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { toast } from 'sonner';
 import { registerInvitedEmail } from '../../lib/supabase/mutations';
 import { supabase } from '../../lib/supabase/client';
+import { formatShortDate } from '../../lib/format';
+import type { User } from '../../lib/types';
 import {
   FamilyStatus,
   GuardianRow,
@@ -21,20 +23,13 @@ import {
   useAdminFamilies,
 } from '../../hooks/useAdminFamilies';
 
-type User = {
-  id: string;
-  email: string;
-  role: 'admin' | 'family';
-  displayName: string;
-};
-
 const beltLevels = ['White Belt', 'Yellow Belt', 'Orange Belt', 'Purple Belt', 'Blue Belt', 'Green Belt', 'Brown Belt', 'Red Belt', 'Black Belt'];
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-export function AdminUsersTab({ user: _user }: { user: User }) {
+export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [isInviteDialogOpen, setIsInviteDialogOpen] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
@@ -54,11 +49,6 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
     saveGuardian,
     setPrimaryGuardian,
   } = useAdminFamilies(searchTerm);
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
   const handleViewDetails = async (familyId: string) => {
     try {
@@ -142,8 +132,8 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
       await saveGuardian(editingGuardian.guardianId, {
         first_name: editingGuardian.firstName,
         last_name: editingGuardian.lastName,
-        email: editingGuardian.email === 'Not set' ? null : editingGuardian.email,
-        phone_number: editingGuardian.phone === 'Not set' ? null : editingGuardian.phone,
+        email: editingGuardian.email || null,
+        phone_number: editingGuardian.phone || null,
         relationship: editingGuardian.relationship || null,
       });
       setEditingGuardian(null);
@@ -256,14 +246,14 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                           </div>
                         </TableCell>
                         <TableCell>{family.primaryEmail}</TableCell>
-                        <TableCell>{family.phoneNumber}</TableCell>
+                        <TableCell>{family.phoneNumber ?? '—'}</TableCell>
                         <TableCell>
                           <Badge variant="secondary">{family.studentCount} {family.studentCount === 1 ? 'student' : 'students'}</Badge>
                         </TableCell>
                         <TableCell>
                           <Badge variant={family.status === 'active' ? 'default' : 'secondary'}>{family.status}</Badge>
                         </TableCell>
-                        <TableCell>{formatDate(family.joinedDate)}</TableCell>
+                        <TableCell>{formatShortDate(family.joinedDate)}</TableCell>
                         <TableCell className="text-right">
                           <div className="flex flex-wrap justify-end gap-2">
                             <Button variant="outline" size="sm" onClick={() => handleViewDetails(family.id)}>
@@ -448,7 +438,7 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                 </div>
                 <div>
                   <p className="text-muted-foreground">Joined</p>
-                  <p>{formatDate(selectedFamily.family.joinedDate)}</p>
+                  <p>{formatShortDate(selectedFamily.family.joinedDate)}</p>
                 </div>
               </div>
 
@@ -464,8 +454,8 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                             <Input value={editingGuardian.lastName} onChange={e => setEditingGuardian({ ...editingGuardian, lastName: e.target.value })} />
                           </div>
                           <Input value={editingGuardian.relationship} onChange={e => setEditingGuardian({ ...editingGuardian, relationship: e.target.value })} />
-                          <Input value={editingGuardian.email === 'Not set' ? '' : editingGuardian.email} onChange={e => setEditingGuardian({ ...editingGuardian, email: e.target.value })} />
-                          <Input value={editingGuardian.phone === 'Not set' ? '' : editingGuardian.phone} onChange={e => setEditingGuardian({ ...editingGuardian, phone: e.target.value })} />
+                          <Input value={editingGuardian.email ?? ''} onChange={e => setEditingGuardian({ ...editingGuardian, email: e.target.value || null })} />
+                          <Input value={editingGuardian.phone ?? ''} onChange={e => setEditingGuardian({ ...editingGuardian, phone: e.target.value || null })} />
                           <div className="flex gap-2">
                             <Button size="sm" disabled={saving} onClick={handleSaveGuardian}>Save</Button>
                             <Button size="sm" variant="outline" onClick={() => setEditingGuardian(null)}>Cancel</Button>
@@ -478,8 +468,8 @@ export function AdminUsersTab({ user: _user }: { user: User }) {
                             {guardian.isPrimaryContact && <Badge variant="secondary">Primary Contact</Badge>}
                           </div>
                           <p className="text-sm text-muted-foreground">{guardian.relationship}</p>
-                          <p className="text-sm">{guardian.email}</p>
-                          <p className="text-sm">{guardian.phone}</p>
+                          <p className="text-sm">{guardian.email ?? '—'}</p>
+                          <p className="text-sm">{guardian.phone ?? '—'}</p>
                           <div className="flex gap-2">
                             <Button size="sm" variant="outline" onClick={() => setEditingGuardian({ ...guardian })}>
                               <Edit2 className="w-4 h-4 mr-2" />

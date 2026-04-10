@@ -198,7 +198,7 @@ export function HomePage({ onRequestEnrollment }: HomePageProps) {
                   </div>
                   <button
                     onClick={onRequestEnrollment}
-                    className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all duration-150 mt-auto"
+                    className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all duration-150 mt-auto cursor-pointer"
                   >
                     Book a trial class <ArrowRight className="w-3.5 h-3.5" />
                   </button>
@@ -211,7 +211,7 @@ export function HomePage({ onRequestEnrollment }: HomePageProps) {
             Not sure which program fits?{' '}
             <button
               onClick={onRequestEnrollment}
-              className="font-medium text-primary hover:underline inline-flex items-center min-h-[44px] px-1"
+              className="font-medium text-primary hover:underline inline-flex items-center min-h-[44px] px-1 cursor-pointer"
             >
               Contact us — we'll help you figure it out.
             </button>

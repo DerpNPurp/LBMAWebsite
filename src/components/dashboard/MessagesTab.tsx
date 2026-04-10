@@ -673,15 +673,6 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
         </Card>
       </div>
 
-      {/* Info Box */}
-      <Card className="bg-secondary border-primary/20">
-        <CardContent className="pt-6">
-          <p className="text-sm">
-            <strong>Note:</strong> Direct messaging is available for family-to-staff and staff-to-staff only. 
-            For parent-to-parent communication, please use the Parent Blog or Group Chat.
-          </p>
-        </CardContent>
-      </Card>
     </div>
   );
 }

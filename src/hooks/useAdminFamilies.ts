@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { getAllFamilies, getFamilyWithRelations } from '../lib/supabase/queries';
+import { getAllFamiliesWithRelations, getFamilyWithRelations, type FamilyWithRelations } from '../lib/supabase/queries';
 import { setFamilyAccountStatus, updateGuardian, updateStudent, updateStudentsByFamily } from '../lib/supabase/mutations';
+import { supabase } from '../lib/supabase/client';
+import { calculateAge } from '../lib/format';
+import type { Guardian, Student } from '../lib/types';
 
 export type FamilyStatus = 'active' | 'inactive' | 'archived';
 export type StudentStatus = 'active' | 'inactive';
@@ -11,8 +14,8 @@ export type GuardianRow = {
   firstName: string;
   lastName: string;
   relationship: string;
-  email: string;
-  phone: string;
+  email: string | null;
+  phone: string | null;
   isPrimaryContact: boolean;
 };
 
@@ -35,7 +38,7 @@ export type Family = {
   id: string;
   primaryEmail: string;
   primaryContact: string;
-  phoneNumber: string;
+  phoneNumber: string | null;
   address: string;
   studentCount: number;
   status: FamilyStatus;
@@ -50,48 +53,47 @@ export type FamilyDetails = {
   students: StudentRow[];
 };
 
-function calculateAge(dateOfBirth: string | null): number {
-  if (!dateOfBirth) return 0;
-  return Math.floor((Date.now() - new Date(dateOfBirth).getTime()) / (1000 * 60 * 60 * 24 * 365));
-}
-
 function toFamilyStatus(status: unknown): FamilyStatus {
   return status === 'inactive' || status === 'archived' ? status : 'active';
 }
 
-function mapFamilyRecord(details: any): Family {
-  const guardians: GuardianRow[] = (details.guardians || []).map((guardian: any) => ({
+function mapGuardian(guardian: Guardian): GuardianRow {
+  return {
     guardianId: guardian.guardian_id,
     name: `${guardian.first_name} ${guardian.last_name}`,
     firstName: guardian.first_name,
     lastName: guardian.last_name,
-    relationship: guardian.relationship || 'Guardian',
-    email: guardian.email || 'Not set',
-    phone: guardian.phone_number || 'Not set',
+    relationship: guardian.relationship ?? 'Guardian',
+    email: guardian.email,
+    phone: guardian.phone_number,
     isPrimaryContact: Boolean(guardian.is_primary_contact),
-  }));
+  };
+}
 
-  const primaryGuardian = guardians.find((guardian) => guardian.isPrimaryContact) || guardians[0];
-  const students: StudentRow[] = (details.students || []).map((student: any) => ({
+function mapFamilyRecord(details: FamilyWithRelations): Family {
+  const guardians = (details.guardians || []).map(mapGuardian);
+  const primaryGuardian = guardians.find((g) => g.isPrimaryContact) ?? guardians[0];
+
+  const students: StudentRow[] = (details.students || []).map((student: Student) => ({
     studentId: student.student_id,
     studentName: `${student.first_name} ${student.last_name}`,
     firstName: student.first_name,
     lastName: student.last_name,
     age: calculateAge(student.date_of_birth),
-    beltLevel: student.belt_level || 'White Belt',
+    beltLevel: student.belt_level ?? 'White Belt',
     status: student.status === 'inactive' ? 'inactive' : 'active',
-    notes: student.notes || '',
+    notes: student.notes ?? '',
     familyId: details.family_id,
-    familyName: `${primaryGuardian?.name || 'Unknown'} Family`,
-    primaryContact: primaryGuardian?.name || 'Unknown',
+    familyName: `${primaryGuardian?.name ?? 'Unknown'} Family`,
+    primaryContact: primaryGuardian?.name ?? 'Unknown',
     primaryEmail: details.primary_email,
   }));
 
   return {
     id: details.family_id,
     primaryEmail: details.primary_email,
-    primaryContact: primaryGuardian?.name || 'Unknown',
-    phoneNumber: primaryGuardian?.phone || 'Not set',
+    primaryContact: primaryGuardian?.name ?? 'Unknown',
+    phoneNumber: primaryGuardian?.phone ?? null,
     address: [details.address, details.city, details.state, details.zip].filter(Boolean).join(', ') || 'Not set',
     studentCount: students.length,
     status: toFamilyStatus(details.account_status),
@@ -106,18 +108,16 @@ export function useAdminFamilies(searchTerm: string) {
   const [selectedFamily, setSelectedFamily] = useState<FamilyDetails | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const refreshFamilies = useCallback(async () => {
     setLoading(true);
+    setError(null);
     try {
-      const familiesData = await getAllFamilies();
-      const familyRows = await Promise.all(
-        familiesData.map(async (family: any) => {
-          const details = await getFamilyWithRelations(family.family_id);
-          return mapFamilyRecord({ ...details, account_status: family.account_status });
-        }),
-      );
-      setFamilies(familyRows);
+      const data = await getAllFamiliesWithRelations();
+      setFamilies(data.map(mapFamilyRecord));
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to load families');
     } finally {
       setLoading(false);
     }
@@ -127,18 +127,18 @@ export function useAdminFamilies(searchTerm: string) {
     void refreshFamilies();
   }, [refreshFamilies]);
 
-  const allStudents: StudentRow[] = useMemo(() => families.flatMap((family) => family.students), [families]);
+  const allStudents: StudentRow[] = useMemo(() => families.flatMap((f) => f.students), [families]);
 
   const filteredFamilies = useMemo(() => {
     const searchLower = searchTerm.trim().toLowerCase();
     if (!searchLower) return families;
-
     return families.filter((family) => {
       if (family.primaryContact.toLowerCase().includes(searchLower)) return true;
       if (family.primaryEmail.toLowerCase().includes(searchLower)) return true;
       return family.guardians.some(
-        (guardian) =>
-          guardian.name.toLowerCase().includes(searchLower) || guardian.email.toLowerCase().includes(searchLower),
+        (g) =>
+          g.name.toLowerCase().includes(searchLower) ||
+          (g.email ?? '').toLowerCase().includes(searchLower),
       );
     });
   }, [families, searchTerm]);
@@ -146,7 +146,6 @@ export function useAdminFamilies(searchTerm: string) {
   const filteredStudents = useMemo(() => {
     const searchLower = searchTerm.trim().toLowerCase();
     if (!searchLower) return allStudents;
-
     return allStudents.filter((student) => {
       if (student.studentName.toLowerCase().includes(searchLower)) return true;
       if (student.primaryContact.toLowerCase().includes(searchLower)) return true;
@@ -156,13 +155,8 @@ export function useAdminFamilies(searchTerm: string) {
 
   const loadFamilyDetails = useCallback(async (familyId: string) => {
     const details = await getFamilyWithRelations(familyId);
-    const mappedFamily = mapFamilyRecord(details);
-
-    setSelectedFamily({
-      family: mappedFamily,
-      guardians: mappedFamily.guardians,
-      students: mappedFamily.students,
-    });
+    const mapped = mapFamilyRecord(details);
+    setSelectedFamily({ family: mapped, guardians: mapped.guardians, students: mapped.students });
   }, []);
 
   const reloadSelectedFamily = useCallback(async () => {
@@ -173,6 +167,7 @@ export function useAdminFamilies(searchTerm: string) {
   const updateFamilyStatus = useCallback(
     async (familyId: string, status: FamilyStatus) => {
       setSaving(true);
+      setError(null);
       try {
         await setFamilyAccountStatus(familyId, status);
         if (status !== 'active') {
@@ -180,6 +175,9 @@ export function useAdminFamilies(searchTerm: string) {
         }
         await refreshFamilies();
         await reloadSelectedFamily();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to update family status');
+        throw err;
       } finally {
         setSaving(false);
       }
@@ -190,10 +188,14 @@ export function useAdminFamilies(searchTerm: string) {
   const saveStudent = useCallback(
     async (studentId: string, updates: { belt_level?: string | null; status?: StudentStatus; notes?: string | null }) => {
       setSaving(true);
+      setError(null);
       try {
         await updateStudent(studentId, updates);
         await refreshFamilies();
         await reloadSelectedFamily();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save student');
+        throw err;
       } finally {
         setSaving(false);
       }
@@ -202,12 +204,16 @@ export function useAdminFamilies(searchTerm: string) {
   );
 
   const saveGuardian = useCallback(
-    async (guardianId: string, updates: any) => {
+    async (guardianId: string, updates: Partial<Pick<Guardian, 'first_name' | 'last_name' | 'email' | 'phone_number' | 'relationship'>>) => {
       setSaving(true);
+      setError(null);
       try {
         await updateGuardian(guardianId, updates);
         await refreshFamilies();
         await reloadSelectedFamily();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to save guardian');
+        throw err;
       } finally {
         setSaving(false);
       }
@@ -217,22 +223,23 @@ export function useAdminFamilies(searchTerm: string) {
 
   const setPrimaryGuardian = useCallback(
     async (guardianId: string) => {
-      if (!selectedFamily) return;
-
       setSaving(true);
+      setError(null);
       try {
-        await Promise.all(
-          selectedFamily.guardians.map((guardian) =>
-            updateGuardian(guardian.guardianId, { is_primary_contact: guardian.guardianId === guardianId }),
-          ),
-        );
+        const { error: rpcError } = await supabase.rpc('set_primary_guardian', {
+          p_guardian_id: guardianId,
+        });
+        if (rpcError) throw rpcError;
         await refreshFamilies();
         await reloadSelectedFamily();
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'Failed to set primary guardian');
+        throw err;
       } finally {
         setSaving(false);
       }
     },
-    [refreshFamilies, reloadSelectedFamily, selectedFamily],
+    [refreshFamilies, reloadSelectedFamily],
   );
 
   return {
@@ -243,6 +250,7 @@ export function useAdminFamilies(searchTerm: string) {
     setSelectedFamily,
     loading,
     saving,
+    error,
     refreshFamilies,
     loadFamilyDetails,
     updateFamilyStatus,

@@ -14,24 +14,29 @@ import type {
   MessageAttachment,
   EnrollmentLead,
   StudentFeedback,
+  FeedbackTest,
   Review,
 } from '../types';
 import {
   CONVERSATION_COLUMNS,
   CONVERSATION_MEMBER_COLUMNS,
   FAMILY_COLUMNS,
+  FEEDBACK_TEST_COLUMNS,
   GUARDIAN_COLUMNS,
   MESSAGE_ATTACHMENT_COLUMNS,
   MESSAGE_COLUMNS,
   PROFILE_COLUMNS,
   STUDENT_COLUMNS,
+  STUDENT_FEEDBACK_COLUMNS,
 } from './selects';
 
 // ============================================
 // PROFILES
 // ============================================
 
-export async function updateProfile(userId: string, updates: Partial<Profile>): Promise<Profile> {
+type ProfileUpdates = Pick<Profile, 'display_name'>;
+
+export async function updateProfile(userId: string, updates: ProfileUpdates): Promise<Profile> {
   const { data, error } = await supabase
     .from('profiles')
     .update(updates)
@@ -390,13 +395,7 @@ export async function createMessage(message: Omit<Message, 'message_id' | 'creat
     .single();
 
   if (error) throw error;
-  
-  // Update conversation updated_at
-  await supabase
-    .from('conversations')
-    .update({ updated_at: new Date().toISOString() })
-    .eq('conversation_id', message.conversation_id);
-
+  // conversations.updated_at is kept current by the trg_message_insert_update_conversation trigger.
   return data;
 }
 
@@ -449,6 +448,47 @@ export async function updateLeadStatus(
 }
 
 // ============================================
+// FEEDBACK TESTS
+// ============================================
+
+export async function createFeedbackTest(
+  test: Omit<FeedbackTest, 'test_id' | 'created_at' | 'updated_at'>
+): Promise<FeedbackTest> {
+  const { data, error } = await supabase
+    .from('feedback_tests')
+    .insert(test)
+    .select(FEEDBACK_TEST_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateFeedbackTest(
+  testId: string,
+  updates: Partial<Pick<FeedbackTest, 'title' | 'test_date' | 'test_time' | 'description'>>
+): Promise<FeedbackTest> {
+  const { data, error } = await supabase
+    .from('feedback_tests')
+    .update(updates)
+    .eq('test_id', testId)
+    .select(FEEDBACK_TEST_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function deleteFeedbackTest(testId: string): Promise<void> {
+  const { error } = await supabase
+    .from('feedback_tests')
+    .delete()
+    .eq('test_id', testId);
+
+  if (error) throw error;
+}
+
+// ============================================
 // STUDENT FEEDBACK
 // ============================================
 
@@ -458,7 +498,7 @@ export async function createStudentFeedback(
   const { data, error } = await supabase
     .from('student_feedback')
     .insert(feedback)
-    .select()
+    .select(STUDENT_FEEDBACK_COLUMNS)
     .single();
 
   if (error) throw error;
@@ -470,7 +510,7 @@ export async function updateStudentFeedback(feedbackId: string, updates: Partial
     .from('student_feedback')
     .update(updates)
     .eq('feedback_id', feedbackId)
-    .select()
+    .select(STUDENT_FEEDBACK_COLUMNS)
     .single();
 
   if (error) throw error;

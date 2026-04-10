@@ -4,28 +4,33 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
 import { Edit2, User } from 'lucide-react';
-
-type User = {
-  id: string;
-  email: string;
-  role: 'admin' | 'family';
-  displayName: string;
-};
+import { updateProfile } from '../../lib/supabase/mutations';
+import type { User as UserType } from '../../lib/types';
 
 type AdminProfileTabProps = {
-  user: User;
+  user: NonNullable<UserType>;
   onClose: () => void;
+  onRefreshUser: () => Promise<void>;
 };
 
-export function AdminProfileTab({ user, onClose }: AdminProfileTabProps) {
+export function AdminProfileTab({ user, onClose, onRefreshUser }: AdminProfileTabProps) {
   const [isEditing, setIsEditing] = useState(false);
   const [displayName, setDisplayName] = useState(user.displayName);
-  const [email, setEmail] = useState(user.email);
+  const [isSaving, setIsSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
 
-  const handleSave = () => {
-    // In production, this would save to Supabase
-    alert('Profile updated!');
-    setIsEditing(false);
+  const handleSave = async () => {
+    setIsSaving(true);
+    setSaveError(null);
+    try {
+      await updateProfile(user.id, { display_name: displayName });
+      await onRefreshUser();
+      setIsEditing(false);
+    } catch (err) {
+      setSaveError(err instanceof Error ? err.message : 'Failed to save. Please try again.');
+    } finally {
+      setIsSaving(false);
+    }
   };
 
   return (
@@ -69,16 +74,17 @@ export function AdminProfileTab({ user, onClose }: AdminProfileTabProps) {
                 />
               </div>
               <div className="space-y-2">
-                <Label>Email</Label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                />
+                <Label className="text-muted-foreground">Email</Label>
+                <Input value={user.email} disabled className="disabled:opacity-50 cursor-not-allowed" />
               </div>
+              {saveError && (
+                <p className="text-sm text-destructive">{saveError}</p>
+              )}
               <div className="flex gap-2">
-                <Button onClick={handleSave}>Save Changes</Button>
-                <Button variant="outline" onClick={() => setIsEditing(false)}>
+                <Button onClick={handleSave} disabled={isSaving}>
+                  {isSaving ? 'Saving...' : 'Save Changes'}
+                </Button>
+                <Button variant="outline" onClick={() => { setIsEditing(false); setSaveError(null); }} disabled={isSaving}>
                   Cancel
                 </Button>
               </div>
@@ -91,7 +97,7 @@ export function AdminProfileTab({ user, onClose }: AdminProfileTabProps) {
               </div>
               <div>
                 <Label className="text-muted-foreground">Email</Label>
-                <p>{email}</p>
+                <p>{user.email}</p>
               </div>
               <div>
                 <Label className="text-muted-foreground">Role</Label>
