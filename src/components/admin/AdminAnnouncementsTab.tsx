@@ -6,12 +6,12 @@ import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Label } from '../ui/label';
-import { Plus, Edit2, Trash2, Upload, Pin, PinOff, Loader2, X } from 'lucide-react';
+import { Plus, Edit2, Trash2, Upload, Pin, PinOff, Loader2, X, MessageCircle, Send } from 'lucide-react';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { toast } from 'sonner';
-import { getAnnouncements } from '../../lib/supabase/queries';
-import { createAnnouncement, updateAnnouncement, deleteAnnouncement } from '../../lib/supabase/mutations';
-import { subscribeToAnnouncements, unsubscribe } from '../../lib/supabase/realtime';
+import { getAnnouncements, getAnnouncementComments } from '../../lib/supabase/queries';
+import { createAnnouncement, updateAnnouncement, deleteAnnouncement, createAnnouncementComment } from '../../lib/supabase/mutations';
+import { subscribeToAnnouncements, subscribeToAnnouncementComments, unsubscribe } from '../../lib/supabase/realtime';
 import { supabase } from '../../lib/supabase/client';
 
 type User = {
@@ -19,6 +19,13 @@ type User = {
   email: string;
   role: 'admin' | 'family';
   displayName: string;
+};
+
+type Comment = {
+  id: string;
+  authorName: string;
+  body: string;
+  createdAt: string;
 };
 
 type Announcement = {
@@ -59,6 +66,10 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const [comments, setComments] = useState<{ [announcementId: string]: Comment[] }>({});
+  const [commentTexts, setCommentTexts] = useState<{ [key: string]: string }>({});
+  const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
+  const [savingComment, setSavingComment] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const loadAnnouncements = async () => {
@@ -75,6 +86,18 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
         isPinned: a.is_pinned || false,
       }));
       setAnnouncements(formatted);
+
+      const commentsMap: { [key: string]: Comment[] } = {};
+      for (const ann of formatted) {
+        const commentsData = await getAnnouncementComments(ann.id);
+        commentsMap[ann.id] = commentsData.map((c: any) => ({
+          id: c.comment_id,
+          authorName: c.profiles?.display_name || 'Unknown',
+          body: c.body,
+          createdAt: c.created_at,
+        }));
+      }
+      setComments(commentsMap);
     } catch (error) {
       console.error('Error loading announcements:', error);
       toast.error('Error loading announcements: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -94,6 +117,63 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
 
     return () => unsubscribe(channel);
   }, []);
+
+  useEffect(() => {
+    const channels: any[] = [];
+    Object.keys(expandedComments).forEach((announcementId) => {
+      if (expandedComments[announcementId]) {
+        const channel = subscribeToAnnouncementComments(announcementId, (payload) => {
+          if (payload.eventType === 'INSERT' && payload.new) {
+            getAnnouncementComments(announcementId).then((commentsData) => {
+              setComments((prev) => ({
+                ...prev,
+                [announcementId]: commentsData.map((c: any) => ({
+                  id: c.comment_id,
+                  authorName: c.profiles?.display_name || 'Unknown',
+                  body: c.body,
+                  createdAt: c.created_at,
+                })),
+              }));
+            });
+          }
+        });
+        channels.push(channel);
+      }
+    });
+    return () => { channels.forEach(channel => unsubscribe(channel)); };
+  }, [expandedComments]);
+
+  const toggleComments = (announcementId: string) => {
+    setExpandedComments({ ...expandedComments, [announcementId]: !expandedComments[announcementId] });
+  };
+
+  const handleAddComment = async (announcementId: string) => {
+    const commentText = commentTexts[announcementId];
+    if (!commentText?.trim() || !user) return;
+    setSavingComment(announcementId);
+    try {
+      await createAnnouncementComment({
+        announcement_id: announcementId,
+        author_user_id: user.id,
+        body: commentText.trim(),
+      });
+      const commentsData = await getAnnouncementComments(announcementId);
+      setComments((prev) => ({
+        ...prev,
+        [announcementId]: commentsData.map((c: any) => ({
+          id: c.comment_id,
+          authorName: c.profiles?.display_name || 'Unknown',
+          body: c.body,
+          createdAt: c.created_at,
+        })),
+      }));
+      setCommentTexts({ ...commentTexts, [announcementId]: '' });
+    } catch (error) {
+      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setSavingComment(null);
+    }
+  };
 
   const handleCreate = async () => {
     if (!newTitle.trim() || !newBody.trim() || !user) return;
@@ -473,6 +553,55 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
                 />
               )}
               <p className="text-foreground whitespace-pre-line">{announcement.body}</p>
+
+              {/* Comments Section */}
+              <div className="border-t pt-4 space-y-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleComments(announcement.id)}
+                  className="gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  {(comments[announcement.id] || []).length} {(comments[announcement.id] || []).length === 1 ? 'Comment' : 'Comments'}
+                </Button>
+
+                {expandedComments[announcement.id] && (
+                  <div className="space-y-4 pl-4 border-l-2 border-border">
+                    {(comments[announcement.id] || []).map((comment) => (
+                      <div key={comment.id} className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-xs">{comment.authorName[0]}</AvatarFallback>
+                          </Avatar>
+                          <span className="text-sm font-medium">{comment.authorName}</span>
+                          <span className="text-xs text-muted-foreground">{formatDate(comment.createdAt)}</span>
+                        </div>
+                        <p className="text-sm pl-8">{comment.body}</p>
+                      </div>
+                    ))}
+                    <div className="flex gap-2 pt-2">
+                      <Textarea
+                        placeholder="Add a comment..."
+                        value={commentTexts[announcement.id] || ''}
+                        onChange={(e) => setCommentTexts({ ...commentTexts, [announcement.id]: e.target.value })}
+                        className="min-h-[80px]"
+                      />
+                      <Button
+                        onClick={() => handleAddComment(announcement.id)}
+                        disabled={!commentTexts[announcement.id]?.trim() || savingComment === announcement.id}
+                        size="sm"
+                      >
+                        {savingComment === announcement.id ? (
+                          <Loader2 className="w-4 h-4 animate-spin" />
+                        ) : (
+                          <Send className="w-4 h-4" />
+                        )}
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </CardContent>
           </Card>
         ))}

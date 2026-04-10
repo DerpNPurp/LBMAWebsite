@@ -4,8 +4,8 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Star, Edit2, Check, Loader2 } from 'lucide-react';
-import { getUserReview } from '../../lib/supabase/queries';
-import { getFamilyByOwner } from '../../lib/supabase/queries';
+import { getUserReview, getFamilyByOwner } from '../../lib/supabase/queries';
+import { formatDate } from '../../lib/format';
 import { createReview, updateReview } from '../../lib/supabase/mutations';
 import type { User as AppUser, Review } from '../../lib/types';
 
@@ -55,6 +55,7 @@ export function ReviewTab({ user }: ReviewTabProps) {
         const created = await createReview({
           family_id: family.family_id,
           author_user_id: user.id,
+          display_name: user.displayName ?? null,
           rating,
           review: reviewText.trim(),
         });
@@ -87,11 +88,6 @@ export function ReviewTab({ user }: ReviewTabProps) {
     setIsEditing(false);
     setError(null);
   };
-
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('en-US', {
-      year: 'numeric', month: 'long', day: 'numeric',
-    });
 
   const isAddingNew = !existingReview;
   const showForm = isAddingNew || isEditing;
@@ -176,8 +172,9 @@ export function ReviewTab({ user }: ReviewTabProps) {
                   value={reviewText}
                   onChange={(e) => setReviewText(e.target.value)}
                   className="min-h-[200px]"
+                  maxLength={2000}
                 />
-                <p className="text-xs text-muted-foreground">{reviewText.length} characters</p>
+                <p className="text-xs text-muted-foreground">{reviewText.length}/2000 characters</p>
               </div>
 
               {/* Actions */}

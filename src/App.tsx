@@ -3,8 +3,8 @@ import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from
 import { PublicWebsite } from './components/PublicWebsite';
 import { LoginModal } from './components/LoginModal';
 import { FirstLoginOnboarding } from './components/FirstLoginOnboarding';
-import { DashboardV2 } from './experimental/DashboardV2';
-import { AdminDashboardV2 } from './experimental/AdminDashboardV2';
+import { DashboardV2 } from './components/DashboardV2';
+import { AdminDashboardV2 } from './components/AdminDashboardV2';
 import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
 import { useAuth } from './hooks/useAuth';
 import { Alert, AlertDescription } from './components/ui/alert';
@@ -107,9 +107,9 @@ function AppRoutes() {
             <ProtectedRoute user={user} loading={loading} accessState={accessState}>
               {user?.role === 'admin' ? (
                 <Navigate to="/admin" replace />
-              ) : (
-                <DashboardV2 user={user!} onLogout={handleLogout} onRefreshUser={refreshUser} />
-              )}
+              ) : user ? (
+                <DashboardV2 user={user} onLogout={handleLogout} onRefreshUser={refreshUser} />
+              ) : null}
             </ProtectedRoute>
           }
         />

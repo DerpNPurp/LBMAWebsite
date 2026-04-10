@@ -86,7 +86,12 @@ export async function getAllFamilies(): Promise<Family[]> {
   return data || [];
 }
 
-export async function getFamilyWithRelations(familyId: string) {
+export type FamilyWithRelations = Family & {
+  guardians: Guardian[];
+  students: Student[];
+};
+
+export async function getFamilyWithRelations(familyId: string): Promise<FamilyWithRelations> {
   const { data, error } = await supabase
     .from('families')
     .select(`
@@ -98,7 +103,25 @@ export async function getFamilyWithRelations(familyId: string) {
     .single();
 
   if (error) throw error;
-  return data;
+  return data as FamilyWithRelations;
+}
+
+/**
+ * Fetches all families with their guardians and students in a single query.
+ * Use this instead of getAllFamilies() + N×getFamilyWithRelations().
+ */
+export async function getAllFamiliesWithRelations(): Promise<FamilyWithRelations[]> {
+  const { data, error } = await supabase
+    .from('families')
+    .select(`
+      ${FAMILY_COLUMNS},
+      guardians (${GUARDIAN_COLUMNS}),
+      students (${STUDENT_COLUMNS})
+    `)
+    .order('created_at', { ascending: false });
+
+  if (error) throw error;
+  return (data || []) as FamilyWithRelations[];
 }
 
 // ============================================
@@ -178,7 +201,7 @@ async function hydrateAuthorNames<T extends { author_user_id: string }>(
 // ANNOUNCEMENTS
 // ============================================
 
-export async function getAnnouncements(): Promise<Announcement[]> {
+export async function getAnnouncements(): Promise<(Announcement & { profiles: { display_name: string | null } })[]> {
   const { data, error } = await supabase
     .from('announcements')
     .select(ANNOUNCEMENT_COLUMNS)
@@ -190,7 +213,7 @@ export async function getAnnouncements(): Promise<Announcement[]> {
   return hydrateAuthorNames(data as Announcement[]);
 }
 
-export async function getAnnouncement(announcementId: string) {
+export async function getAnnouncement(announcementId: string): Promise<Announcement> {
   const { data, error } = await supabase
     .from('announcements')
     .select(ANNOUNCEMENT_COLUMNS)
@@ -201,7 +224,11 @@ export async function getAnnouncement(announcementId: string) {
   return data;
 }
 
-export async function getAnnouncementComments(announcementId: string): Promise<AnnouncementComment[]> {
+export type AnnouncementCommentWithAuthor = AnnouncementComment & {
+  profiles: { display_name: string | null } | null;
+};
+
+export async function getAnnouncementComments(announcementId: string): Promise<AnnouncementCommentWithAuthor[]> {
   const { data, error } = await supabase
     .from('announcement_comments')
     .select(`
@@ -214,14 +241,14 @@ export async function getAnnouncementComments(announcementId: string): Promise<A
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as AnnouncementCommentWithAuthor[];
 }
 
 // ============================================
 // BLOG POSTS
 // ============================================
 
-export async function getBlogPosts(): Promise<BlogPost[]> {
+export async function getBlogPosts(): Promise<(BlogPost & { profiles: { display_name: string | null } })[]> {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(BLOG_POST_COLUMNS)
@@ -232,7 +259,7 @@ export async function getBlogPosts(): Promise<BlogPost[]> {
   return hydrateAuthorNames(data as BlogPost[]);
 }
 
-export async function getBlogPost(postId: string) {
+export async function getBlogPost(postId: string): Promise<BlogPost> {
   const { data, error } = await supabase
     .from('blog_posts')
     .select(BLOG_POST_COLUMNS)
@@ -243,7 +270,11 @@ export async function getBlogPost(postId: string) {
   return data;
 }
 
-export async function getBlogComments(postId: string): Promise<BlogComment[]> {
+export type BlogCommentWithAuthor = BlogComment & {
+  profiles: { display_name: string | null } | null;
+};
+
+export async function getBlogComments(postId: string): Promise<BlogCommentWithAuthor[]> {
   const { data, error } = await supabase
     .from('blog_comments')
     .select(`
@@ -256,7 +287,7 @@ export async function getBlogComments(postId: string): Promise<BlogComment[]> {
     .order('created_at', { ascending: true });
 
   if (error) throw error;
-  return data || [];
+  return (data || []) as BlogCommentWithAuthor[];
 }
 
 /**
@@ -265,7 +296,7 @@ export async function getBlogComments(postId: string): Promise<BlogComment[]> {
  */
 export async function getBlogCommentsForPosts(
   postIds: string[]
-): Promise<Record<string, BlogComment[]>> {
+): Promise<Record<string, BlogCommentWithAuthor[]>> {
   if (postIds.length === 0) return {};
 
   const { data, error } = await supabase
@@ -281,11 +312,11 @@ export async function getBlogCommentsForPosts(
 
   if (error) throw error;
 
-  const result: Record<string, BlogComment[]> = {};
-  for (const row of data ?? []) {
-    const postId = (row as BlogComment & { post_id: string }).post_id;
+  const result: Record<string, BlogCommentWithAuthor[]> = {};
+  for (const row of (data ?? []) as BlogCommentWithAuthor[]) {
+    const postId = (row as BlogCommentWithAuthor & { post_id: string }).post_id;
     if (!result[postId]) result[postId] = [];
-    result[postId].push(row as BlogComment);
+    result[postId].push(row);
   }
   return result;
 }
@@ -315,26 +346,15 @@ export async function getUserConversations(userId: string): Promise<Conversation
     .eq('conversation_members.user_id', userId)
     .order('updated_at', { ascending: false });
 
-  if (error) {
-    if (error.code === '42703' || error.message?.toLowerCase().includes('last_read_at')) {
-      const fallback = await supabase
-        .from('conversations')
-        .select(`
-          ${CONVERSATION_COLUMNS},
-          conversation_members!inner (user_id)
-        `)
-        .eq('conversation_members.user_id', userId)
-        .order('updated_at', { ascending: false });
-
-      if (fallback.error) throw fallback.error;
-      return fallback.data || [];
-    }
-    throw error;
-  }
+  if (error) throw error;
   return data || [];
 }
 
-export async function getConversationMembers(conversationId: string): Promise<ConversationMember[]> {
+export type ConversationMemberWithProfile = ConversationMember & {
+  profiles: { display_name: string | null; role: string | null } | null;
+};
+
+export async function getConversationMembers(conversationId: string): Promise<ConversationMemberWithProfile[]> {
   const { data, error } = await supabase
     .from('conversation_members')
     .select(`
@@ -346,46 +366,16 @@ export async function getConversationMembers(conversationId: string): Promise<Co
     `)
     .eq('conversation_id', conversationId);
 
-  if (!error) return data || [];
-
-  if (error.code === 'PGRST200') {
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('conversation_members')
-      .select(CONVERSATION_MEMBER_COLUMNS)
-      .eq('conversation_id', conversationId);
-
-    if (fallbackError) {
-      throw fallbackError;
-    }
-
-    const memberUserIds = Array.from(
-      new Set((fallbackData || []).map((member: any) => member.user_id).filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)),
-    );
-
-    if (memberUserIds.length === 0) return fallbackData || [];
-
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('user_id, display_name, role')
-      .in('user_id', memberUserIds);
-
-    if (profilesError) {
-      return fallbackData || [];
-    }
-
-    const profileByUserId = new Map((profiles || []).map((profile: any) => [profile.user_id, { display_name: profile.display_name, role: profile.role }]));
-    const hydrated = (fallbackData || []).map((member: any) => ({
-      ...member,
-      profiles: profileByUserId.get(member.user_id) || null,
-    }));
-
-    return hydrated;
-  }
-
-  throw error;
+  if (error) throw error;
+  return (data || []) as ConversationMemberWithProfile[];
 }
 
-export async function getMessages(conversationId: string): Promise<Message[]> {
+export type MessageWithMeta = Message & {
+  profiles: { display_name: string | null; role: string | null } | null;
+  message_attachments: MessageAttachment[];
+};
+
+export async function getMessages(conversationId: string): Promise<MessageWithMeta[]> {
   const { data, error } = await supabase
     .from('messages')
     .select(`
@@ -399,49 +389,8 @@ export async function getMessages(conversationId: string): Promise<Message[]> {
     .eq('conversation_id', conversationId)
     .order('created_at', { ascending: true });
 
-  if (!error) {
-    return data || [];
-  }
-
-  if (error.code === 'PGRST200') {
-    const { data: fallbackData, error: fallbackError } = await supabase
-      .from('messages')
-      .select(`
-        ${MESSAGE_COLUMNS},
-        message_attachments (${MESSAGE_ATTACHMENT_COLUMNS})
-      `)
-      .eq('conversation_id', conversationId)
-      .order('created_at', { ascending: true });
-
-    if (fallbackError) {
-      throw fallbackError;
-    }
-
-    const authorUserIds = Array.from(
-      new Set((fallbackData || []).map((message: any) => message.author_user_id).filter((value: unknown): value is string => typeof value === 'string' && value.length > 0)),
-    );
-
-    if (authorUserIds.length === 0) return fallbackData || [];
-
-    const { data: profiles, error: profilesError } = await supabase
-      .from('profiles')
-      .select('user_id, display_name, role')
-      .in('user_id', authorUserIds);
-
-    if (profilesError) {
-      return fallbackData || [];
-    }
-
-    const profileByUserId = new Map((profiles || []).map((profile: any) => [profile.user_id, { display_name: profile.display_name, role: profile.role }]));
-    const hydratedMessages = (fallbackData || []).map((message: any) => ({
-      ...message,
-      profiles: profileByUserId.get(message.author_user_id) || null,
-    }));
-
-    return hydratedMessages;
-  }
-
-  throw error;
+  if (error) throw error;
+  return (data || []) as MessageWithMeta[];
 }
 
 export async function getDirectMessageConversation(userId1: string, userId2: string): Promise<Conversation | null> {
@@ -460,8 +409,8 @@ export async function getDirectMessageConversation(userId1: string, userId2: str
 
   if (error) throw error;
 
-  const matchedConversationIds = new Set((data || []).map((row: any) => row.conversation_id));
-  return userConversations.find((conversation) => matchedConversationIds.has(conversation.conversation_id)) || null;
+  const matchedIds = new Set((data || []).map((row) => row.conversation_id));
+  return userConversations.find((c) => matchedIds.has(c.conversation_id)) || null;
 }
 
 export async function getConversationUnreadCount(conversationId: string, userId: string): Promise<number> {
@@ -472,18 +421,7 @@ export async function getConversationUnreadCount(conversationId: string, userId:
     .eq('user_id', userId)
     .maybeSingle();
 
-  if (memberError) {
-    if (memberError.code === '42703' || memberError.message?.toLowerCase().includes('last_read_at')) {
-      const { count, error: fallbackError } = await supabase
-        .from('messages')
-        .select('message_id', { count: 'exact', head: true })
-        .eq('conversation_id', conversationId)
-        .neq('author_user_id', userId);
-      if (fallbackError) throw fallbackError;
-      return count || 0;
-    }
-    throw memberError;
-  }
+  if (memberError) throw memberError;
   if (!member) return 0;
 
   let query = supabase
@@ -501,15 +439,15 @@ export async function getConversationUnreadCount(conversationId: string, userId:
   return count || 0;
 }
 
-export async function getUnreadMessageCount(userId: string): Promise<number> {
-  const conversations = await getUserConversations(userId);
-  if (conversations.length === 0) return 0;
-
-  const unreadCounts = await Promise.all(
-    conversations.map((conversation) => getConversationUnreadCount(conversation.conversation_id, userId)),
-  );
-
-  return unreadCounts.reduce((total, current) => total + current, 0);
+/**
+ * Returns the total unread message count across all conversations for the
+ * current user. Delegates to the get_total_unread_count DB function which
+ * performs this in a single query instead of the previous waterfall.
+ */
+export async function getUnreadMessageCount(): Promise<number> {
+  const { data, error } = await supabase.rpc('get_total_unread_count');
+  if (error) throw error;
+  return (data as number) || 0;
 }
 
 export async function getCommunicationCounts(userId: string): Promise<{
@@ -520,11 +458,15 @@ export async function getCommunicationCounts(userId: string): Promise<{
   const [announcementResult, blogResult, unreadMessages] = await Promise.all([
     supabase.from('announcements').select('announcement_id', { count: 'exact', head: true }),
     supabase.from('blog_posts').select('post_id', { count: 'exact', head: true }),
-    getUnreadMessageCount(userId),
+    getUnreadMessageCount(),
   ]);
 
   if (announcementResult.error) throw announcementResult.error;
   if (blogResult.error) throw blogResult.error;
+
+  // userId is kept in the signature for API compatibility but is no longer
+  // needed since getUnreadMessageCount uses auth.uid() server-side.
+  void userId;
 
   return {
     announcements: announcementResult.count || 0,
@@ -570,7 +512,7 @@ export async function getFeedbackTestsByFamily(familyId: string): Promise<Feedba
   if (studentsError) throw studentsError;
   if (!students || students.length === 0) return [];
 
-  const studentIds = students.map((s: any) => s.student_id);
+  const studentIds = students.map((s) => s.student_id);
 
   // Single join: student_feedback → feedback_tests, deduped client-side
   const { data, error } = await supabase
@@ -581,9 +523,8 @@ export async function getFeedbackTestsByFamily(familyId: string): Promise<Feedba
   if (error) throw error;
 
   const testMap = new Map<string, FeedbackTest>();
-  for (const row of (data || []) as any[]) {
-    const test = row.feedback_tests as FeedbackTest | null;
-    if (test) testMap.set(test.test_id, test);
+  for (const row of (data || []) as { test_id: string; feedback_tests: FeedbackTest | null }[]) {
+    if (row.feedback_tests) testMap.set(row.feedback_tests.test_id, row.feedback_tests);
   }
 
   return Array.from(testMap.values()).sort((a, b) => b.test_date.localeCompare(a.test_date));
@@ -593,7 +534,7 @@ export async function getFeedbackTestsByFamily(familyId: string): Promise<Feedba
 // STUDENT FEEDBACK
 // ============================================
 
-type FeedbackWithRelations = StudentFeedback & {
+export type FeedbackWithRelations = StudentFeedback & {
   profiles: { display_name: string | null } | null;
 };
 
@@ -604,7 +545,7 @@ async function attachAuthorNames(rows: StudentFeedback[]): Promise<FeedbackWithR
     .from('profiles')
     .select('user_id, display_name')
     .in('user_id', authorIds);
-  const nameMap = new Map((profiles || []).map((p: any) => [p.user_id, p.display_name]));
+  const nameMap = new Map((profiles || []).map((p) => [p.user_id as string, p.display_name as string | null]));
   return rows.map((r) => ({
     ...r,
     profiles: { display_name: nameMap.get(r.author_user_id) ?? null },
@@ -620,7 +561,7 @@ export async function getStudentFeedbackByFamily(familyId: string): Promise<Feed
   if (studentsError) throw studentsError;
   if (!students || students.length === 0) return [];
 
-  const studentIds = students.map((s: any) => s.student_id);
+  const studentIds = students.map((s) => s.student_id);
 
   const { data, error } = await supabase
     .from('student_feedback')
