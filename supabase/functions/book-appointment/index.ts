@@ -62,9 +62,10 @@ Deno.serve(async (req) => {
   if (override) return new Response('This date is not available', { status: 422 })
 
   // Determine if date is within 2 days (auto-confirm)
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const daysUntilAppt = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  // Use UTC midnight for consistent day-boundary comparison (edge function runs in UTC)
+  const nowUtc = new Date()
+  const todayUtc = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()))
+  const daysUntilAppt = Math.floor((targetDate.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24))
   const autoConfirm = daysUntilAppt < 2
   const newStatus = autoConfirm ? 'appointment_confirmed' : 'appointment_scheduled'
 
@@ -80,7 +81,7 @@ Deno.serve(async (req) => {
   if (updateError) return new Response('Booking failed', { status: 500 })
 
   // Send booking confirmation
-  await supabase
+  const { error: notifError } = await supabase
     .from('enrollment_lead_notifications')
     .insert({
       lead_id: lead.lead_id,
@@ -89,6 +90,11 @@ Deno.serve(async (req) => {
       type: 'booking_confirmation',
       status: 'queued',
     })
+
+  if (notifError) {
+    console.error('[book-appointment] notification insert error:', notifError)
+    return new Response('Booking saved but notification failed', { status: 500 })
+  }
 
   return new Response(
     JSON.stringify({

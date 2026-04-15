@@ -40,10 +40,14 @@ Deno.serve(async (req) => {
   let token = lead.booking_token
   if (!token) {
     token = crypto.randomUUID()
-    await supabase
+    const { error: tokenError } = await supabase
       .from('enrollment_leads')
       .update({ booking_token: token })
       .eq('lead_id', leadId)
+    if (tokenError) {
+      console.error('[admin-book-appointment] token write error:', tokenError)
+      return new Response('Failed to assign booking token', { status: 500 })
+    }
   }
 
   const { data: slot } = await supabase
@@ -70,9 +74,10 @@ Deno.serve(async (req) => {
 
   if (override) return new Response('This date is blocked', { status: 422 })
 
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  const daysUntilAppt = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
+  // Use UTC midnight for consistent day-boundary comparison (edge function runs in UTC)
+  const nowUtc = new Date()
+  const todayUtc = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()))
+  const daysUntilAppt = Math.floor((targetDate.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24))
   const autoConfirm = daysUntilAppt < 2
   const newStatus = autoConfirm ? 'appointment_confirmed' : 'appointment_scheduled'
 
@@ -87,7 +92,7 @@ Deno.serve(async (req) => {
 
   if (updateError) return new Response('Booking failed', { status: 500 })
 
-  await supabase
+  const { error: notifError } = await supabase
     .from('enrollment_lead_notifications')
     .insert({
       lead_id: leadId,
@@ -96,6 +101,11 @@ Deno.serve(async (req) => {
       type: 'booking_confirmation',
       status: 'queued',
     })
+
+  if (notifError) {
+    console.error('[admin-book-appointment] notification insert error:', notifError)
+    return new Response('Booking saved but notification failed', { status: 500 })
+  }
 
   return new Response(
     JSON.stringify({ ok: true, status: newStatus, appointment_date: appointmentDate, appointment_time: slot.start_time }),
