@@ -25,6 +25,7 @@ import { AdminMessagesTab } from './admin/AdminMessagesTab';
 import { AdminUsersTab } from './admin/AdminUsersTab';
 import { FeedbackTab as AdminFeedbackTab } from './admin/FeedbackTab';
 import { AdminEnrollmentLeadsTab } from './admin/AdminEnrollmentLeadsTab';
+import { AdminAvailabilitySettings } from './admin/AdminAvailabilitySettings';
 import { AdminProfileTab } from './admin/AdminProfileTab';
 import { getUnreadMessageCount } from '../lib/supabase/queries';
 import { getInitials } from '../lib/format';
@@ -33,6 +34,7 @@ import {
   Award,
   Bell,
   BookOpen,
+  CalendarCog,
   ClipboardList,
   LogOut,
   MessageSquare,
@@ -54,6 +56,7 @@ type AdminTabId =
   | 'families'
   | 'feedback'
   | 'leads'
+  | 'availability'
   | 'profile';
 
 const navGroups: {
@@ -77,7 +80,10 @@ const navGroups: {
   },
   {
     label: 'Enrollment',
-    items: [{ id: 'leads', label: 'Enrollment Leads', icon: ClipboardList }],
+    items: [
+      { id: 'leads', label: 'Enrollment Leads', icon: ClipboardList },
+      { id: 'availability', label: 'Availability & Notifications', icon: CalendarCog },
+    ],
   },
 ];
 
@@ -247,6 +253,7 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
           {activeTab === 'families' && <AdminUsersTab user={user} />}
           {activeTab === 'feedback' && <AdminFeedbackTab />}
           {activeTab === 'leads' && <AdminEnrollmentLeadsTab />}
+          {activeTab === 'availability' && <AdminAvailabilitySettings />}
           {activeTab === 'profile' && (
             <AdminProfileTab user={user} onClose={() => setActiveTab('announcements')} onRefreshUser={onRefreshUser} />
           )}
