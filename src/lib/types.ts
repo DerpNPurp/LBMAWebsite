@@ -155,9 +155,40 @@ export type EnrollmentLead = {
   source_page: string;
   notification_status: 'queued' | 'sent' | 'failed';
   notified_at: string | null;
-  status: 'new' | 'approved' | 'appointment_scheduled' | 'enrolled' | 'closed';
+  status: 'new' | 'approved' | 'appointment_scheduled' | 'appointment_confirmed' | 'denied' | 'enrolled' | 'closed';
   approved_at: string | null;
   approval_email_sent_at: string | null;
+  booking_token: string | null;
+  appointment_date: string | null;   // "YYYY-MM-DD"
+  appointment_time: string | null;   // "HH:MM:SS"
+  denied_at: string | null;
+  denial_message: string | null;
+  created_at: string;
+};
+
+export type AppointmentSlot = {
+  slot_id: string;
+  day_of_week: number;   // 0=Sun, 1=Mon … 6=Sat
+  start_time: string;    // "HH:MM:SS"
+  end_time: string;      // "HH:MM:SS"
+  label: string;
+  is_active: boolean;
+  created_at: string;
+};
+
+export type AppointmentSlotOverride = {
+  override_id: string;
+  slot_id: string;
+  override_date: string; // "YYYY-MM-DD"
+  reason: string | null;
+  created_at: string;
+};
+
+export type AdminNotificationSetting = {
+  setting_id: string;
+  email: string;
+  notify_new_leads: boolean;
+  is_active: boolean;
   created_at: string;
 };
 
