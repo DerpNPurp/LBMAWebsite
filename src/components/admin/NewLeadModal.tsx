@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { toast } from 'sonner'
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from '../ui/dialog'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
@@ -58,17 +59,29 @@ export function NewLeadModal({ onSuccess, onCancel }: NewLeadModalProps) {
         .eq('lead_id', leadId)
         .single()
 
+      if (!leadData) {
+        toast.error('Lead created but could not be fetched')
+        setLoading(false)
+        return
+      }
+
       if (postAction === 'send_link') {
-        await supabase.functions.invoke('approve-enrollment-lead', {
+        const { error: approveError } = await supabase.functions.invoke('approve-enrollment-lead', {
           body: { leadId },
           headers: { Authorization: `Bearer ${session?.access_token}` },
         })
+        if (approveError) {
+          toast.error('Lead created but booking link failed to send')
+        }
         onSuccess(leadData as EnrollmentLead)
       } else if (postAction === 'create_only') {
         onSuccess(leadData as EnrollmentLead)
       } else if (postAction === 'pick_date') {
         setCreatedLead(leadData as EnrollmentLead)
       }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      toast.error(msg)
     } finally {
       setLoading(false)
     }
@@ -76,15 +89,17 @@ export function NewLeadModal({ onSuccess, onCancel }: NewLeadModalProps) {
 
   async function handlePickDateConfirm(leadId: string, slotId: string, appointmentDate: string) {
     const { data: { session } } = await supabase.auth.getSession()
-    await supabase.functions.invoke('admin-book-appointment', {
+    const { error: bookError } = await supabase.functions.invoke('admin-book-appointment', {
       body: { leadId, slotId, appointmentDate },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     })
+    if (bookError) throw bookError  // propagates to PickDateModal's catch handler
     const { data: updatedLead } = await supabase
       .from('enrollment_leads')
       .select('*')
       .eq('lead_id', leadId)
       .single()
+    if (!updatedLead) throw new Error('Lead not found after booking')
     onSuccess(updatedLead as EnrollmentLead)
   }
 

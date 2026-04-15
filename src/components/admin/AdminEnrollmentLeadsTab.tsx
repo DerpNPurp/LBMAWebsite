@@ -60,39 +60,43 @@ export function AdminEnrollmentLeadsTab() {
 
   async function handleApprove(lead: EnrollmentLead) {
     const { data: { session } } = await supabase.auth.getSession();
-    await supabase.functions.invoke('approve-enrollment-lead', {
+    const { error } = await supabase.functions.invoke('approve-enrollment-lead', {
       body: { leadId: lead.lead_id },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
+    if (error) { toast.error('Failed to send approval'); return }
     setLeads(prev => prev.map(l => l.lead_id === lead.lead_id ? { ...l, status: 'approved' as const } : l));
     toast.success('Approval sent');
   }
 
   async function handleResendBookingLink(lead: EnrollmentLead) {
     const { data: { session } } = await supabase.auth.getSession();
-    await supabase.functions.invoke('resend-booking-link', {
+    const { error } = await supabase.functions.invoke('resend-booking-link', {
       body: { leadId: lead.lead_id },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
+    if (error) { toast.error('Failed to resend booking link'); return }
     toast.success('Booking link resent');
   }
 
   async function handleDenyConfirm(leadId: string, message: string) {
     const { data: { session } } = await supabase.auth.getSession();
-    await supabase.functions.invoke('deny-enrollment-lead', {
+    const { error } = await supabase.functions.invoke('deny-enrollment-lead', {
       body: { leadId, message },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
+    if (error) { toast.error('Failed to send denial'); return }
     setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status: 'denied' as const } : l));
     setDenyTarget(null);
   }
 
   async function handleBookingConfirm(leadId: string, slotId: string, appointmentDate: string) {
     const { data: { session } } = await supabase.auth.getSession();
-    const { data } = await supabase.functions.invoke('admin-book-appointment', {
+    const { data, error } = await supabase.functions.invoke('admin-book-appointment', {
       body: { leadId, slotId, appointmentDate },
       headers: { Authorization: `Bearer ${session?.access_token}` },
     });
+    if (error || !data) { toast.error('Failed to book appointment'); return }
     setLeads(prev => prev.map(l => l.lead_id === leadId
       ? { ...l, status: data.status, appointment_date: appointmentDate } : l));
     setPickDateTarget(null);

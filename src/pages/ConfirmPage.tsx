@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
 import { Loader2, CheckCircle2 } from 'lucide-react'
 import { supabase } from '../lib/supabase/client'
@@ -15,9 +15,11 @@ export function ConfirmPage() {
   const [state, setState] = useState<'loading' | 'confirmed' | 'already' | 'invalid'>('loading')
   const [apptDate, setApptDate] = useState<string | null>(null)
   const [apptTime, setApptTime] = useState<string | null>(null)
+  const hasFired = useRef(false)
 
   useEffect(() => {
-    if (!token) { setState('invalid'); return }
+    if (!token || hasFired.current) { setState('invalid'); return }
+    hasFired.current = true
     supabase.functions.invoke('confirm-appointment', { body: { token } }).then(({ data, error }) => {
       if (error || !data?.ok) { setState('invalid'); return }
       const result = data as ConfirmResult

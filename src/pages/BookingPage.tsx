@@ -51,22 +51,24 @@ export function BookingPage() {
     getAppointmentSlots().then((s) => {
       setSlots(s)
       if (s.length === 1) setSelectedSlotId(s[0].slot_id)
-    })
+    }).catch(() => setError('Failed to load available dates. Please refresh.'))
   }, [lead])
 
   useEffect(() => {
     if (!selectedSlotId) return
-    const slot = slots.find(s => s.slot_id === selectedSlotId)!
     getUpcomingBookableDates(selectedSlotId).then((dates) => {
+      const slot = slots.find(s => s.slot_id === selectedSlotId)
+      if (!slot) return
       setDateOptions(dates.map(d => ({ date: d, slotId: selectedSlotId, slotLabel: slot.label, startTime: slot.start_time })))
       setSelectedDate(null)
-    })
+    }).catch(() => setError('Failed to load available dates. Please refresh.'))
   }, [selectedSlotId, slots])
 
   async function handleBook() {
     if (!selectedDate || !selectedSlotId || !token) return
     setSubmitting(true)
     try {
+      setError(null)
       const { data, error: fnError } = await supabase.functions.invoke('book-appointment', {
         body: { token, slotId: selectedSlotId, appointmentDate: selectedDate },
       })
