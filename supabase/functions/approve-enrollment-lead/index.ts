@@ -38,23 +38,24 @@ Deno.serve(async (req) => {
   if (!lead) return new Response('Lead not found', { status: 404 })
 
   let token = lead.booking_token
+  const updateFields: Record<string, unknown> = {
+    status: 'approved',
+    approved_at: new Date().toISOString(),
+  }
 
-  // Generate token if not yet set
   if (!token) {
     token = crypto.randomUUID()
-    const { error: updateError } = await supabase
-      .from('enrollment_leads')
-      .update({
-        status: 'approved',
-        booking_token: token,
-        approved_at: new Date().toISOString(),
-      })
-      .eq('lead_id', leadId)
+    updateFields.booking_token = token
+  }
 
-    if (updateError) {
-      console.error('[approve-enrollment-lead] update error:', updateError)
-      return new Response('Update failed', { status: 500 })
-    }
+  const { error: updateError } = await supabase
+    .from('enrollment_leads')
+    .update(updateFields)
+    .eq('lead_id', leadId)
+
+  if (updateError) {
+    console.error('[approve-enrollment-lead] update error:', updateError)
+    return new Response('Update failed', { status: 500 })
   }
 
   // Insert approval notification (triggers send-email webhook)

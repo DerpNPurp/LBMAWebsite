@@ -55,6 +55,12 @@ Deno.serve(async (req) => {
 
   if (!slot) return new Response('Slot not found or inactive', { status: 404 })
 
+  // Validate appointment date matches slot's day_of_week
+  const targetDate = new Date(appointmentDate + 'T12:00:00')
+  if (targetDate.getDay() !== slot.day_of_week) {
+    return new Response('Appointment date does not match slot day', { status: 422 })
+  }
+
   const { data: override } = await supabase
     .from('appointment_slot_overrides')
     .select('override_id')
@@ -64,7 +70,6 @@ Deno.serve(async (req) => {
 
   if (override) return new Response('This date is blocked', { status: 422 })
 
-  const targetDate = new Date(appointmentDate + 'T12:00:00')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
   const daysUntilAppt = Math.floor((targetDate.getTime() - today.getTime()) / (1000 * 60 * 60 * 24))
