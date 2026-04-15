@@ -184,6 +184,7 @@ export function BookingPage() {
         {showReschedule ? (
           <div className="space-y-4">
             <p className="text-sm font-medium">Select a new date:</p>
+            {error && <p className="text-sm text-destructive bg-destructive/5 border border-destructive/20 rounded px-3 py-2">{error}</p>}
             {datePickerSection}
             <button onClick={() => setShowReschedule(false)} className="text-sm text-muted-foreground underline underline-offset-2 block text-center w-full">Cancel</button>
           </div>

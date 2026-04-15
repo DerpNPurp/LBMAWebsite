@@ -231,56 +231,57 @@ export function AdminAvailabilitySettings() {
           </div>
         )}
 
-        {/* Blocked Dates */}
-        <div className="mt-6">
-          <div className="flex items-center justify-between mb-3">
-            <h4 className="font-medium text-sm">Blocked Dates</h4>
-            <Button size="sm" variant="outline" onClick={() => setShowOverrideForm(true)} className="gap-1.5">
-              <Plus className="w-4 h-4" />Block Date
-            </Button>
-          </div>
-          <div className="space-y-1.5">
-            {overrides.map(o => (
-              <div key={o.override_id} className="flex items-center justify-between min-h-[44px] px-3 py-2 rounded border text-sm">
-                <div>
-                  <span className="font-medium">{o.override_date}</span>
-                  {o.reason && <span className="text-muted-foreground ml-2">— {o.reason}</span>}
-                  <span className="text-xs text-muted-foreground ml-2">({slots.find(s => s.slot_id === o.slot_id)?.label ?? 'Unknown slot'})</span>
-                </div>
-                <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeOverride(o.override_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+      </div>
+
+      {/* Blocked Dates */}
+      <div className="rounded-lg border p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-semibold text-base">Blocked Dates</h3>
+          <Button size="sm" variant="outline" onClick={() => setShowOverrideForm(true)} className="gap-1.5">
+            <Plus className="w-4 h-4" />Block Date
+          </Button>
+        </div>
+        <div className="space-y-1.5">
+          {overrides.map(o => (
+            <div key={o.override_id} className="flex items-center justify-between min-h-[44px] px-3 py-2 rounded border text-sm">
+              <div>
+                <span className="font-medium">{o.override_date}</span>
+                {o.reason && <span className="text-muted-foreground ml-2">— {o.reason}</span>}
+                <span className="text-xs text-muted-foreground ml-2">({slots.find(s => s.slot_id === o.slot_id)?.label ?? 'Unknown slot'})</span>
               </div>
-            ))}
-            {overrides.length === 0 && <p className="text-sm text-muted-foreground">No blocked dates.</p>}
-          </div>
-          {showOverrideForm && (
-            <div className="mt-3 p-4 rounded border bg-muted/30 space-y-3">
-              {slots.length > 1 && (
-                <div>
-                  <Label>Slot</Label>
-                  <select value={overrideSlotId} onChange={e => setOverrideSlotId(e.target.value)} className="mt-1 w-full rounded border px-3 py-2 text-sm bg-background">
-                    {slots.map(s => <option key={s.slot_id} value={s.slot_id}>{s.label}</option>)}
-                  </select>
-                </div>
-              )}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <Label>Date to block</Label>
-                  <Input type="date" value={overrideDate} onChange={e => setOverrideDate(e.target.value)} className="mt-1" />
-                </div>
-                <div>
-                  <Label>Reason (optional)</Label>
-                  <Input value={overrideReason} onChange={e => setOverrideReason(e.target.value)} className="mt-1" placeholder="Holiday, closed, etc." />
-                </div>
+              <Button size="icon" variant="ghost" className="h-8 w-8 text-destructive hover:text-destructive" onClick={() => removeOverride(o.override_id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+            </div>
+          ))}
+          {overrides.length === 0 && <p className="text-sm text-muted-foreground">No blocked dates.</p>}
+        </div>
+        {showOverrideForm && (
+          <div className="mt-3 p-4 rounded border bg-muted/30 space-y-3">
+            {slots.length > 1 && (
+              <div>
+                <Label>Slot</Label>
+                <select value={overrideSlotId} onChange={e => setOverrideSlotId(e.target.value)} className="mt-1 w-full rounded border px-3 py-2 text-sm bg-background">
+                  {slots.map(s => <option key={s.slot_id} value={s.slot_id}>{s.label}</option>)}
+                </select>
               </div>
-              <div className="flex gap-2 justify-end">
-                <Button size="sm" variant="ghost" onClick={() => setShowOverrideForm(false)}>Cancel</Button>
-                <Button size="sm" onClick={addOverride} disabled={overrideSaving || !overrideDate || (slots.length > 1 && !overrideSlotId)}>
-                  {overrideSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
-                </Button>
+            )}
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <Label>Date to block</Label>
+                <Input type="date" value={overrideDate} onChange={e => setOverrideDate(e.target.value)} className="mt-1" />
+              </div>
+              <div>
+                <Label>Reason (optional)</Label>
+                <Input value={overrideReason} onChange={e => setOverrideReason(e.target.value)} className="mt-1" placeholder="Holiday, closed, etc." />
               </div>
             </div>
-          )}
-        </div>
+            <div className="flex gap-2 justify-end">
+              <Button size="sm" variant="ghost" onClick={() => setShowOverrideForm(false)}>Cancel</Button>
+              <Button size="sm" onClick={addOverride} disabled={overrideSaving || !overrideDate || (slots.length > 1 && !overrideSlotId)}>
+                {overrideSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
+              </Button>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Notification Recipients */}
