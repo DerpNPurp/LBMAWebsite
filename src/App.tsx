@@ -6,6 +6,8 @@ import { FirstLoginOnboarding } from './components/FirstLoginOnboarding';
 import { DashboardV2 } from './components/DashboardV2';
 import { AdminDashboardV2 } from './components/AdminDashboardV2';
 import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
+import { BookingPage } from './pages/BookingPage';
+import { ConfirmPage } from './pages/ConfirmPage';
 import { useAuth } from './hooks/useAuth';
 import { Alert, AlertDescription } from './components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -137,6 +139,8 @@ function AppRoutes() {
           }
         />
         <Route path="/experimental/public/*" element={<PublicWebsiteV2 />} />
+        <Route path="/book/:token" element={<BookingPage />} />
+        <Route path="/confirm/:token" element={<ConfirmPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
