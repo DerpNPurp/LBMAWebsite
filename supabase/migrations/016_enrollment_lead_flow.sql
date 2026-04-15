@@ -68,7 +68,8 @@ ALTER TABLE public.appointment_slots ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admins can manage appointment slots" ON public.appointment_slots;
 CREATE POLICY "Admins can manage appointment slots"
   ON public.appointment_slots FOR ALL
-  USING (is_admin(auth.uid()));
+  USING (is_admin(auth.uid()))
+  WITH CHECK (is_admin(auth.uid()));
 
 -- Public read for the booking page (anon token lookup)
 DROP POLICY IF EXISTS "Public can view active appointment slots" ON public.appointment_slots;
@@ -97,7 +98,8 @@ ALTER TABLE public.appointment_slot_overrides ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "Admins can manage slot overrides" ON public.appointment_slot_overrides;
 CREATE POLICY "Admins can manage slot overrides"
   ON public.appointment_slot_overrides FOR ALL
-  USING (is_admin(auth.uid()));
+  USING (is_admin(auth.uid()))
+  WITH CHECK (is_admin(auth.uid()));
 
 -- Public read for booking page availability checks
 DROP POLICY IF EXISTS "Public can view slot overrides" ON public.appointment_slot_overrides;
@@ -128,7 +130,7 @@ CREATE POLICY "Admins can manage notification settings"
   USING (is_admin(auth.uid()));
 
 GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_notification_settings TO authenticated;
-GRANT SELECT ON public.admin_notification_settings TO service_role;
+GRANT SELECT, INSERT, UPDATE, DELETE ON public.admin_notification_settings TO service_role;
 
 -- ============================================
 -- service_role grants for new tables
@@ -245,12 +247,15 @@ GRANT EXECUTE ON FUNCTION public.create_enrollment_lead(TEXT, TEXT, TEXT, TEXT, 
 -- Admin notification settings RPCs
 CREATE OR REPLACE FUNCTION public.get_admin_notification_settings()
 RETURNS SETOF public.admin_notification_settings
-LANGUAGE sql
+LANGUAGE plpgsql
 STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT * FROM admin_notification_settings WHERE is_active = true ORDER BY created_at;
+BEGIN
+  IF NOT is_admin(auth.uid()) THEN RAISE EXCEPTION 'Unauthorized'; END IF;
+  RETURN QUERY SELECT * FROM admin_notification_settings WHERE is_active = true ORDER BY created_at;
+END;
 $$;
 
 GRANT EXECUTE ON FUNCTION public.get_admin_notification_settings() TO authenticated;
