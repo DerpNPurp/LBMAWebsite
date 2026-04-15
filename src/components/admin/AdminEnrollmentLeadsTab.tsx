@@ -3,16 +3,22 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { CheckCircle, Mail, Phone, User, Calendar, MessageSquare, Loader2 } from 'lucide-react';
+import { Mail, Phone, User, Calendar, MessageSquare, Loader2, Plus } from 'lucide-react';
+import { toast } from 'sonner';
 import { supabase } from '../../lib/supabase/client';
 import { getEnrollmentLeads } from '../../lib/supabase/queries';
 import { updateLeadStatus } from '../../lib/supabase/mutations';
 import type { EnrollmentLead } from '../../lib/types';
+import { DenyModal } from './DenyModal';
+import { PickDateModal } from './PickDateModal';
+import { NewLeadModal } from './NewLeadModal';
 
 const STATUS_LABELS: Record<EnrollmentLead['status'], string> = {
   new: 'New',
   approved: 'Approved',
   appointment_scheduled: 'Appt. Scheduled',
+  appointment_confirmed: 'Confirmed',
+  denied: 'Denied',
   enrolled: 'Enrolled',
   closed: 'Closed',
 };
@@ -21,6 +27,8 @@ const STATUS_COLORS: Record<EnrollmentLead['status'], string> = {
   new: 'bg-blue-100 text-blue-800 border-blue-200',
   approved: 'bg-amber-100 text-amber-800 border-amber-200',
   appointment_scheduled: 'bg-purple-100 text-purple-800 border-purple-200',
+  appointment_confirmed: 'bg-green-100 text-green-800 border-green-200',
+  denied: 'bg-red-100 text-red-800 border-red-200',
   enrolled: 'bg-green-100 text-green-800 border-green-200',
   closed: 'bg-gray-100 text-gray-600 border-gray-200',
 };
@@ -29,8 +37,10 @@ export function AdminEnrollmentLeadsTab() {
   const [leads, setLeads] = useState<EnrollmentLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [approvingId, setApprovingId] = useState<string | null>(null);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [denyTarget, setDenyTarget] = useState<EnrollmentLead | null>(null);
+  const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
+  const [showNewLeadModal, setShowNewLeadModal] = useState(false);
 
   useEffect(() => {
     load();
@@ -49,24 +59,44 @@ export function AdminEnrollmentLeadsTab() {
   }
 
   async function handleApprove(lead: EnrollmentLead) {
-    setApprovingId(lead.lead_id);
-    try {
-      const { error: fnError } = await supabase.functions.invoke('approve-enrollment-lead', {
-        body: { leadId: lead.lead_id },
-      });
-      if (fnError) throw fnError;
-      setLeads((prev) =>
-        prev.map((l) =>
-          l.lead_id === lead.lead_id
-            ? { ...l, status: 'approved', approved_at: new Date().toISOString(), approval_email_sent_at: new Date().toISOString() }
-            : l
-        )
-      );
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to send approval');
-    } finally {
-      setApprovingId(null);
-    }
+    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.functions.invoke('approve-enrollment-lead', {
+      body: { leadId: lead.lead_id },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    setLeads(prev => prev.map(l => l.lead_id === lead.lead_id ? { ...l, status: 'approved' as const } : l));
+    toast.success('Approval sent');
+  }
+
+  async function handleResendBookingLink(lead: EnrollmentLead) {
+    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.functions.invoke('resend-booking-link', {
+      body: { leadId: lead.lead_id },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    toast.success('Booking link resent');
+  }
+
+  async function handleDenyConfirm(leadId: string, message: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    await supabase.functions.invoke('deny-enrollment-lead', {
+      body: { leadId, message },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status: 'denied' as const } : l));
+    setDenyTarget(null);
+  }
+
+  async function handleBookingConfirm(leadId: string, slotId: string, appointmentDate: string) {
+    const { data: { session } } = await supabase.auth.getSession();
+    const { data } = await supabase.functions.invoke('admin-book-appointment', {
+      body: { leadId, slotId, appointmentDate },
+      headers: { Authorization: `Bearer ${session?.access_token}` },
+    });
+    setLeads(prev => prev.map(l => l.lead_id === leadId
+      ? { ...l, status: data.status, appointment_date: appointmentDate } : l));
+    setPickDateTarget(null);
+    toast.success(`Appointment booked for ${appointmentDate}`);
   }
 
   async function handleStatusChange(leadId: string, status: EnrollmentLead['status']) {
@@ -115,6 +145,10 @@ export function AdminEnrollmentLeadsTab() {
             Inquiries submitted from the public contact form
           </p>
         </div>
+        <Button onClick={() => setShowNewLeadModal(true)} variant="outline" size="sm" className="gap-2">
+          <Plus className="w-4 h-4" />
+          New Lead
+        </Button>
       </div>
 
       {error && (
@@ -149,8 +183,8 @@ export function AdminEnrollmentLeadsTab() {
                   </div>
 
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Status updater (non-new leads) */}
-                    {lead.status !== 'new' && (
+                    {/* Status updater for enrolled/closed */}
+                    {(lead.status === 'enrolled' || lead.status === 'closed') && (
                       <Select
                         value={lead.status}
                         onValueChange={(val) => handleStatusChange(lead.lead_id, val as EnrollmentLead['status'])}
@@ -160,33 +194,10 @@ export function AdminEnrollmentLeadsTab() {
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="approved">Approved</SelectItem>
-                          <SelectItem value="appointment_scheduled">Appt. Scheduled</SelectItem>
                           <SelectItem value="enrolled">Enrolled</SelectItem>
                           <SelectItem value="closed">Closed</SelectItem>
                         </SelectContent>
                       </Select>
-                    )}
-
-                    {/* Approve button for new leads */}
-                    {lead.status === 'new' && (
-                      <Button
-                        onClick={() => handleApprove(lead)}
-                        disabled={approvingId === lead.lead_id}
-                        className="gap-2"
-                      >
-                        {approvingId === lead.lead_id ? (
-                          <>
-                            <Loader2 className="w-4 h-4 animate-spin" />
-                            Sending...
-                          </>
-                        ) : (
-                          <>
-                            <CheckCircle className="w-4 h-4" />
-                            Approve &amp; Send Invite
-                          </>
-                        )}
-                      </Button>
                     )}
                   </div>
                 </div>
@@ -219,6 +230,14 @@ export function AdminEnrollmentLeadsTab() {
                   )}
                 </div>
 
+                {/* Appointment date for scheduled/confirmed leads */}
+                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Appointment: {new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
+                    {lead.appointment_time && ` at ${new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+                  </p>
+                )}
+
                 {/* Message */}
                 {lead.message && (
                   <div className="flex gap-2 pt-1">
@@ -233,10 +252,52 @@ export function AdminEnrollmentLeadsTab() {
                     Invite sent {formatDate(lead.approval_email_sent_at)}
                   </p>
                 )}
+
+                {/* Action buttons per status */}
+                {lead.status === 'new' && (
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" onClick={() => handleApprove(lead)}>Approve & Send Invite</Button>
+                    <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setDenyTarget(lead)}>Deny</Button>
+                  </div>
+                )}
+                {lead.status === 'approved' && (
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>Resend Booking Link</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>Pick Date for Them</Button>
+                    <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setDenyTarget(lead)}>Deny</Button>
+                  </div>
+                )}
+                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && (
+                  <div className="flex gap-2 flex-wrap">
+                    <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>Resend Booking Link</Button>
+                    <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>Pick New Date</Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
         </div>
+      )}
+
+      {denyTarget && (
+        <DenyModal
+          lead={denyTarget}
+          onConfirm={handleDenyConfirm}
+          onCancel={() => setDenyTarget(null)}
+        />
+      )}
+      {pickDateTarget && (
+        <PickDateModal
+          lead={pickDateTarget}
+          onConfirm={handleBookingConfirm}
+          onCancel={() => setPickDateTarget(null)}
+        />
+      )}
+      {showNewLeadModal && (
+        <NewLeadModal
+          onSuccess={(lead) => { setLeads(prev => [lead, ...prev]); setShowNewLeadModal(false); }}
+          onCancel={() => setShowNewLeadModal(false)}
+        />
       )}
     </div>
   );
