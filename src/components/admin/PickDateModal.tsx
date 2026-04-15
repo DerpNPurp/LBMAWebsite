@@ -24,21 +24,24 @@ export function PickDateModal({ lead, onConfirm, onCancel }: PickDateModalProps)
   const [selectedDate, setSelectedDate] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const [fetching, setFetching] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   useEffect(() => {
     getAppointmentSlots().then((s) => {
       setSlots(s)
       if (s.length === 1) setSelectedSlotId(s[0].slot_id)
-    }).finally(() => setFetching(false))
+    }).catch(() => setFetchError('Failed to load available slots.'))
+    .finally(() => setFetching(false))
   }, [])
 
   useEffect(() => {
     if (!selectedSlotId) return
     getUpcomingBookableDates(selectedSlotId).then((dates) => {
-      const slot = slots.find(s => s.slot_id === selectedSlotId)!
+      const slot = slots.find(s => s.slot_id === selectedSlotId)
+      if (!slot) return
       setDateOptions(dates.map(d => ({ date: d, slotId: selectedSlotId, slotLabel: slot.label })))
       setSelectedDate(null)
-    })
+    }).catch(() => setFetchError('Failed to load available dates.'))
   }, [selectedSlotId, slots])
 
   function isWithin2Days(dateStr: string) {
@@ -53,6 +56,8 @@ export function PickDateModal({ lead, onConfirm, onCancel }: PickDateModalProps)
     setLoading(true)
     try {
       await onConfirm(lead.lead_id, selectedSlotId, selectedDate)
+    } catch {
+      setFetchError('Failed to book appointment. Please try again.')
     } finally {
       setLoading(false)
     }
@@ -84,6 +89,8 @@ export function PickDateModal({ lead, onConfirm, onCancel }: PickDateModalProps)
           )}
           {fetching ? (
             <div className="flex justify-center py-8"><Loader2 className="w-5 h-5 animate-spin text-muted-foreground" /></div>
+          ) : fetchError ? (
+            <p className="text-sm text-destructive text-center py-4">{fetchError}</p>
           ) : !selectedSlotId ? (
             <p className="text-sm text-muted-foreground text-center py-4">Select a slot above to see available dates.</p>
           ) : dateOptions.length === 0 ? (
