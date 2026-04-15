@@ -16,6 +16,8 @@ import type {
   StudentFeedback,
   FeedbackTest,
   Review,
+  AppointmentSlot,
+  AdminNotificationSetting,
 } from '../types';
 import {
   ANNOUNCEMENT_COLUMNS,
@@ -623,4 +625,43 @@ export async function getUserReview(userId: string): Promise<Review | null> {
 
   if (error) throw error;
   return data || null;
+}
+
+// ============================================
+// APPOINTMENT SLOTS
+// ============================================
+
+export async function getAppointmentSlots(): Promise<AppointmentSlot[]> {
+  const { data, error } = await supabase
+    .from('appointment_slots')
+    .select('*')
+    .eq('is_active', true)
+    .order('day_of_week')
+  if (error) throw error
+  return data ?? []
+}
+
+export async function getUpcomingBookableDates(slotId: string, weeksAhead = 8): Promise<string[]> {
+  const { data, error } = await supabase.rpc('get_upcoming_bookable_dates', {
+    p_slot_id: slotId,
+    p_weeks_ahead: weeksAhead,
+  })
+  if (error) throw error
+  return (data ?? []).map((row: { available_date: string }) => row.available_date)
+}
+
+export async function getLeadByToken(token: string) {
+  const { data, error } = await supabase.rpc('get_lead_by_token', { p_token: token })
+  if (error) throw error
+  return data?.[0] ?? null
+}
+
+// ============================================
+// ADMIN NOTIFICATION SETTINGS
+// ============================================
+
+export async function getAdminNotificationSettings(): Promise<AdminNotificationSetting[]> {
+  const { data, error } = await supabase.rpc('get_admin_notification_settings')
+  if (error) throw error
+  return data ?? []
 }
