@@ -333,6 +333,25 @@ export function AdminEnrollmentLeadsTab() {
         />
       </div>
 
+      {/* Sub-filter for Closed / Denied tab */}
+      {activeTab === 'denied_closed' && (
+        <div className="flex gap-1.5">
+          {(['all', 'denied', 'closed', 'deleted'] as ClosedDeniedFilter[]).map(f => (
+            <button
+              key={f}
+              onClick={() => setClosedDeniedFilter(f)}
+              className={`px-3 py-1 text-xs rounded-full font-medium transition-colors capitalize ${
+                closedDeniedFilter === f
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-muted text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {f === 'all' ? 'All' : f.charAt(0).toUpperCase() + f.slice(1)}
+            </button>
+          ))}
+        </div>
+      )}
+
       {visibleLeads.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           {search.trim() ? 'No leads match your search.' : 'No leads in this status.'}
