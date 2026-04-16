@@ -1,56 +1,117 @@
 import { useState, useEffect } from 'react';
-import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Badge } from '../ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Mail, Phone, User, Calendar, MessageSquare, Loader2, Plus } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Calendar, Plus, Search } from 'lucide-react';
 import { toast } from 'sonner';
-import { supabase } from '../../lib/supabase/client';
+import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client';
 import { getEnrollmentLeads } from '../../lib/supabase/queries';
-import { updateLeadStatus } from '../../lib/supabase/mutations';
+import { updateLeadStatus, updateLeadAdminNotes } from '../../lib/supabase/mutations';
 import type { EnrollmentLead } from '../../lib/types';
 import { DenyModal } from './DenyModal';
 import { PickDateModal } from './PickDateModal';
 import { NewLeadModal } from './NewLeadModal';
 
+// ─── Tab config ────────────────────────────────────────────────────────────
+
+type TabId =
+  | 'new'
+  | 'approved'
+  | 'appointment_scheduled'
+  | 'appointment_confirmed'
+  | 'denied_closed'
+  | 'all';
+
+const TABS: { id: TabId; label: string; statuses?: EnrollmentLead['status'][] }[] = [
+  { id: 'new',                   label: 'New',             statuses: ['new'] },
+  { id: 'approved',              label: 'Approved',        statuses: ['approved'] },
+  { id: 'appointment_scheduled', label: 'Scheduled',       statuses: ['appointment_scheduled'] },
+  { id: 'appointment_confirmed', label: 'Confirmed',       statuses: ['appointment_confirmed'] },
+  { id: 'denied_closed',         label: 'Closed / Denied', statuses: ['denied', 'closed'] },
+  { id: 'all',                   label: 'All' },
+];
+
+function tabCount(leads: EnrollmentLead[], tab: (typeof TABS)[number]): number {
+  if (!tab.statuses) return leads.length;
+  return leads.filter(l => tab.statuses!.includes(l.status)).length;
+}
+
+function filterLeads(leads: EnrollmentLead[], tabId: TabId, search: string): EnrollmentLead[] {
+  const tab = TABS.find(t => t.id === tabId)!;
+  let result = tab.statuses
+    ? leads.filter(l => tab.statuses!.includes(l.status))
+    : [...leads];
+  if (search.trim()) {
+    const q = search.toLowerCase();
+    result = result.filter(l =>
+      l.parent_name.toLowerCase().includes(q) ||
+      l.parent_email.toLowerCase().includes(q) ||
+      (l.student_name?.toLowerCase().includes(q) ?? false)
+    );
+  }
+  return result;
+}
+
+// ─── Status display ────────────────────────────────────────────────────────
+
 const STATUS_LABELS: Record<EnrollmentLead['status'], string> = {
-  new: 'New',
-  approved: 'Approved',
-  appointment_scheduled: 'Appt. Scheduled',
+  new:                   'New',
+  approved:              'Approved',
+  appointment_scheduled: 'Scheduled',
   appointment_confirmed: 'Confirmed',
-  denied: 'Denied',
-  enrolled: 'Enrolled',
-  closed: 'Closed',
+  denied:                'Denied',
+  enrolled:              'Enrolled',
+  closed:                'Closed',
 };
 
-const STATUS_COLORS: Record<EnrollmentLead['status'], string> = {
-  new: 'bg-blue-100 text-blue-800 border-blue-200',
-  approved: 'bg-amber-100 text-amber-800 border-amber-200',
-  appointment_scheduled: 'bg-purple-100 text-purple-800 border-purple-200',
-  appointment_confirmed: 'bg-green-100 text-green-800 border-green-200',
-  denied: 'bg-red-100 text-red-800 border-red-200',
-  enrolled: 'bg-green-100 text-green-800 border-green-200',
-  closed: 'bg-gray-100 text-gray-600 border-gray-200',
+const BADGE_STYLES: Record<EnrollmentLead['status'], string> = {
+  new:                   'bg-[#FFF0F0] text-[#A01F23] border border-[rgba(160,31,35,0.2)]',
+  approved:              'bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]',
+  appointment_scheduled: 'bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]',
+  appointment_confirmed: 'bg-[#DCFCE7] text-[#14532D] border border-[#86EFAC]',
+  denied:                'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]',
+  enrolled:              'bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0]',
+  closed:                'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]',
 };
+
+function AgingIndicator({ createdAt }: { createdAt: string }) {
+  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
+  const label = days === 0 ? 'today' : days === 1 ? '1d ago' : `${days}d ago`;
+  return (
+    <span className={`text-xs ${days >= 7 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
+      {label}
+    </span>
+  );
+}
+
+function formatDate(dateString: string) {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    month: 'short', day: 'numeric', year: 'numeric',
+  });
+}
+
+// ─── Component ─────────────────────────────────────────────────────────────
 
 export function AdminEnrollmentLeadsTab() {
   const [leads, setLeads] = useState<EnrollmentLead[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<TabId>('new');
+  const [search, setSearch] = useState('');
+  const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [denyTarget, setDenyTarget] = useState<EnrollmentLead | null>(null);
   const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
 
-  useEffect(() => {
-    load();
-  }, []);
+  useEffect(() => { load(); }, []);
 
   async function load() {
     try {
       setLoading(true);
       setError(null);
-      setLeads(await getEnrollmentLeads());
+      const data = await getEnrollmentLeads();
+      setLeads(data);
+      setNotesDraft(Object.fromEntries(data.map(l => [l.lead_id, l.admin_notes ?? ''])));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to load leads');
     } finally {
@@ -59,44 +120,48 @@ export function AdminEnrollmentLeadsTab() {
   }
 
   async function handleApprove(lead: EnrollmentLead) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const fnHeaders = await edgeFunctionUserAuthHeaders();
+    if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
     const { error } = await supabase.functions.invoke('approve-enrollment-lead', {
       body: { leadId: lead.lead_id },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: fnHeaders,
     });
-    if (error) { toast.error('Failed to send approval'); return }
+    if (error) { toast.error('Failed to send approval'); return; }
     setLeads(prev => prev.map(l => l.lead_id === lead.lead_id ? { ...l, status: 'approved' as const } : l));
     toast.success('Approval sent');
   }
 
   async function handleResendBookingLink(lead: EnrollmentLead) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const fnHeaders = await edgeFunctionUserAuthHeaders();
+    if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
     const { error } = await supabase.functions.invoke('resend-booking-link', {
       body: { leadId: lead.lead_id },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: fnHeaders,
     });
-    if (error) { toast.error('Failed to resend booking link'); return }
+    if (error) { toast.error('Failed to resend booking link'); return; }
     toast.success('Booking link resent');
   }
 
   async function handleDenyConfirm(leadId: string, message: string) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const fnHeaders = await edgeFunctionUserAuthHeaders();
+    if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
     const { error } = await supabase.functions.invoke('deny-enrollment-lead', {
       body: { leadId, message },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: fnHeaders,
     });
-    if (error) { toast.error('Failed to send denial'); return }
+    if (error) { toast.error('Failed to send denial'); return; }
     setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status: 'denied' as const } : l));
     setDenyTarget(null);
   }
 
   async function handleBookingConfirm(leadId: string, slotId: string, appointmentDate: string) {
-    const { data: { session } } = await supabase.auth.getSession();
+    const fnHeaders = await edgeFunctionUserAuthHeaders();
+    if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
     const { data, error } = await supabase.functions.invoke('admin-book-appointment', {
       body: { leadId, slotId, appointmentDate },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: fnHeaders,
     });
-    if (error || !data) { toast.error('Failed to book appointment'); return }
+    if (error || !data) { toast.error('Failed to book appointment'); return; }
     setLeads(prev => prev.map(l => l.lead_id === leadId
       ? { ...l, status: data.status, appointment_date: appointmentDate } : l));
     setPickDateTarget(null);
@@ -107,9 +172,7 @@ export function AdminEnrollmentLeadsTab() {
     setUpdatingId(leadId);
     try {
       await updateLeadStatus(leadId, status);
-      setLeads((prev) =>
-        prev.map((l) => (l.lead_id === leadId ? { ...l, status } : l))
-      );
+      setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status } : l));
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
@@ -117,36 +180,39 @@ export function AdminEnrollmentLeadsTab() {
     }
   }
 
-  const formatDate = (dateString: string) =>
-    new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short', day: 'numeric', year: 'numeric',
-    });
+  async function handleNotesSave(leadId: string) {
+    try {
+      await updateLeadAdminNotes(leadId, notesDraft[leadId] ?? '');
+    } catch {
+      // silent — notes are best-effort
+    }
+  }
 
-  const newCount = leads.filter((l) => l.status === 'new').length;
+  const visibleLeads = filterLeads(leads, activeTab, search);
+  const newCount = leads.filter(l => l.status === 'new').length;
+  const approvedCount = leads.filter(l => l.status === 'approved').length;
+  const scheduledCount = leads.filter(l => l.status === 'appointment_scheduled').length;
 
   if (loading) {
     return (
       <div className="flex items-center justify-center py-16 text-muted-foreground">
         <Loader2 className="w-5 h-5 animate-spin mr-3" />
-        Loading leads...
+        Loading leads…
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="space-y-4">
+      {/* Header */}
+      <div className="flex items-start justify-between">
         <div>
-          <h2 className="text-4xl font-bold flex items-center gap-3">
-            Enrollment Leads
-            {newCount > 0 && (
-              <Badge className="text-sm px-2 py-0.5 bg-blue-600 text-white">
-                {newCount} new
-              </Badge>
-            )}
-          </h2>
-          <p className="text-muted-foreground text-lg">
-            Inquiries submitted from the public contact form
+          <h2 className="text-xl font-semibold">Enrollment Leads</h2>
+          <p className="text-sm text-muted-foreground mt-0.5">
+            {newCount > 0 && <span className="text-primary font-medium">{newCount} new · </span>}
+            {approvedCount > 0 && <span>{approvedCount} approved · </span>}
+            {scheduledCount > 0 && <span>{scheduledCount} scheduled · </span>}
+            <span>{leads.length} total</span>
           </p>
         </div>
         <Button onClick={() => setShowNewLeadModal(true)} variant="outline" size="sm" className="gap-2">
@@ -159,147 +225,80 @@ export function AdminEnrollmentLeadsTab() {
         <div className="text-sm text-destructive bg-destructive/10 rounded-md px-4 py-2">{error}</div>
       )}
 
-      {leads.length === 0 ? (
-        <Card>
-          <CardContent className="flex flex-col items-center justify-center py-16 text-muted-foreground">
-            <Mail className="w-12 h-12 mb-3 opacity-40" />
-            <p className="font-medium">No leads yet</p>
-            <p className="text-sm mt-1">Submissions from the contact form will appear here</p>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <div className="border-b border-border">
+        <div className="flex gap-0 overflow-x-auto">
+          {TABS.map(tab => {
+            const count = tabCount(leads, tab);
+            const isActive = activeTab === tab.id;
+            return (
+              <button
+                key={tab.id}
+                onClick={() => { setActiveTab(tab.id); setSearch(''); }}
+                className={`px-4 py-2.5 text-sm whitespace-nowrap flex items-center gap-1.5 border-b-2 transition-colors ${
+                  isActive
+                    ? 'border-primary text-primary font-semibold -mb-px'
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+              >
+                {tab.label}
+                {count > 0 && (
+                  <span className={`text-xs px-1.5 py-0.5 rounded-full font-semibold ${
+                    isActive
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground'
+                  }`}>
+                    {count}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground pointer-events-none" />
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Search by name, email, or student…"
+          className="w-full pl-9 pr-4 py-2 text-sm border border-border rounded-lg bg-background focus:outline-none focus:ring-2 focus:ring-ring"
+        />
+      </div>
+
+      {/* Lead list — stub, replaced in Task 4 */}
+      {visibleLeads.length === 0 ? (
+        <div className="text-center py-12 text-muted-foreground text-sm">
+          {search.trim() ? 'No leads match your search.' : 'No leads in this status.'}
+        </div>
       ) : (
-        <div className="space-y-4">
-          {leads.map((lead) => (
-            <Card key={lead.lead_id} className={lead.status === 'new' ? 'border-blue-200 shadow-sm' : ''}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between gap-4">
-                  <div className="space-y-1">
-                    <CardTitle className="text-xl flex items-center gap-3">
-                      {lead.parent_name}
-                      <span className={`text-xs font-medium px-2 py-0.5 rounded-full border ${STATUS_COLORS[lead.status]}`}>
-                        {STATUS_LABELS[lead.status]}
-                      </span>
-                    </CardTitle>
-                    <p className="text-sm text-muted-foreground flex items-center gap-1">
-                      <Calendar className="w-3.5 h-3.5" />
-                      Submitted {formatDate(lead.created_at)}
-                    </p>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-shrink-0">
-                    {/* Status updater for enrolled/closed */}
-                    {(lead.status === 'enrolled' || lead.status === 'closed') && (
-                      <Select
-                        value={lead.status}
-                        onValueChange={(val) => handleStatusChange(lead.lead_id, val as EnrollmentLead['status'])}
-                        disabled={updatingId === lead.lead_id}
-                      >
-                        <SelectTrigger className="w-48 h-9 text-sm">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="enrolled">Enrolled</SelectItem>
-                          <SelectItem value="closed">Closed</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    )}
-                  </div>
-                </div>
-              </CardHeader>
-
-              <CardContent className="space-y-3">
-                {/* Contact info */}
-                <div className="flex flex-wrap gap-4 text-sm">
-                  <a
-                    href={`mailto:${lead.parent_email}`}
-                    className="flex items-center gap-1.5 text-primary hover:underline"
-                  >
-                    <Mail className="w-4 h-4" />
-                    {lead.parent_email}
-                  </a>
-                  {lead.phone && (
-                    <a
-                      href={`tel:${lead.phone}`}
-                      className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
-                    >
-                      <Phone className="w-4 h-4" />
-                      {lead.phone}
-                    </a>
-                  )}
-                  {lead.student_name && (
-                    <span className="flex items-center gap-1.5 text-muted-foreground">
-                      <User className="w-4 h-4" />
-                      {lead.student_name}{lead.student_age ? `, age ${lead.student_age}` : ''}
-                    </span>
-                  )}
-                </div>
-
-                {/* Appointment date for scheduled/confirmed leads */}
-                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
-                  <p className="text-sm text-muted-foreground mt-1">
-                    Appointment: {new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric', year: 'numeric' })}
-                    {lead.appointment_time && ` at ${new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
-                  </p>
-                )}
-
-                {/* Message */}
-                {lead.message && (
-                  <div className="flex gap-2 pt-1">
-                    <MessageSquare className="w-4 h-4 text-muted-foreground flex-shrink-0 mt-0.5" />
-                    <p className="text-sm text-muted-foreground leading-relaxed">{lead.message}</p>
-                  </div>
-                )}
-
-                {/* Approval timestamp */}
-                {lead.approval_email_sent_at && (
-                  <p className="text-xs text-muted-foreground pt-1">
-                    Invite sent {formatDate(lead.approval_email_sent_at)}
-                  </p>
-                )}
-
-                {/* Action buttons per status */}
-                {lead.status === 'new' && (
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" onClick={() => handleApprove(lead)}>Approve & Send Invite</Button>
-                    <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setDenyTarget(lead)}>Deny</Button>
-                  </div>
-                )}
-                {lead.status === 'approved' && (
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>Resend Booking Link</Button>
-                    <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>Pick Date for Them</Button>
-                    <Button size="sm" variant="outline" className="text-destructive border-destructive hover:bg-destructive/10" onClick={() => setDenyTarget(lead)}>Deny</Button>
-                  </div>
-                )}
-                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && (
-                  <div className="flex gap-2 flex-wrap">
-                    <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>Resend Booking Link</Button>
-                    <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>Pick New Date</Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+        <div className="space-y-3">
+          {visibleLeads.map(lead => (
+            <div key={lead.lead_id} className="border border-border rounded-lg p-4 bg-card">
+              <p className="font-medium">{lead.parent_name}</p>
+              <p className="text-sm text-muted-foreground">{lead.status}</p>
+            </div>
           ))}
         </div>
       )}
 
+      {/* Modals */}
       {denyTarget && (
-        <DenyModal
-          lead={denyTarget}
-          onConfirm={handleDenyConfirm}
-          onCancel={() => setDenyTarget(null)}
-        />
+        <DenyModal lead={denyTarget} onConfirm={handleDenyConfirm} onCancel={() => setDenyTarget(null)} />
       )}
       {pickDateTarget && (
-        <PickDateModal
-          lead={pickDateTarget}
-          onConfirm={handleBookingConfirm}
-          onCancel={() => setPickDateTarget(null)}
-        />
+        <PickDateModal lead={pickDateTarget} onConfirm={handleBookingConfirm} onCancel={() => setPickDateTarget(null)} />
       )}
       {showNewLeadModal && (
         <NewLeadModal
-          onSuccess={(lead) => { setLeads(prev => [lead, ...prev]); setShowNewLeadModal(false); }}
+          onSuccess={lead => {
+            setLeads(prev => [lead, ...prev]);
+            setNotesDraft(d => ({ ...d, [lead.lead_id]: lead.admin_notes ?? '' }));
+            setShowNewLeadModal(false);
+          }}
           onCancel={() => setShowNewLeadModal(false)}
         />
       )}
