@@ -349,10 +349,14 @@ export function AdminEnrollmentLeadsTab() {
 
                 {/* Admin notes */}
                 <div className="space-y-1">
-                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  <label
+                    htmlFor={`notes-${lead.lead_id}`}
+                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
+                  >
                     Admin notes
-                  </p>
+                  </label>
                   <textarea
+                    id={`notes-${lead.lead_id}`}
                     value={notesDraft[lead.lead_id] ?? ''}
                     onChange={e => setNotesDraft(d => ({ ...d, [lead.lead_id]: e.target.value }))}
                     onBlur={() => handleNotesSave(lead.lead_id)}
@@ -362,7 +366,7 @@ export function AdminEnrollmentLeadsTab() {
                   />
                 </div>
 
-                {/* Actions */}
+                {/* Actions — denied leads are terminal; no actions shown */}
                 <div className="flex flex-wrap gap-2">
                   {lead.status === 'new' && (
                     <>
