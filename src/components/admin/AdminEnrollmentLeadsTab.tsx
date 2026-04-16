@@ -73,10 +73,8 @@ const BADGE_STYLES: Record<EnrollmentLead['status'], string> = {
   closed:                'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]',
 };
 
-const _NOW = Date.now();
-
-function AgingIndicator({ createdAt }: { createdAt: string }) {
-  const days = Math.floor((_NOW - new Date(createdAt).getTime()) / 86_400_000);
+function AgingIndicator({ createdAt, now }: { createdAt: string; now: number }) {
+  const days = Math.floor((now - new Date(createdAt).getTime()) / 86_400_000);
   const label = days === 0 ? 'today' : days === 1 ? '1d ago' : `${days}d ago`;
   return (
     <span className={`text-xs ${days >= 7 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
@@ -95,6 +93,7 @@ function formatDate(dateString: string) {
 
 export function AdminEnrollmentLeadsTab() {
   const [leads, setLeads] = useState<EnrollmentLead[]>([]);
+  const [now] = useState(Date.now);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('new');
@@ -290,7 +289,7 @@ export function AdminEnrollmentLeadsTab() {
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold text-base">{lead.parent_name}</span>
                   <div className="flex items-center gap-2 flex-shrink-0">
-                    {activeTab === 'new' && <AgingIndicator createdAt={lead.created_at} />}
+                    {activeTab === 'new' && <AgingIndicator createdAt={lead.created_at} now={now} />}
                     <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLES[lead.status]}`}>
                       {STATUS_LABELS[lead.status]}
                     </span>
