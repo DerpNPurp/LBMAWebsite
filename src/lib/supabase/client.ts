@@ -30,6 +30,16 @@ export type EnrollmentLeadInput = {
  * Call check_email_has_account via REST with a hard timeout (AbortController).
  * Use this instead of supabase.rpc() when the client's request may hang (e.g. PostgREST/schema cache).
  */
+/**
+ * Returns Authorization headers for calling Supabase Edge Functions as the
+ * current authenticated user. Returns null if there is no active session.
+ */
+export async function edgeFunctionUserAuthHeaders(): Promise<Record<string, string> | null> {
+  const { data: { session } } = await supabase.auth.getSession();
+  if (!session?.access_token) return null;
+  return { Authorization: `Bearer ${session.access_token}` };
+}
+
 export async function checkEmailHasAccountWithTimeout(
   email: string,
   timeoutMs: number
