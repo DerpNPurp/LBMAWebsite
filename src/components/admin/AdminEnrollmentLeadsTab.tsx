@@ -30,16 +30,49 @@ const TABS: { id: TabId; label: string; statuses?: EnrollmentLead['status'][] }[
   { id: 'all',                   label: 'All' },
 ];
 
+type ClosedDeniedFilter = 'all' | 'denied' | 'closed' | 'deleted';
+
 function tabCount(leads: EnrollmentLead[], tab: (typeof TABS)[number]): number {
-  if (!tab.statuses) return leads.length;
-  return leads.filter(l => tab.statuses!.includes(l.status)).length;
+  if (!tab.statuses) return leads.filter(l => !l.deleted_at).length;
+  if (tab.id === 'denied_closed') {
+    return leads.filter(l =>
+      (tab.statuses!.includes(l.status) && !l.deleted_at) || !!l.deleted_at
+    ).length;
+  }
+  return leads.filter(l => tab.statuses!.includes(l.status) && !l.deleted_at).length;
 }
 
-function filterLeads(leads: EnrollmentLead[], tabId: TabId, search: string): EnrollmentLead[] {
-  const tab = TABS.find(t => t.id === tabId)!;
-  let result = tab.statuses
-    ? leads.filter(l => tab.statuses!.includes(l.status))
-    : [...leads];
+function filterLeads(
+  leads: EnrollmentLead[],
+  tabId: TabId,
+  search: string,
+  closedDeniedFilter: ClosedDeniedFilter
+): EnrollmentLead[] {
+  let result: EnrollmentLead[];
+
+  if (tabId === 'denied_closed') {
+    switch (closedDeniedFilter) {
+      case 'denied':
+        result = leads.filter(l => l.status === 'denied' && !l.deleted_at);
+        break;
+      case 'closed':
+        result = leads.filter(l => l.status === 'closed' && !l.deleted_at);
+        break;
+      case 'deleted':
+        result = leads.filter(l => !!l.deleted_at);
+        break;
+      default:
+        result = leads.filter(l =>
+          ((l.status === 'denied' || l.status === 'closed') && !l.deleted_at) || !!l.deleted_at
+        );
+    }
+  } else {
+    const tab = TABS.find(t => t.id === tabId)!;
+    result = tab.statuses
+      ? leads.filter(l => tab.statuses!.includes(l.status) && !l.deleted_at)
+      : leads.filter(l => !l.deleted_at);
+  }
+
   if (search.trim()) {
     const q = search.toLowerCase();
     result = result.filter(l =>
@@ -103,6 +136,7 @@ export function AdminEnrollmentLeadsTab() {
   const [denyTarget, setDenyTarget] = useState<EnrollmentLead | null>(null);
   const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
+  const [closedDeniedFilter, setClosedDeniedFilter] = useState<ClosedDeniedFilter>('all');
 
   useEffect(() => { load(); }, []);
 
@@ -189,7 +223,7 @@ export function AdminEnrollmentLeadsTab() {
     }
   }
 
-  const visibleLeads = filterLeads(leads, activeTab, search);
+  const visibleLeads = filterLeads(leads, activeTab, search, closedDeniedFilter);
   const newCount = leads.filter(l => l.status === 'new').length;
   const approvedCount = leads.filter(l => l.status === 'approved').length;
   const scheduledCount = leads.filter(l => l.status === 'appointment_scheduled').length;
@@ -235,7 +269,7 @@ export function AdminEnrollmentLeadsTab() {
             return (
               <button
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSearch(''); }}
+                onClick={() => { setActiveTab(tab.id); setSearch(''); setClosedDeniedFilter('all'); }}
                 className={`px-4 py-2.5 text-sm whitespace-nowrap flex items-center gap-1.5 border-b-2 transition-colors ${
                   isActive
                     ? 'border-primary text-primary font-semibold -mb-px'
