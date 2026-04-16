@@ -455,6 +455,22 @@ export async function updateLeadAdminNotes(leadId: string, notes: string): Promi
   if (error) throw error;
 }
 
+export async function dismissLeadSilently(leadId: string): Promise<void> {
+  const { error } = await supabase
+    .from('enrollment_leads')
+    .update({ status: 'denied', denied_at: new Date().toISOString() })
+    .eq('lead_id', leadId);
+  if (error) throw error;
+}
+
+export async function deleteEnrollmentLead(leadId: string): Promise<void> {
+  const { error } = await supabase
+    .from('enrollment_leads')
+    .update({ deleted_at: new Date().toISOString() })
+    .eq('lead_id', leadId);
+  if (error) throw error;
+}
+
 // ============================================
 // FEEDBACK TESTS
 // ============================================
