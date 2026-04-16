@@ -2,7 +2,7 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead } from './types.ts'
-import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml } from './templates.ts'
+import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml } from './templates.ts'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM = 'Los Banos Martial Arts Academy <no-reply@notifications.lbmartialarts.com>'
@@ -41,7 +41,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
 
   if (error || !lead) throw new Error(`Enrollment lead not found: ${record.lead_id}`)
 
-  const appUrl = Deno.env.get('APP_URL') ?? 'https://lbmaa.com'
+  const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173'
   const adminUrl = `${appUrl}/admin`
   const bookingUrl = lead.booking_token ? `${appUrl}/book/${lead.booking_token}` : appUrl
   const confirmUrl = lead.booking_token ? `${appUrl}/confirm/${lead.booking_token}` : appUrl
@@ -50,9 +50,28 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
   let html: string
 
   switch (record.type) {
-    case 'new_lead':
+    case 'new_lead': {
+      // Fan out to all active admin notification recipients
+      const { data: admins } = await supabase
+        .from('admin_notification_settings')
+        .select('email')
+        .eq('notify_new_leads', true)
+        .eq('is_active', true)
+      const recipients = admins && admins.length > 0
+        ? admins.map((a: { email: string }) => a.email)
+        : [record.recipient_email]
       subject = `New enrollment inquiry — ${lead.parent_name}`
       html = enrollmentNotificationHtml(lead, adminUrl)
+      await Promise.all(recipients.map((to: string) => sendEmail(to, subject, html)))
+      await supabase
+        .from('enrollment_lead_notifications')
+        .update({ status: 'sent' })
+        .eq('notification_id', record.notification_id)
+      return
+    }
+    case 'submission':
+      subject = 'Thank you for your interest in LBMAA'
+      html = submissionConfirmationHtml(lead)
       break
     case 'approval':
       subject = 'Your enrollment request — book your appointment'
@@ -108,7 +127,7 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
     .single()
 
   const senderName = senderProfile?.display_name ?? 'Someone'
-  const portalUrl = `${Deno.env.get('APP_URL') ?? 'https://lbmaa.com'}/dashboard`
+  const portalUrl = `${Deno.env.get('APP_URL') ?? 'http://localhost:5173'}/dashboard`
 
   await sendEmail(
     user.email,
@@ -120,7 +139,12 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
 Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
-  if (webhookSecret && authHeader !== `Bearer ${webhookSecret}`) {
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  // Accept service role key (Supabase DB webhook default) or explicit WEBHOOK_SECRET if set
+  const isAuthorized =
+    authHeader === `Bearer ${serviceRoleKey}` ||
+    (webhookSecret ? authHeader === `Bearer ${webhookSecret}` : true)
+  if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 })
   }
 

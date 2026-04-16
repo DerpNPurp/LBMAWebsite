@@ -13,7 +13,7 @@ export interface EnrollmentLeadNotificationRecord {
   lead_id: string
   recipient_email: string
   channel: string
-  type: 'new_lead' | 'approval' | 'denial' | 'booking_confirmation' | 'reminder'
+  type: 'new_lead' | 'submission' | 'approval' | 'denial' | 'booking_confirmation' | 'reminder'
   status: string
   created_at: string
 }

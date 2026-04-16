@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Loader2, Mail, Phone, User, Calendar, Plus, Search, MoreVertical } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Calendar, Plus, Search, MoreVertical, Check, Pencil } from 'lucide-react';
 import { toast } from 'sonner';
 import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client';
 import { getEnrollmentLeads } from '../../lib/supabase/queries';
@@ -140,6 +140,9 @@ export function AdminEnrollmentLeadsTab() {
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
   const [closedDeniedFilter, setClosedDeniedFilter] = useState<ClosedDeniedFilter>('all');
   const [pendingAction, setPendingAction] = useState<{ type: 'dismiss' | 'delete'; lead: EnrollmentLead } | null>(null);
+  const [notesExpanded, setNotesExpanded] = useState<Record<string, boolean>>({});
+  const [notesSaved, setNotesSaved] = useState<Record<string, boolean>>({});
+  const [messageExpanded, setMessageExpanded] = useState<Record<string, boolean>>({});
 
   useEffect(() => { load(); }, []);
 
@@ -221,9 +224,12 @@ export function AdminEnrollmentLeadsTab() {
   async function handleNotesSave(leadId: string) {
     try {
       await updateLeadAdminNotes(leadId, notesDraft[leadId] ?? '');
+      setNotesSaved(s => ({ ...s, [leadId]: true }));
+      setTimeout(() => setNotesSaved(s => ({ ...s, [leadId]: false })), 2000);
     } catch {
       // silent — notes are best-effort
     }
+    setNotesExpanded(e => ({ ...e, [leadId]: false }));
   }
 
   async function handleDismissSilently(lead: EnrollmentLead) {
@@ -431,49 +437,76 @@ export function AdminEnrollmentLeadsTab() {
                   )}
                 </div>
 
-                {/* Appointment date (scheduled / confirmed only) */}
-                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
-                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
-                    <Calendar className="w-3.5 h-3.5" />
-                    Appointment: {new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', {
-                      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
-                    })}
-                    {lead.appointment_time && ` at ${new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
-                  </p>
+                {/* Approval timestamp + appointment date */}
+                {(lead.approval_email_sent_at || ((lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date)) && (
+                  <div className="flex flex-wrap gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
+                    {lead.approval_email_sent_at && (
+                      <span>Invite sent {formatDate(lead.approval_email_sent_at)}</span>
+                    )}
+                    {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
+                      <span className="flex items-center gap-1">
+                        <Calendar className="w-3 h-3" />
+                        {new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', {
+                          weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                        })}
+                        {lead.appointment_time && ` at ${new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+                      </span>
+                    )}
+                  </div>
                 )}
 
                 {/* Message */}
                 {lead.message && (
-                  <div className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed border-l-2 border-primary/20">
-                    {lead.message}
+                  <div>
+                    <div className={`text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed border-l-2 border-primary/20 ${!messageExpanded[lead.lead_id] && lead.message.length > 150 ? 'line-clamp-3' : ''}`}>
+                      {lead.message}
+                    </div>
+                    {lead.message.length > 150 && (
+                      <button
+                        onClick={() => setMessageExpanded(e => ({ ...e, [lead.lead_id]: !e[lead.lead_id] }))}
+                        className="text-xs text-muted-foreground hover:text-foreground mt-1 px-1 transition-colors"
+                      >
+                        {messageExpanded[lead.lead_id] ? 'Show less' : 'Show more'}
+                      </button>
+                    )}
                   </div>
                 )}
 
-                {/* Approval timestamp */}
-                {lead.approval_email_sent_at && (
-                  <p className="text-xs text-muted-foreground">
-                    Invite sent {formatDate(lead.approval_email_sent_at)}
-                  </p>
-                )}
-
                 {/* Admin notes */}
-                <div className="space-y-1">
-                  <label
-                    htmlFor={`notes-${lead.lead_id}`}
-                    className="text-xs font-semibold uppercase tracking-wide text-muted-foreground"
-                  >
-                    Admin notes
-                  </label>
+                {notesExpanded[lead.lead_id] ? (
                   <textarea
-                    id={`notes-${lead.lead_id}`}
+                    autoFocus
                     value={notesDraft[lead.lead_id] ?? ''}
                     onChange={e => setNotesDraft(d => ({ ...d, [lead.lead_id]: e.target.value }))}
                     onBlur={() => handleNotesSave(lead.lead_id)}
                     rows={2}
-                    placeholder="Add internal notes (only visible to admins)…"
+                    placeholder="Internal notes (only visible to admins)…"
                     className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/60"
                   />
-                </div>
+                ) : notesDraft[lead.lead_id]?.trim() ? (
+                  <div className="flex items-start gap-2 group">
+                    <p className="flex-1 text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed border border-border/50">
+                      {notesDraft[lead.lead_id]}
+                    </p>
+                    <div className="flex items-center gap-0.5 flex-shrink-0 pt-1.5">
+                      {notesSaved[lead.lead_id] && <Check className="w-3.5 h-3.5 text-green-600" />}
+                      <button
+                        onClick={() => setNotesExpanded(e => ({ ...e, [lead.lead_id]: true }))}
+                        className="p-1 rounded text-muted-foreground hover:text-foreground hover:bg-muted transition-colors opacity-0 group-hover:opacity-100"
+                      >
+                        <Pencil className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setNotesExpanded(e => ({ ...e, [lead.lead_id]: true }))}
+                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground transition-colors py-0.5"
+                  >
+                    <Plus className="w-3.5 h-3.5" />
+                    Add note
+                  </button>
+                )}
 
                 {/* Actions — denied leads are terminal; no actions shown */}
                 {!lead.deleted_at && (
