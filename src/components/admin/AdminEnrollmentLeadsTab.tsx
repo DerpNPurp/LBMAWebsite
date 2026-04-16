@@ -73,8 +73,10 @@ const BADGE_STYLES: Record<EnrollmentLead['status'], string> = {
   closed:                'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]',
 };
 
+const _NOW = Date.now();
+
 function AgingIndicator({ createdAt }: { createdAt: string }) {
-  const days = Math.floor((Date.now() - new Date(createdAt).getTime()) / 86_400_000);
+  const days = Math.floor((_NOW - new Date(createdAt).getTime()) / 86_400_000);
   const label = days === 0 ? 'today' : days === 1 ? '1d ago' : `${days}d ago`;
   return (
     <span className={`text-xs ${days >= 7 ? 'text-primary font-medium' : 'text-muted-foreground'}`}>
@@ -269,7 +271,6 @@ export function AdminEnrollmentLeadsTab() {
         />
       </div>
 
-      {/* Lead list — stub, replaced in Task 4 */}
       {visibleLeads.length === 0 ? (
         <div className="text-center py-12 text-muted-foreground text-sm">
           {search.trim() ? 'No leads match your search.' : 'No leads in this status.'}
@@ -277,9 +278,154 @@ export function AdminEnrollmentLeadsTab() {
       ) : (
         <div className="space-y-3">
           {visibleLeads.map(lead => (
-            <div key={lead.lead_id} className="border border-border rounded-lg p-4 bg-card">
-              <p className="font-medium">{lead.parent_name}</p>
-              <p className="text-sm text-muted-foreground">{lead.status}</p>
+            <div
+              key={lead.lead_id}
+              className={`bg-card rounded-lg border overflow-hidden ${
+                lead.status === 'new' ? 'border-primary/25' : 'border-border'
+              }`}
+            >
+              <div className="p-4 space-y-3">
+
+                {/* Row 1: name + aging + badge */}
+                <div className="flex items-center justify-between gap-3">
+                  <span className="font-semibold text-base">{lead.parent_name}</span>
+                  <div className="flex items-center gap-2 flex-shrink-0">
+                    {activeTab === 'new' && <AgingIndicator createdAt={lead.created_at} />}
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLES[lead.status]}`}>
+                      {STATUS_LABELS[lead.status]}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Row 2: contact info */}
+                <div className="flex flex-wrap gap-x-4 gap-y-1 text-sm">
+                  <a
+                    href={`mailto:${lead.parent_email}`}
+                    className="flex items-center gap-1.5 text-primary hover:underline"
+                  >
+                    <Mail className="w-3.5 h-3.5" />
+                    {lead.parent_email}
+                  </a>
+                  {lead.phone && (
+                    <a
+                      href={`tel:${lead.phone}`}
+                      className="flex items-center gap-1.5 text-muted-foreground hover:text-foreground"
+                    >
+                      <Phone className="w-3.5 h-3.5" />
+                      {lead.phone}
+                    </a>
+                  )}
+                  {lead.student_name && (
+                    <span className="flex items-center gap-1.5 text-muted-foreground">
+                      <User className="w-3.5 h-3.5" />
+                      {lead.student_name}{lead.student_age ? `, age ${lead.student_age}` : ''}
+                    </span>
+                  )}
+                </div>
+
+                {/* Appointment date (scheduled / confirmed only) */}
+                {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
+                  <p className="text-sm text-muted-foreground flex items-center gap-1.5">
+                    <Calendar className="w-3.5 h-3.5" />
+                    Appointment: {new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', {
+                      weekday: 'short', month: 'short', day: 'numeric', year: 'numeric',
+                    })}
+                    {lead.appointment_time && ` at ${new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })}`}
+                  </p>
+                )}
+
+                {/* Message */}
+                {lead.message && (
+                  <div className="text-sm text-muted-foreground bg-muted/40 rounded-md px-3 py-2 leading-relaxed border-l-2 border-primary/20">
+                    {lead.message}
+                  </div>
+                )}
+
+                {/* Approval timestamp */}
+                {lead.approval_email_sent_at && (
+                  <p className="text-xs text-muted-foreground">
+                    Invite sent {formatDate(lead.approval_email_sent_at)}
+                  </p>
+                )}
+
+                {/* Admin notes */}
+                <div className="space-y-1">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Admin notes
+                  </p>
+                  <textarea
+                    value={notesDraft[lead.lead_id] ?? ''}
+                    onChange={e => setNotesDraft(d => ({ ...d, [lead.lead_id]: e.target.value }))}
+                    onBlur={() => handleNotesSave(lead.lead_id)}
+                    rows={2}
+                    placeholder="Add internal notes (only visible to admins)…"
+                    className="w-full text-sm px-3 py-2 border border-border rounded-md bg-background resize-none focus:outline-none focus:ring-2 focus:ring-ring placeholder:text-muted-foreground/60"
+                  />
+                </div>
+
+                {/* Actions */}
+                <div className="flex flex-wrap gap-2">
+                  {lead.status === 'new' && (
+                    <>
+                      <Button size="sm" onClick={() => handleApprove(lead)}>
+                        Approve &amp; Send Invite
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive border-destructive/40 hover:bg-destructive/5"
+                        onClick={() => setDenyTarget(lead)}
+                      >
+                        Deny
+                      </Button>
+                    </>
+                  )}
+                  {lead.status === 'approved' && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>
+                        Resend Booking Link
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>
+                        Pick Date for Them
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="text-destructive border-destructive/40 hover:bg-destructive/5"
+                        onClick={() => setDenyTarget(lead)}
+                      >
+                        Deny
+                      </Button>
+                    </>
+                  )}
+                  {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && (
+                    <>
+                      <Button size="sm" variant="outline" onClick={() => handleResendBookingLink(lead)}>
+                        Resend Booking Link
+                      </Button>
+                      <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>
+                        Pick New Date
+                      </Button>
+                    </>
+                  )}
+                  {(lead.status === 'enrolled' || lead.status === 'closed') && (
+                    <Select
+                      value={lead.status}
+                      onValueChange={val => handleStatusChange(lead.lead_id, val as EnrollmentLead['status'])}
+                      disabled={updatingId === lead.lead_id}
+                    >
+                      <SelectTrigger className="w-40 h-9 text-sm">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="enrolled">Enrolled</SelectItem>
+                        <SelectItem value="closed">Closed</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
+                </div>
+
+              </div>
             </div>
           ))}
         </div>
