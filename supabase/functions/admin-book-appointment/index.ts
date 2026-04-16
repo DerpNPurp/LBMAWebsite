@@ -2,6 +2,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function adminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -11,22 +16,28 @@ function adminClient() {
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
   const authHeader = req.headers.get('Authorization')
-  if (!authHeader) return new Response('Unauthorized', { status: 401 })
+  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
+
+  const userClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } }
+  )
+  const { data: { user }, error: userError } = await userClient.auth.getUser()
+  if (userError || !user) return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
 
   const supabase = adminClient()
 
-  const { data: { user }, error: userError } = await supabase.auth.getUser(authHeader.replace('Bearer ', ''))
-  if (userError || !user) return new Response('Unauthorized', { status: 401 })
-
-  const { data: isAdmin } = await supabase.rpc('is_admin', { user_id: user.id })
-  if (!isAdmin) return new Response('Forbidden', { status: 403 })
+  const { data: isAdmin } = await supabase.rpc('is_admin', { user_uuid: user.id })
+  if (!isAdmin) return new Response('Forbidden', { status: 403, headers: CORS_HEADERS })
 
   const { leadId, slotId, appointmentDate } = await req.json()
   if (!leadId || !slotId || !appointmentDate) {
-    return new Response('Missing leadId, slotId, or appointmentDate', { status: 400 })
+    return new Response('Missing leadId, slotId, or appointmentDate', { status: 400, headers: CORS_HEADERS })
   }
 
   const { data: lead } = await supabase
@@ -35,7 +46,7 @@ Deno.serve(async (req) => {
     .eq('lead_id', leadId)
     .single()
 
-  if (!lead) return new Response('Lead not found', { status: 404 })
+  if (!lead) return new Response('Lead not found', { status: 404, headers: CORS_HEADERS })
 
   let token = lead.booking_token
   if (!token) {
@@ -46,7 +57,7 @@ Deno.serve(async (req) => {
       .eq('lead_id', leadId)
     if (tokenError) {
       console.error('[admin-book-appointment] token write error:', tokenError)
-      return new Response('Failed to assign booking token', { status: 500 })
+      return new Response('Failed to assign booking token', { status: 500, headers: CORS_HEADERS })
     }
   }
 
@@ -57,12 +68,11 @@ Deno.serve(async (req) => {
     .eq('is_active', true)
     .single()
 
-  if (!slot) return new Response('Slot not found or inactive', { status: 404 })
+  if (!slot) return new Response('Slot not found or inactive', { status: 404, headers: CORS_HEADERS })
 
-  // Validate appointment date matches slot's day_of_week
   const targetDate = new Date(appointmentDate + 'T12:00:00')
   if (targetDate.getDay() !== slot.day_of_week) {
-    return new Response('Appointment date does not match slot day', { status: 422 })
+    return new Response('Appointment date does not match slot day', { status: 422, headers: CORS_HEADERS })
   }
 
   const { data: override } = await supabase
@@ -72,9 +82,8 @@ Deno.serve(async (req) => {
     .eq('override_date', appointmentDate)
     .maybeSingle()
 
-  if (override) return new Response('This date is blocked', { status: 422 })
+  if (override) return new Response('This date is blocked', { status: 422, headers: CORS_HEADERS })
 
-  // Use UTC midnight for consistent day-boundary comparison (edge function runs in UTC)
   const nowUtc = new Date()
   const todayUtc = new Date(Date.UTC(nowUtc.getUTCFullYear(), nowUtc.getUTCMonth(), nowUtc.getUTCDate()))
   const daysUntilAppt = Math.floor((targetDate.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24))
@@ -90,7 +99,7 @@ Deno.serve(async (req) => {
     })
     .eq('lead_id', leadId)
 
-  if (updateError) return new Response('Booking failed', { status: 500 })
+  if (updateError) return new Response('Booking failed', { status: 500, headers: CORS_HEADERS })
 
   const { error: notifError } = await supabase
     .from('enrollment_lead_notifications')
@@ -104,11 +113,11 @@ Deno.serve(async (req) => {
 
   if (notifError) {
     console.error('[admin-book-appointment] notification insert error:', notifError)
-    return new Response('Booking saved but notification failed', { status: 500 })
+    return new Response('Booking saved but notification failed', { status: 500, headers: CORS_HEADERS })
   }
 
   return new Response(
     JSON.stringify({ ok: true, status: newStatus, appointment_date: appointmentDate, appointment_time: slot.start_time }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
   )
 })

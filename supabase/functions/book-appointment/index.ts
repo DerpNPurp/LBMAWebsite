@@ -3,6 +3,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function adminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -14,11 +19,12 @@ function adminClient() {
 const BOOKABLE_STATUSES = ['approved', 'appointment_scheduled', 'appointment_confirmed']
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
   const { token, slotId, appointmentDate } = await req.json()
   if (!token || !slotId || !appointmentDate) {
-    return new Response('Missing token, slotId, or appointmentDate', { status: 400 })
+    return new Response('Missing token, slotId, or appointmentDate', { status: 400, headers: CORS_HEADERS })
   }
 
   const supabase = adminClient()
@@ -30,9 +36,9 @@ Deno.serve(async (req) => {
     .eq('booking_token', token)
     .single()
 
-  if (!lead) return new Response('Invalid booking token', { status: 404 })
+  if (!lead) return new Response('Invalid booking token', { status: 404, headers: CORS_HEADERS })
   if (!BOOKABLE_STATUSES.includes(lead.status)) {
-    return new Response('This booking link is no longer valid', { status: 422 })
+    return new Response('This booking link is no longer valid', { status: 422, headers: CORS_HEADERS })
   }
 
   // Validate slot exists and is active
@@ -43,12 +49,12 @@ Deno.serve(async (req) => {
     .eq('is_active', true)
     .single()
 
-  if (!slot) return new Response('Slot not found or inactive', { status: 404 })
+  if (!slot) return new Response('Slot not found or inactive', { status: 404, headers: CORS_HEADERS })
 
   // Validate appointment date matches slot's day_of_week
   const targetDate = new Date(appointmentDate + 'T12:00:00')
   if (targetDate.getDay() !== slot.day_of_week) {
-    return new Response('Appointment date does not match slot day', { status: 422 })
+    return new Response('Appointment date does not match slot day', { status: 422, headers: CORS_HEADERS })
   }
 
   // Check for overrides
@@ -59,7 +65,7 @@ Deno.serve(async (req) => {
     .eq('override_date', appointmentDate)
     .maybeSingle()
 
-  if (override) return new Response('This date is not available', { status: 422 })
+  if (override) return new Response('This date is not available', { status: 422, headers: CORS_HEADERS })
 
   // Determine if date is within 2 days (auto-confirm)
   // Use UTC midnight for consistent day-boundary comparison (edge function runs in UTC)
@@ -78,7 +84,7 @@ Deno.serve(async (req) => {
     })
     .eq('lead_id', lead.lead_id)
 
-  if (updateError) return new Response('Booking failed', { status: 500 })
+  if (updateError) return new Response('Booking failed', { status: 500, headers: CORS_HEADERS })
 
   // Send booking confirmation
   const { error: notifError } = await supabase
@@ -93,7 +99,7 @@ Deno.serve(async (req) => {
 
   if (notifError) {
     console.error('[book-appointment] notification insert error:', notifError)
-    return new Response('Booking saved but notification failed', { status: 500 })
+    return new Response('Booking saved but notification failed', { status: 500, headers: CORS_HEADERS })
   }
 
   return new Response(
@@ -103,6 +109,6 @@ Deno.serve(async (req) => {
       appointment_date: appointmentDate,
       appointment_time: slot.start_time,
     }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
   )
 })

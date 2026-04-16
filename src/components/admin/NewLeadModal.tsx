@@ -7,7 +7,7 @@ import { Textarea } from '../ui/textarea'
 import { Label } from '../ui/label'
 import { Loader2 } from 'lucide-react'
 import { createEnrollmentLead } from '../../lib/supabase/mutations'
-import { supabase } from '../../lib/supabase/client'
+import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client'
 import type { EnrollmentLead } from '../../lib/types'
 import { PickDateModal } from './PickDateModal'
 
@@ -43,7 +43,6 @@ export function NewLeadModal({ onSuccess, onCancel }: NewLeadModalProps) {
     if (!validate()) return
     setLoading(true)
     try {
-      const { data: { session } } = await supabase.auth.getSession()
       const leadId = await createEnrollmentLead({
         parentName: parentName.trim(),
         parentEmail: parentEmail.trim(),
@@ -66,12 +65,17 @@ export function NewLeadModal({ onSuccess, onCancel }: NewLeadModalProps) {
       }
 
       if (postAction === 'send_link') {
-        const { error: approveError } = await supabase.functions.invoke('approve-enrollment-lead', {
-          body: { leadId },
-          headers: { Authorization: `Bearer ${session?.access_token}` },
-        })
-        if (approveError) {
-          toast.error('Lead created but booking link failed to send')
+        const fnHeaders = await edgeFunctionUserAuthHeaders()
+        if (!fnHeaders) {
+          toast.error('Session expired. Lead was created; sign in again to send the invite.')
+        } else {
+          const { error: approveError } = await supabase.functions.invoke('approve-enrollment-lead', {
+            body: { leadId },
+            headers: fnHeaders,
+          })
+          if (approveError) {
+            toast.error('Lead created but booking link failed to send')
+          }
         }
         onSuccess(leadData as EnrollmentLead)
       } else if (postAction === 'create_only') {
@@ -88,10 +92,11 @@ export function NewLeadModal({ onSuccess, onCancel }: NewLeadModalProps) {
   }
 
   async function handlePickDateConfirm(leadId: string, slotId: string, appointmentDate: string) {
-    const { data: { session } } = await supabase.auth.getSession()
+    const fnHeaders = await edgeFunctionUserAuthHeaders()
+    if (!fnHeaders) throw new Error('Session expired. Please sign in again.')
     const { error: bookError } = await supabase.functions.invoke('admin-book-appointment', {
       body: { leadId, slotId, appointmentDate },
-      headers: { Authorization: `Bearer ${session?.access_token}` },
+      headers: fnHeaders,
     })
     if (bookError) throw bookError  // propagates to PickDateModal's catch handler
     const { data: updatedLead } = await supabase

@@ -5,7 +5,7 @@ import { Label } from '../ui/label'
 import { Switch } from '../ui/switch'
 import { Loader2, Pencil, Trash2, Plus } from 'lucide-react'
 import { supabase } from '../../lib/supabase/client'
-import { getAppointmentSlots, getAdminNotificationSettings } from '../../lib/supabase/queries'
+import { getAppointmentSlots, getAdminNotificationSettings, getAdminEmails } from '../../lib/supabase/queries'
 import type { AppointmentSlot, AppointmentSlotOverride, AdminNotificationSetting } from '../../lib/types'
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
@@ -36,15 +36,18 @@ export function AdminAvailabilitySettings() {
   const [showNotifForm, setShowNotifForm] = useState(false)
   const [notifEmail, setNotifEmail] = useState('')
   const [notifSaving, setNotifSaving] = useState(false)
+  const [adminUsers, setAdminUsers] = useState<{ user_id: string; email: string; display_name: string }[]>([])
 
   useEffect(() => {
     async function load() {
-      const [slotsData, notifsData] = await Promise.all([
+      const [slotsData, notifsData, adminsData] = await Promise.all([
         getAppointmentSlots(),
         getAdminNotificationSettings(),
+        getAdminEmails(),
       ])
       setSlots(slotsData)
       setNotifSettings(notifsData)
+      setAdminUsers(adminsData)
 
       // Load overrides
       const { data: ovData } = await supabase
@@ -314,7 +317,20 @@ export function AdminAvailabilitySettings() {
           ))}
           {showNotifForm && (
             <div className="flex gap-2 mt-2">
-              <Input type="email" value={notifEmail} onChange={e => setNotifEmail(e.target.value)} placeholder="email@example.com" className="flex-1" />
+              <select
+                value={notifEmail}
+                onChange={e => setNotifEmail(e.target.value)}
+                className="flex-1 rounded border px-3 py-2 text-sm bg-background"
+              >
+                <option value="">Select admin…</option>
+                {adminUsers
+                  .filter(u => !notifSettings.some(n => n.email === u.email))
+                  .map(u => (
+                    <option key={u.user_id} value={u.email}>
+                      {u.display_name} ({u.email})
+                    </option>
+                  ))}
+              </select>
               <Button size="sm" onClick={addNotifRecipient} disabled={notifSaving || !notifEmail}>
                 {notifSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Add'}
               </Button>
