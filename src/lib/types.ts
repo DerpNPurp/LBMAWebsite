@@ -164,6 +164,7 @@ export type EnrollmentLead = {
   denied_at: string | null;
   denial_message: string | null;
   admin_notes: string | null;
+  deleted_at: string | null;
   created_at: string;
 };
 
