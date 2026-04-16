@@ -163,6 +163,7 @@ export type EnrollmentLead = {
   appointment_time: string | null;   // "HH:MM:SS"
   denied_at: string | null;
   denial_message: string | null;
+  admin_notes: string | null;
   created_at: string;
 };
 

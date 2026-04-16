@@ -447,6 +447,14 @@ export async function updateLeadStatus(
   if (error) throw error;
 }
 
+export async function updateLeadAdminNotes(leadId: string, notes: string): Promise<void> {
+  const { error } = await supabase
+    .from('enrollment_leads')
+    .update({ admin_notes: notes })
+    .eq('lead_id', leadId);
+  if (error) throw error;
+}
+
 // ============================================
 // FEEDBACK TESTS
 // ============================================
