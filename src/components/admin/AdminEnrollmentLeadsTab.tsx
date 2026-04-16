@@ -1,11 +1,13 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Loader2, Mail, Phone, User, Calendar, Plus, Search } from 'lucide-react';
+import { Loader2, Mail, Phone, User, Calendar, Plus, Search, MoreVertical } from 'lucide-react';
 import { toast } from 'sonner';
 import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client';
 import { getEnrollmentLeads } from '../../lib/supabase/queries';
-import { updateLeadStatus, updateLeadAdminNotes } from '../../lib/supabase/mutations';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
+import { updateLeadStatus, updateLeadAdminNotes, dismissLeadSilently, deleteEnrollmentLead } from '../../lib/supabase/mutations';
 import type { EnrollmentLead } from '../../lib/types';
 import { DenyModal } from './DenyModal';
 import { PickDateModal } from './PickDateModal';
@@ -137,6 +139,7 @@ export function AdminEnrollmentLeadsTab() {
   const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
   const [closedDeniedFilter, setClosedDeniedFilter] = useState<ClosedDeniedFilter>('all');
+  const [pendingAction, setPendingAction] = useState<{ type: 'dismiss' | 'delete'; lead: EnrollmentLead } | null>(null);
 
   useEffect(() => { load(); }, []);
 
@@ -221,6 +224,32 @@ export function AdminEnrollmentLeadsTab() {
     } catch {
       // silent — notes are best-effort
     }
+  }
+
+  async function handleDismissSilently(lead: EnrollmentLead) {
+    try {
+      await dismissLeadSilently(lead.lead_id);
+      setLeads(prev => prev.map(l =>
+        l.lead_id === lead.lead_id ? { ...l, status: 'denied' as const, denied_at: new Date().toISOString() } : l
+      ));
+      toast.success('Lead dismissed');
+    } catch {
+      toast.error('Failed to dismiss lead');
+    }
+    setPendingAction(null);
+  }
+
+  async function handleDeleteLead(lead: EnrollmentLead) {
+    try {
+      await deleteEnrollmentLead(lead.lead_id);
+      setLeads(prev => prev.map(l =>
+        l.lead_id === lead.lead_id ? { ...l, deleted_at: new Date().toISOString() } : l
+      ));
+      toast.success('Lead deleted');
+    } catch {
+      toast.error('Failed to delete lead');
+    }
+    setPendingAction(null);
   }
 
   const visibleLeads = filterLeads(leads, activeTab, search, closedDeniedFilter);
@@ -319,14 +348,41 @@ export function AdminEnrollmentLeadsTab() {
             >
               <div className="p-4 space-y-3">
 
-                {/* Row 1: name + aging + badge */}
+                {/* Row 1: name + aging + badge + kebab */}
                 <div className="flex items-center justify-between gap-3">
                   <span className="font-semibold text-base">{lead.parent_name}</span>
                   <div className="flex items-center gap-2 flex-shrink-0">
                     {activeTab === 'new' && <AgingIndicator createdAt={lead.created_at} now={now} />}
-                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLES[lead.status]}`}>
-                      {STATUS_LABELS[lead.status]}
+                    <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
+                      lead.deleted_at
+                        ? 'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]'
+                        : BADGE_STYLES[lead.status]
+                    }`}>
+                      {lead.deleted_at ? 'Deleted' : STATUS_LABELS[lead.status]}
                     </span>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors">
+                          <MoreVertical className="w-4 h-4" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                          disabled={lead.status === 'denied' || !!lead.deleted_at}
+                          onSelect={() => setPendingAction({ type: 'dismiss', lead })}
+                        >
+                          Dismiss silently
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          className="text-destructive focus:text-destructive focus:bg-destructive/10"
+                          disabled={!!lead.deleted_at}
+                          onSelect={() => setPendingAction({ type: 'delete', lead })}
+                        >
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </div>
                 </div>
 
@@ -469,6 +525,35 @@ export function AdminEnrollmentLeadsTab() {
       )}
 
       {/* Modals */}
+      {pendingAction && (
+        <AlertDialog open onOpenChange={open => { if (!open) setPendingAction(null); }}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {pendingAction.type === 'dismiss' ? 'Dismiss lead?' : 'Delete lead?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {pendingAction.type === 'dismiss'
+                  ? `This will mark ${pendingAction.lead.parent_name}'s lead as denied without notifying them.`
+                  : `This will hide ${pendingAction.lead.parent_name}'s lead from all views. It can still be found in the Closed / Denied tab under "Deleted".`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                onClick={() =>
+                  pendingAction.type === 'dismiss'
+                    ? handleDismissSilently(pendingAction.lead)
+                    : handleDeleteLead(pendingAction.lead)
+                }
+              >
+                {pendingAction.type === 'dismiss' ? 'Dismiss' : 'Delete'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      )}
       {denyTarget && (
         <DenyModal lead={denyTarget} onConfirm={handleDenyConfirm} onCancel={() => setDenyTarget(null)} />
       )}
