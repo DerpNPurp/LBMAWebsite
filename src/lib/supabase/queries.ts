@@ -18,6 +18,9 @@ import type {
   Review,
   AppointmentSlot,
   AdminNotificationSetting,
+  UserNotification,
+  UserNotificationPreferences,
+  AdminNotificationPreferences,
 } from '../types';
 import {
   ANNOUNCEMENT_COLUMNS,
@@ -670,4 +673,120 @@ export async function getAdminEmails(): Promise<{ user_id: string; email: string
   const { data, error } = await supabase.rpc('get_admin_emails')
   if (error) throw error
   return data ?? []
+}
+
+// ============================================
+// NOTIFICATION SYSTEM
+// ============================================
+
+export async function getSectionUnreadCounts(userId: string): Promise<{
+  announcements: number;
+  blog: number;
+}> {
+  const { data: lastSeen } = await supabase
+    .from('user_section_last_seen')
+    .select('section, last_seen_at')
+    .eq('user_id', userId);
+
+  const announcementsSince =
+    lastSeen?.find((r) => r.section === 'announcements')?.last_seen_at ??
+    '1970-01-01T00:00:00Z';
+  const blogSince =
+    lastSeen?.find((r) => r.section === 'blog')?.last_seen_at ??
+    '1970-01-01T00:00:00Z';
+
+  const [announcementsResult, blogResult] = await Promise.all([
+    supabase
+      .from('announcements')
+      .select('*', { count: 'exact', head: true })
+      .gt('created_at', announcementsSince),
+    supabase
+      .from('blog_posts')
+      .select('*', { count: 'exact', head: true })
+      .gt('created_at', blogSince),
+  ]);
+
+  return {
+    announcements: announcementsResult.count ?? 0,
+    blog: blogResult.count ?? 0,
+  };
+}
+
+export async function getUnreadNotificationCount(): Promise<number> {
+  const { count } = await supabase
+    .from('user_notifications')
+    .select('*', { count: 'exact', head: true })
+    .eq('is_read', false);
+  return count ?? 0;
+}
+
+export async function getNotificationSummary(userId: string): Promise<{
+  unreadMessages: number;
+  announcements: { count: number; latestTitle: string | null };
+  blog: { count: number; latestTitle: string | null };
+  commentNotifications: UserNotification[];
+}> {
+  const { data: lastSeen } = await supabase
+    .from('user_section_last_seen')
+    .select('section, last_seen_at')
+    .eq('user_id', userId);
+
+  const announcementsSince =
+    lastSeen?.find((r) => r.section === 'announcements')?.last_seen_at ??
+    '1970-01-01T00:00:00Z';
+  const blogSince =
+    lastSeen?.find((r) => r.section === 'blog')?.last_seen_at ??
+    '1970-01-01T00:00:00Z';
+
+  const [messagesCount, announcementsData, blogData, commentNotifsData] =
+    await Promise.all([
+      getUnreadMessageCount(),
+      supabase
+        .from('announcements')
+        .select('title')
+        .gt('created_at', announcementsSince)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('blog_posts')
+        .select('title')
+        .gt('created_at', blogSince)
+        .order('created_at', { ascending: false })
+        .limit(10),
+      supabase
+        .from('user_notifications')
+        .select('*')
+        .eq('is_read', false)
+        .order('created_at', { ascending: false })
+        .limit(5),
+    ]);
+
+  return {
+    unreadMessages: messagesCount,
+    announcements: {
+      count: announcementsData.data?.length ?? 0,
+      latestTitle: announcementsData.data?.[0]?.title ?? null,
+    },
+    blog: {
+      count: blogData.data?.length ?? 0,
+      latestTitle: blogData.data?.[0]?.title ?? null,
+    },
+    commentNotifications: (commentNotifsData.data ?? []) as UserNotification[],
+  };
+}
+
+export async function getUserNotificationPreferences(): Promise<UserNotificationPreferences | null> {
+  const { data } = await supabase
+    .from('user_notification_preferences')
+    .select('*')
+    .maybeSingle();
+  return data as UserNotificationPreferences | null;
+}
+
+export async function getAdminNotificationPreferences(): Promise<AdminNotificationPreferences | null> {
+  const { data } = await supabase
+    .from('admin_notification_preferences')
+    .select('*')
+    .maybeSingle();
+  return data as AdminNotificationPreferences | null;
 }
