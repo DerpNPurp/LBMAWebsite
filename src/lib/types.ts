@@ -225,3 +225,39 @@ export type Review = {
   created_at: string;
   updated_at: string;
 };
+
+export type UserSectionLastSeen = {
+  user_id: string;
+  section: 'announcements' | 'blog';
+  last_seen_at: string;
+};
+
+export type UserNotification = {
+  notification_id: string;
+  recipient_user_id: string;
+  type: 'comment_reply' | 'post_comment';
+  reference_id: string;
+  reference_type: 'announcement_comment' | 'blog_comment';
+  actor_display_name: string | null;
+  is_read: boolean;
+  created_at: string;
+};
+
+export type UserNotificationPreferences = {
+  user_id: string;
+  notify_messages: boolean;
+  notify_announcements: boolean;
+  notify_blog_posts: boolean;
+  notify_comment_replies: boolean;
+  notify_post_comments: boolean;
+  updated_at: string;
+};
+
+export type AdminNotificationPreferences = {
+  user_id: string;
+  notify_messages: boolean;
+  notify_blog_posts: boolean;
+  notify_comment_replies: boolean;
+  notify_post_comments: boolean;
+  updated_at: string;
+};
