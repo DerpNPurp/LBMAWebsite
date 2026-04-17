@@ -84,7 +84,8 @@ ALTER TABLE blog_comments
 
 -- ─── 7. Announcement fan-out email trigger ────────────────────────────────────
 CREATE OR REPLACE FUNCTION notify_new_announcement()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp AS $$
 BEGIN
   INSERT INTO portal_email_queue (recipient_email, type, payload, status)
   SELECT
@@ -110,7 +111,8 @@ CREATE TRIGGER announcement_notification_trigger
 
 -- ─── 8. Blog post fan-out email trigger ──────────────────────────────────────
 CREATE OR REPLACE FUNCTION notify_new_blog_post()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp AS $$
 DECLARE
   v_author_name TEXT;
 BEGIN
@@ -129,7 +131,7 @@ BEGIN
     'queued'
   FROM (
     SELECT user_id, notify_blog_posts FROM user_notification_preferences
-    UNION ALL
+    UNION
     SELECT user_id, notify_blog_posts FROM admin_notification_preferences
   ) prefs
   JOIN auth.users au ON au.id = prefs.user_id
@@ -146,7 +148,8 @@ CREATE TRIGGER blog_post_notification_trigger
 
 -- ─── 9. Announcement comment notification trigger ─────────────────────────────
 CREATE OR REPLACE FUNCTION notify_announcement_comment()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp AS $$
 DECLARE
   v_parent_author_id  UUID;
   v_post_author_id    UUID;
@@ -180,19 +183,21 @@ BEGIN
       FROM auth.users au
       LEFT JOIN (
         SELECT user_id, notify_comment_replies FROM user_notification_preferences
-        UNION ALL
+        UNION
         SELECT user_id, notify_comment_replies FROM admin_notification_preferences
       ) prefs ON prefs.user_id = au.id
       WHERE au.id = v_parent_author_id
       LIMIT 1;
 
       IF v_pref IS DISTINCT FROM false THEN
-        INSERT INTO portal_email_queue (recipient_email, type, payload, status)
-        VALUES (v_email, 'comment_reply', jsonb_build_object(
-          'replier_name',    COALESCE(v_actor_name, 'Someone'),
-          'original_snippet', v_parent_snippet,
-          'tab',             'announcements'
-        ), 'queued');
+        IF v_email IS NOT NULL THEN
+          INSERT INTO portal_email_queue (recipient_email, type, payload, status)
+          VALUES (v_email, 'comment_reply', jsonb_build_object(
+            'replier_name',    COALESCE(v_actor_name, 'Someone'),
+            'original_snippet', v_parent_snippet,
+            'tab',             'announcements'
+          ), 'queued');
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -214,19 +219,21 @@ BEGIN
       FROM auth.users au
       LEFT JOIN (
         SELECT user_id, notify_post_comments FROM user_notification_preferences
-        UNION ALL
+        UNION
         SELECT user_id, notify_post_comments FROM admin_notification_preferences
       ) prefs ON prefs.user_id = au.id
       WHERE au.id = v_post_author_id
       LIMIT 1;
 
       IF v_pref IS DISTINCT FROM false THEN
-        INSERT INTO portal_email_queue (recipient_email, type, payload, status)
-        VALUES (v_email, 'post_comment', jsonb_build_object(
-          'commenter_name', COALESCE(v_actor_name, 'Someone'),
-          'post_title',     COALESCE(v_announcement_title, 'an announcement'),
-          'tab',            'announcements'
-        ), 'queued');
+        IF v_email IS NOT NULL THEN
+          INSERT INTO portal_email_queue (recipient_email, type, payload, status)
+          VALUES (v_email, 'post_comment', jsonb_build_object(
+            'commenter_name', COALESCE(v_actor_name, 'Someone'),
+            'post_title',     COALESCE(v_announcement_title, 'an announcement'),
+            'tab',            'announcements'
+          ), 'queued');
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -242,7 +249,8 @@ CREATE TRIGGER announcement_comment_notification_trigger
 
 -- ─── 10. Blog comment notification trigger ────────────────────────────────────
 CREATE OR REPLACE FUNCTION notify_blog_comment()
-RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER AS $$
+RETURNS trigger LANGUAGE plpgsql SECURITY DEFINER
+SET search_path = public, pg_temp AS $$
 DECLARE
   v_parent_author_id UUID;
   v_post_author_id   UUID;
@@ -276,19 +284,21 @@ BEGIN
       FROM auth.users au
       LEFT JOIN (
         SELECT user_id, notify_comment_replies FROM user_notification_preferences
-        UNION ALL
+        UNION
         SELECT user_id, notify_comment_replies FROM admin_notification_preferences
       ) prefs ON prefs.user_id = au.id
       WHERE au.id = v_parent_author_id
       LIMIT 1;
 
       IF v_pref IS DISTINCT FROM false THEN
-        INSERT INTO portal_email_queue (recipient_email, type, payload, status)
-        VALUES (v_email, 'comment_reply', jsonb_build_object(
-          'replier_name',     COALESCE(v_actor_name, 'Someone'),
-          'original_snippet', v_parent_snippet,
-          'tab',              'blog'
-        ), 'queued');
+        IF v_email IS NOT NULL THEN
+          INSERT INTO portal_email_queue (recipient_email, type, payload, status)
+          VALUES (v_email, 'comment_reply', jsonb_build_object(
+            'replier_name',     COALESCE(v_actor_name, 'Someone'),
+            'original_snippet', v_parent_snippet,
+            'tab',              'blog'
+          ), 'queued');
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -310,19 +320,21 @@ BEGIN
       FROM auth.users au
       LEFT JOIN (
         SELECT user_id, notify_post_comments FROM user_notification_preferences
-        UNION ALL
+        UNION
         SELECT user_id, notify_post_comments FROM admin_notification_preferences
       ) prefs ON prefs.user_id = au.id
       WHERE au.id = v_post_author_id
       LIMIT 1;
 
       IF v_pref IS DISTINCT FROM false THEN
-        INSERT INTO portal_email_queue (recipient_email, type, payload, status)
-        VALUES (v_email, 'post_comment', jsonb_build_object(
-          'commenter_name', COALESCE(v_actor_name, 'Someone'),
-          'post_title',     COALESCE(v_post_title, 'a blog post'),
-          'tab',            'blog'
-        ), 'queued');
+        IF v_email IS NOT NULL THEN
+          INSERT INTO portal_email_queue (recipient_email, type, payload, status)
+          VALUES (v_email, 'post_comment', jsonb_build_object(
+            'commenter_name', COALESCE(v_actor_name, 'Someone'),
+            'post_title',     COALESCE(v_post_title, 'a blog post'),
+            'tab',            'blog'
+          ), 'queued');
+        END IF;
       END IF;
     END IF;
   END IF;
@@ -337,6 +349,12 @@ CREATE TRIGGER blog_comment_notification_trigger
   FOR EACH ROW EXECUTE FUNCTION notify_blog_comment();
 
 -- ─── 11. Appointment reminder cron ───────────────────────────────────────────
+-- Remove existing job if present to allow idempotent re-runs
+DO $$ BEGIN
+  PERFORM cron.unschedule('appointment-reminders');
+EXCEPTION WHEN OTHERS THEN NULL;
+END $$;
+
 SELECT cron.schedule(
   'appointment-reminders',
   '0 8 * * *',
