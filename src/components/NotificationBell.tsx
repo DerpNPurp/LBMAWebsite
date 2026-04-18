@@ -1,0 +1,194 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Bell, CheckCheck } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import { Skeleton } from './ui/skeleton';
+import { getNotificationSummary } from '../lib/supabase/queries';
+import { markSectionSeen, markNotificationsRead } from '../lib/supabase/mutations';
+import { subscribeToUserNotifications, unsubscribe } from '../lib/supabase/realtime';
+import type { UserNotification } from '../lib/types';
+
+type Summary = {
+  unreadMessages: number;
+  announcements: { count: number; latestTitle: string | null };
+  blog: { count: number; latestTitle: string | null };
+  commentNotifications: UserNotification[];
+};
+
+type NotificationBellProps = {
+  userId: string;
+  onNavigate: (tab: string) => void;
+};
+
+export function NotificationBell({ userId, onNavigate }: NotificationBellProps) {
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [summary, setSummary] = useState<Summary | null>(null);
+
+  const totalUnread = summary
+    ? summary.unreadMessages +
+      summary.announcements.count +
+      summary.blog.count +
+      summary.commentNotifications.length
+    : 0;
+
+  const loadSummary = useCallback(async () => {
+    try {
+      setLoading(true);
+      const data = await getNotificationSummary(userId);
+      setSummary(data);
+    } catch {
+      // non-critical; leave stale state
+    } finally {
+      setLoading(false);
+    }
+  }, [userId]);
+
+  useEffect(() => {
+    loadSummary();
+    const channel = subscribeToUserNotifications(userId, () => loadSummary());
+    return () => { unsubscribe(channel); };
+  }, [userId, loadSummary]);
+
+  async function handleMarkAllRead() {
+    await Promise.all([
+      markSectionSeen('announcements'),
+      markSectionSeen('blog'),
+      markNotificationsRead(),
+    ]);
+    setSummary((prev) =>
+      prev
+        ? {
+            ...prev,
+            announcements: { count: 0, latestTitle: null },
+            blog: { count: 0, latestTitle: null },
+            commentNotifications: [],
+          }
+        : null
+    );
+  }
+
+  async function handleNavigate(tab: string, section?: 'announcements' | 'blog') {
+    if (section) {
+      await markSectionSeen(section).catch(console.error);
+      setSummary((prev) => {
+        if (!prev) return prev;
+        return section === 'announcements'
+          ? { ...prev, announcements: { count: 0, latestTitle: null } }
+          : { ...prev, blog: { count: 0, latestTitle: null } };
+      });
+    }
+    onNavigate(tab);
+    setOpen(false);
+  }
+
+  async function handleCommentNotifClick(notif: UserNotification) {
+    const tab =
+      notif.reference_type === 'announcement_comment' ? 'announcements' : 'blog';
+    await markNotificationsRead().catch(console.error);
+    setSummary((prev) =>
+      prev ? { ...prev, commentNotifications: [] } : null
+    );
+    onNavigate(tab);
+    setOpen(false);
+  }
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <button
+          className="relative p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"
+          aria-label={totalUnread > 0 ? `${totalUnread} unread notifications` : 'Notifications'}
+        >
+          <Bell className="h-4 w-4" />
+          {totalUnread > 0 && (
+            <span className="absolute top-0.5 right-0.5 h-2 w-2 rounded-full bg-destructive" aria-hidden="true" />
+          )}
+        </button>
+      </PopoverTrigger>
+      <PopoverContent align="start" side="right" className="w-72 p-0">
+        <div className="flex items-center justify-between px-4 py-3 border-b">
+          <span className="font-semibold text-sm">Notifications</span>
+          {totalUnread > 0 && (
+            <button
+              onClick={handleMarkAllRead}
+              className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
+            >
+              <CheckCheck className="h-3.5 w-3.5" />
+              Mark all read
+            </button>
+          )}
+        </div>
+
+        <div className="max-h-80 overflow-y-auto">
+          {loading ? (
+            <div className="p-4 space-y-3">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-3/4" />
+            </div>
+          ) : totalUnread === 0 ? (
+            <div className="py-8 text-center text-sm text-muted-foreground">
+              <CheckCheck className="h-8 w-8 mx-auto mb-2 opacity-40" />
+              You're all caught up!
+            </div>
+          ) : (
+            <div className="py-1">
+              {summary!.unreadMessages > 0 && (
+                <button
+                  onClick={() => handleNavigate('messages')}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-accent text-left transition-colors"
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span className="text-sm">
+                    <strong>{summary!.unreadMessages}</strong>{' '}
+                    unread {summary!.unreadMessages === 1 ? 'message' : 'messages'}
+                  </span>
+                </button>
+              )}
+              {summary!.announcements.count > 0 && (
+                <button
+                  onClick={() => handleNavigate('announcements', 'announcements')}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-accent text-left transition-colors"
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span className="text-sm line-clamp-2">
+                    {summary!.announcements.latestTitle
+                      ? <>New announcement: <strong>{summary!.announcements.latestTitle}</strong></>
+                      : <><strong>{summary!.announcements.count}</strong> new announcements</>}
+                  </span>
+                </button>
+              )}
+              {summary!.blog.count > 0 && (
+                <button
+                  onClick={() => handleNavigate('blog', 'blog')}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-accent text-left transition-colors"
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span className="text-sm line-clamp-2">
+                    {summary!.blog.latestTitle
+                      ? <>New blog post: <strong>{summary!.blog.latestTitle}</strong></>
+                      : <><strong>{summary!.blog.count}</strong> new blog posts</>}
+                  </span>
+                </button>
+              )}
+              {summary!.commentNotifications.map((notif) => (
+                <button
+                  key={notif.notification_id}
+                  onClick={() => handleCommentNotifClick(notif)}
+                  className="w-full flex items-start gap-3 px-4 py-3 hover:bg-accent text-left transition-colors"
+                >
+                  <span className="mt-1.5 h-2 w-2 shrink-0 rounded-full bg-primary" />
+                  <span className="text-sm text-muted-foreground">
+                    {notif.type === 'comment_reply'
+                      ? <><strong>{notif.actor_display_name ?? 'Someone'}</strong> replied to your comment</>
+                      : <><strong>{notif.actor_display_name ?? 'Someone'}</strong> commented on your post</>}
+                  </span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+}
