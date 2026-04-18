@@ -30,6 +30,7 @@ import { AdminProfileTab } from './admin/AdminProfileTab';
 import { getUnreadMessageCount, getSectionUnreadCounts } from '../lib/supabase/queries';
 import { getInitials } from '../lib/format';
 import type { User } from '../lib/types';
+import { NotificationBell } from './NotificationBell';
 import {
   Award,
   Bell,
@@ -124,9 +125,15 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
               <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
             </div>
-            <div className="flex flex-col group-data-[collapsible=icon]:hidden">
+            <div className="flex flex-col flex-1 group-data-[collapsible=icon]:hidden">
               <span className="text-sm font-semibold leading-none text-sidebar-foreground">LBMAA</span>
               <span className="mt-0.5 text-xs text-sidebar-foreground/60">Admin Portal</span>
+            </div>
+            <div className="group-data-[collapsible=icon]:hidden">
+              <NotificationBell
+                userId={user.id}
+                onNavigate={(tab) => setActiveTab(tab as AdminTabId)}
+              />
             </div>
           </div>
         </SidebarHeader>
