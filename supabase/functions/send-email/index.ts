@@ -1,8 +1,8 @@
 // supabase/functions/send-email/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead } from './types.ts'
-import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml } from './templates.ts'
+import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead, PortalEmailQueueRecord } from './types.ts'
+import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml, announcementNotificationHtml, blogPostNotificationHtml, commentReplyHtml, postCommentHtml } from './templates.ts'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM = 'Los Banos Martial Arts Academy <no-reply@notifications.lbmartialarts.com>'
@@ -129,11 +129,88 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
   const senderName = senderProfile?.display_name ?? 'Someone'
   const portalUrl = `${Deno.env.get('APP_URL') ?? 'http://localhost:5173'}/dashboard`
 
+  // Check if the recipient has opted out of message emails
+  const { data: prefRow } = await supabase
+    .from('user_notification_preferences')
+    .select('notify_messages')
+    .eq('user_id', recipient.user_id)
+    .maybeSingle()
+
+  const prefRowAdmin = prefRow === null
+    ? await supabase
+        .from('admin_notification_preferences')
+        .select('notify_messages')
+        .eq('user_id', recipient.user_id)
+        .maybeSingle()
+    : null
+
+  const notifyMessages =
+    prefRow?.notify_messages ??
+    prefRowAdmin?.data?.notify_messages ??
+    true  // default: send if no prefs row exists
+
+  if (!notifyMessages) return
+
   await sendEmail(
     user.email,
     `New message from ${senderName} — LBMAA Portal`,
     messagingNotificationHtml(senderName, portalUrl)
   )
+}
+
+async function handlePortalNotification(record: PortalEmailQueueRecord): Promise<void> {
+  const supabase = adminClient()
+  const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173'
+  const tab = record.payload.tab ?? 'announcements'
+  const tabUrl = `${appUrl}/dashboard?tab=${tab}`
+
+  let subject: string
+  let html: string
+
+  switch (record.type) {
+    case 'announcement':
+      subject = 'New announcement — LBMAA'
+      html = announcementNotificationHtml(
+        record.payload.title ?? '',
+        record.payload.body ?? '',
+        tabUrl
+      )
+      break
+    case 'blog_post':
+      subject = `New post from ${record.payload.author_name ?? 'a member'} — LBMAA`
+      html = blogPostNotificationHtml(
+        record.payload.title ?? '',
+        record.payload.author_name ?? 'A member',
+        tabUrl
+      )
+      break
+    case 'comment_reply':
+      subject = `${record.payload.replier_name ?? 'Someone'} replied to your comment — LBMAA`
+      html = commentReplyHtml(
+        record.payload.replier_name ?? 'Someone',
+        record.payload.original_snippet ?? '',
+        tabUrl
+      )
+      break
+    case 'post_comment':
+      subject = 'New comment on your post — LBMAA'
+      html = postCommentHtml(
+        record.payload.commenter_name ?? 'Someone',
+        record.payload.post_title ?? 'your post',
+        tabUrl
+      )
+      break
+    default:
+      console.warn('[send-email] Unknown portal notification type:', record.type)
+      return
+  }
+
+  await sendEmail(record.recipient_email, subject, html)
+
+  await supabase
+    .from('portal_email_queue')
+    .update({ status: 'sent' })
+    .eq('queue_id', record.queue_id)
 }
 
 Deno.serve(async (req) => {
@@ -168,6 +245,8 @@ Deno.serve(async (req) => {
       await handleEnrollmentNotification(payload.record as EnrollmentLeadNotificationRecord)
     } else if (payload.table === 'messages') {
       await handleMessageNotification(payload.record as MessageRecord)
+    } else if (payload.table === 'portal_email_queue') {
+      await handlePortalNotification(payload.record as PortalEmailQueueRecord)
     }
     return new Response('OK', { status: 200 })
   } catch (err) {

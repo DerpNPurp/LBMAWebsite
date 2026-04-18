@@ -43,3 +43,28 @@ export interface EnrollmentLead {
   denial_message: string | null
   created_at: string
 }
+
+export interface PortalEmailQueueRecord {
+  queue_id: string
+  recipient_email: string
+  type: 'announcement' | 'blog_post' | 'comment_reply' | 'post_comment'
+  payload: {
+    // announcement
+    title?: string
+    body?: string
+    // blog_post
+    author_name?: string
+    post_id?: string
+    // comment_reply
+    replier_name?: string
+    original_snippet?: string
+    // post_comment
+    commenter_name?: string
+    post_title?: string
+    // shared
+    tab?: string
+    announcement_id?: string
+  }
+  status: string
+  created_at: string
+}
