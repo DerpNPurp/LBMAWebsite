@@ -1,5 +1,6 @@
 import { RealtimeChannel } from '@supabase/supabase-js';
 import { supabase } from './client';
+import type { UserNotification } from '../types';
 
 export type RealtimeCallback<T> = (payload: T) => void;
 
@@ -198,6 +199,29 @@ export function subscribeToReviews(
     .subscribe();
 
   return channel;
+}
+
+// ============================================
+// USER NOTIFICATIONS
+// ============================================
+
+export function subscribeToUserNotifications(
+  userId: string,
+  onNewNotification: (notification: UserNotification) => void
+): RealtimeChannel {
+  return supabase
+    .channel(`user_notifications:${userId}`)
+    .on(
+      'postgres_changes',
+      {
+        event: 'INSERT',
+        schema: 'public',
+        table: 'user_notifications',
+        filter: `recipient_user_id=eq.${userId}`,
+      },
+      (payload) => onNewNotification(payload.new as UserNotification)
+    )
+    .subscribe();
 }
 
 // ============================================

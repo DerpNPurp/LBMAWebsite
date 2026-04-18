@@ -16,6 +16,8 @@ import type {
   StudentFeedback,
   FeedbackTest,
   Review,
+  UserNotificationPreferences,
+  AdminNotificationPreferences,
 } from '../types';
 import {
   CONVERSATION_COLUMNS,
@@ -226,15 +228,19 @@ export async function deleteAnnouncement(announcementId: string): Promise<void> 
   if (error) throw error;
 }
 
-export async function createAnnouncementComment(comment: Omit<AnnouncementComment, 'comment_id' | 'created_at' | 'updated_at'>): Promise<AnnouncementComment> {
-  const { data, error } = await supabase
+export async function createAnnouncementComment(
+  announcementId: string,
+  body: string,
+  parentCommentId?: string
+): Promise<void> {
+  const { error } = await supabase
     .from('announcement_comments')
-    .insert(comment)
-    .select()
-    .single();
-
+    .insert({
+      announcement_id: announcementId,
+      body,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    });
   if (error) throw error;
-  return data;
 }
 
 export async function updateAnnouncementComment(commentId: string, updates: Partial<AnnouncementComment>): Promise<AnnouncementComment> {
@@ -294,15 +300,19 @@ export async function deleteBlogPost(postId: string): Promise<void> {
   if (error) throw error;
 }
 
-export async function createBlogComment(comment: Omit<BlogComment, 'comment_id' | 'created_at' | 'updated_at'>): Promise<BlogComment> {
-  const { data, error } = await supabase
+export async function createBlogComment(
+  postId: string,
+  body: string,
+  parentCommentId?: string
+): Promise<void> {
+  const { error } = await supabase
     .from('blog_comments')
-    .insert(comment)
-    .select()
-    .single();
-
+    .insert({
+      post_id: postId,
+      body,
+      ...(parentCommentId ? { parent_comment_id: parentCommentId } : {}),
+    });
   if (error) throw error;
-  return data;
 }
 
 export async function updateBlogComment(commentId: string, updates: Partial<BlogComment>): Promise<BlogComment> {
@@ -594,6 +604,58 @@ export async function registerInvitedEmail(email: string): Promise<string> {
 
   if (error) throw error;
   return data as string;
+}
+
+// ============================================
+// NOTIFICATIONS
+// ============================================
+
+export async function markSectionSeen(section: 'announcements' | 'blog'): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from('user_section_last_seen')
+    .upsert(
+      { user_id: user.id, section, last_seen_at: new Date().toISOString() },
+      { onConflict: 'user_id,section' }
+    );
+  if (error) throw error;
+}
+
+export async function markNotificationsRead(): Promise<void> {
+  const { error } = await supabase
+    .from('user_notifications')
+    .update({ is_read: true })
+    .eq('is_read', false);
+  if (error) throw error;
+}
+
+export async function upsertUserNotificationPreferences(
+  prefs: Partial<Omit<UserNotificationPreferences, 'user_id' | 'updated_at'>>
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from('user_notification_preferences')
+    .upsert(
+      { user_id: user.id, ...prefs, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  if (error) throw error;
+}
+
+export async function upsertAdminNotificationPreferences(
+  prefs: Partial<Omit<AdminNotificationPreferences, 'user_id' | 'updated_at'>>
+): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
+  const { error } = await supabase
+    .from('admin_notification_preferences')
+    .upsert(
+      { user_id: user.id, ...prefs, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id' }
+    );
+  if (error) throw error;
 }
 
 // ============================================
