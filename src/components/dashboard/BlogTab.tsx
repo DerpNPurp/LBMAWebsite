@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Plus, MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogPosts, getBlogComments } from '../../lib/supabase/queries';
-import { createBlogPost, createBlogComment } from '../../lib/supabase/mutations';
+import { createBlogPost, createBlogComment, markSectionSeen } from '../../lib/supabase/mutations';
 import { subscribeToBlogPosts, subscribeToBlogComments, unsubscribe } from '../../lib/supabase/realtime';
 
 type User = {
@@ -46,6 +46,10 @@ export function BlogTab({ user }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingComment, setSavingComment] = useState<string | null>(null);
+
+  useEffect(() => {
+    markSectionSeen('blog').catch(console.error);
+  }, []);
 
   // Load blog posts and comments
   const loadData = async () => {

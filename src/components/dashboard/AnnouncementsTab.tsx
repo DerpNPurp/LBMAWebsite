@@ -8,7 +8,7 @@ import { MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { getAnnouncements, getAnnouncementComments } from '../../lib/supabase/queries';
-import { createAnnouncementComment } from '../../lib/supabase/mutations';
+import { createAnnouncementComment, markSectionSeen } from '../../lib/supabase/mutations';
 import { subscribeToAnnouncements, subscribeToAnnouncementComments, unsubscribe } from '../../lib/supabase/realtime';
 import type { Announcement as AnnouncementType, AnnouncementComment as AnnouncementCommentType } from '../../lib/types';
 
@@ -44,6 +44,10 @@ export function AnnouncementsTab({ user }: { user: User }) {
   const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
   const [loading, setLoading] = useState(true);
   const [savingComment, setSavingComment] = useState<string | null>(null);
+
+  useEffect(() => {
+    markSectionSeen('announcements').catch(console.error);
+  }, []);
 
   // Load announcements and comments
   const loadData = async () => {

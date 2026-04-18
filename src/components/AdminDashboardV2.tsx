@@ -27,7 +27,7 @@ import { FeedbackTab as AdminFeedbackTab } from './admin/FeedbackTab';
 import { AdminEnrollmentLeadsTab } from './admin/AdminEnrollmentLeadsTab';
 import { AdminAvailabilitySettings } from './admin/AdminAvailabilitySettings';
 import { AdminProfileTab } from './admin/AdminProfileTab';
-import { getUnreadMessageCount } from '../lib/supabase/queries';
+import { getUnreadMessageCount, getSectionUnreadCounts } from '../lib/supabase/queries';
 import { getInitials } from '../lib/format';
 import type { User } from '../lib/types';
 import {
@@ -100,10 +100,18 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
   const activeTab = (searchParams.get('tab') as AdminTabId) ?? 'announcements';
   const setActiveTab = (tab: AdminTabId) => setSearchParams({ tab }, { replace: true });
   const [unreadMessages, setUnreadMessages] = useState(0);
+  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
+  const [unreadBlog, setUnreadBlog] = useState(0);
 
   useEffect(() => {
     getUnreadMessageCount()
       .then(setUnreadMessages)
+      .catch(console.error);
+    getSectionUnreadCounts(user.id)
+      .then(({ announcements, blog }) => {
+        setUnreadAnnouncements(announcements);
+        setUnreadBlog(blog);
+      })
       .catch(console.error);
   }, [user.id]);
 
@@ -136,7 +144,11 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
                     <SidebarMenuItem key={id}>
                       <SidebarMenuButton
                         isActive={activeTab === id}
-                        onClick={() => setActiveTab(id)}
+                        onClick={() => {
+                          setActiveTab(id);
+                          if (id === 'announcements') setUnreadAnnouncements(0);
+                          if (id === 'blog') setUnreadBlog(0);
+                        }}
                         tooltip={label}
                         size="lg"
                         className={
@@ -150,7 +162,17 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
                       </SidebarMenuButton>
                       {id === 'messages' && unreadMessages > 0 && (
                         <SidebarMenuBadge className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
-                          {unreadMessages}
+                          {unreadMessages > 9 ? '9+' : unreadMessages}
+                        </SidebarMenuBadge>
+                      )}
+                      {id === 'announcements' && unreadAnnouncements > 0 && (
+                        <SidebarMenuBadge className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
+                          {unreadAnnouncements > 9 ? '9+' : unreadAnnouncements}
+                        </SidebarMenuBadge>
+                      )}
+                      {id === 'blog' && unreadBlog > 0 && (
+                        <SidebarMenuBadge className="bg-sidebar-primary text-sidebar-primary-foreground text-xs">
+                          {unreadBlog > 9 ? '9+' : unreadBlog}
                         </SidebarMenuBadge>
                       )}
                     </SidebarMenuItem>
