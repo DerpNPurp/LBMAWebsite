@@ -23,6 +23,7 @@ type Comment = {
   authorName: string;
   body: string;
   createdAt: string;
+  parentCommentId?: string | null;
 };
 
 type BlogPost = {
@@ -46,6 +47,12 @@ export function BlogTab({ user }: { user: User }) {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [savingComment, setSavingComment] = useState<string | null>(null);
+  const [replyingTo, setReplyingTo] = useState<{
+    postId: string;
+    commentId: string;
+    authorName: string;
+  } | null>(null);
+  const [replyText, setReplyText] = useState('');
 
   useEffect(() => {
     markSectionSeen('blog').catch(console.error);
@@ -77,6 +84,7 @@ export function BlogTab({ user }: { user: User }) {
           authorName: c.profiles?.display_name || 'Unknown',
           body: c.body,
           createdAt: c.created_at,
+          parentCommentId: c.parent_comment_id ?? null,
         }));
       }
       setComments(commentsMap);
@@ -119,6 +127,7 @@ export function BlogTab({ user }: { user: User }) {
                   authorName: c.profiles?.display_name || 'Unknown',
                   body: c.body,
                   createdAt: c.created_at,
+                  parentCommentId: c.parent_comment_id ?? null,
                 })),
               }));
             });
@@ -179,6 +188,7 @@ export function BlogTab({ user }: { user: User }) {
           authorName: c.profiles?.display_name || 'Unknown',
           body: c.body,
           createdAt: c.created_at,
+          parentCommentId: c.parent_comment_id ?? null,
         })),
       }));
 
@@ -189,6 +199,21 @@ export function BlogTab({ user }: { user: User }) {
       setSavingComment(null);
     }
   };
+
+  async function handleSendReply(postId: string) {
+    if (!replyText.trim() || !replyingTo) return;
+    setSavingComment(replyingTo.commentId);
+    try {
+      await createBlogComment(postId, replyText.trim(), replyingTo.commentId);
+      setReplyText('');
+      setReplyingTo(null);
+      await loadData();
+    } catch {
+      toast.error('Failed to send reply');
+    } finally {
+      setSavingComment(null);
+    }
+  }
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
@@ -326,6 +351,13 @@ export function BlogTab({ user }: { user: User }) {
                   <div className="space-y-4 pl-4 border-l-2 border-border">
                     {postComments.map((comment) => (
                       <div key={comment.id} className="space-y-1">
+                        {comment.parentCommentId && (
+                          <p className="text-xs text-muted-foreground pl-2 border-l-2 border-muted mb-1">
+                            ↩ Replying to {
+                              comments[post.id]?.find(c => c.id === comment.parentCommentId)?.authorName ?? 'comment'
+                            }
+                          </p>
+                        )}
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
                             <AvatarFallback className="text-xs">
@@ -338,6 +370,53 @@ export function BlogTab({ user }: { user: User }) {
                           </span>
                         </div>
                         <p className="text-sm pl-8">{comment.body}</p>
+                        {!comment.parentCommentId && (
+                          <button
+                            onClick={() => setReplyingTo({
+                              postId: post.id,
+                              commentId: comment.id,
+                              authorName: comment.authorName,
+                            })}
+                            className="text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
+                          >
+                            Reply
+                          </button>
+                        )}
+                        {replyingTo?.commentId === comment.id && (
+                          <div className="ml-8 mt-2 space-y-2">
+                            <Textarea
+                              autoFocus
+                              placeholder={`Reply to ${replyingTo.authorName}…`}
+                              value={replyText}
+                              onChange={(e) => setReplyText(e.target.value)}
+                              className="text-sm min-h-[60px] resize-none"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Escape') { setReplyingTo(null); setReplyText(''); }
+                              }}
+                            />
+                            <div className="flex gap-2 justify-end">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => { setReplyingTo(null); setReplyText(''); }}
+                              >
+                                Cancel
+                              </Button>
+                              <Button
+                                size="sm"
+                                onClick={() => handleSendReply(post.id)}
+                                disabled={!replyText.trim() || savingComment === comment.id}
+                              >
+                                {savingComment === comment.id ? (
+                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                                ) : (
+                                  <Send className="h-3.5 w-3.5" />
+                                )}
+                                Send
+                              </Button>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     ))}
 
