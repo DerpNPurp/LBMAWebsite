@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from '../ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Plus, MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
@@ -34,66 +34,6 @@ type BlogPost = {
   comments: Comment[];
   isPinned?: boolean;
 };
-
-const mockBlogPosts: BlogPost[] = [
-  {
-    id: '1',
-    title: 'Tips for Practicing at Home',
-    body: 'Hi everyone! I wanted to share some tips that have helped my kids practice their forms at home:\n\n1. Set aside 15-20 minutes each day\n2. Use YouTube videos to review techniques\n3. Practice in front of a mirror\n4. Make it fun with music!\n\nWhat works for your family?',
-    authorName: 'Jennifer Martinez',
-    createdAt: '2026-02-03T14:00:00Z',
-    comments: [
-      {
-        id: 'c1',
-        authorName: 'David Kim',
-        body: 'Great tips! We also use a reward chart for daily practice.',
-        createdAt: '2026-02-03T15:30:00Z'
-      },
-      {
-        id: 'c2',
-        authorName: 'Lisa Wong',
-        body: 'The mirror idea is genius! Thank you for sharing.',
-        createdAt: '2026-02-03T16:00:00Z'
-      }
-    ]
-  },
-  {
-    id: '2',
-    title: 'Anyone Carpooling to Saturday Classes?',
-    body: 'We live in the north side and are looking to coordinate carpooling for Saturday morning classes. If you\'re interested in carpooling, let me know in the comments!',
-    authorName: 'Michael Torres',
-    createdAt: '2026-02-02T19:00:00Z',
-    comments: [
-      {
-        id: 'c3',
-        authorName: 'Amanda Lee',
-        body: 'We\'re interested! We live on Oak Street.',
-        createdAt: '2026-02-02T20:00:00Z'
-      }
-    ]
-  },
-  {
-    id: '3',
-    title: 'Celebrating My Daughter\'s Yellow Belt!',
-    body: 'Just wanted to share how proud I am of Emma for earning her yellow belt yesterday! She worked so hard and it really paid off. Thank you to all the instructors for their support and encouragement!',
-    authorName: 'Karen Johnson',
-    createdAt: '2026-02-01T11:00:00Z',
-    comments: [
-      {
-        id: 'c4',
-        authorName: 'Rachel Green',
-        body: 'Congratulations Emma! 🎉',
-        createdAt: '2026-02-01T12:00:00Z'
-      },
-      {
-        id: 'c5',
-        authorName: 'Tom Anderson',
-        body: 'Way to go! My son tested yesterday too - such a proud moment!',
-        createdAt: '2026-02-01T13:00:00Z'
-      }
-    ]
-  }
-];
 
 export function BlogTab({ user }: { user: User }) {
   const [posts, setPosts] = useState<BlogPost[]>([]);
@@ -316,9 +256,9 @@ export function BlogTab({ user }: { user: User }) {
               <Button variant="outline" onClick={() => setIsCreateDialogOpen(false)}>
                 Cancel
               </Button>
-              <Button 
+              <Button
                 onClick={handleCreatePost}
-                disabled={!newPostTitle.trim() || !newPostBody.trim()}
+                disabled={!newPostTitle.trim() || !newPostBody.trim() || saving}
               >
                 Post
               </Button>

@@ -3,12 +3,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Bell, Loader2, MessageSquare, Trophy, Pin, Award, Star } from 'lucide-react';
+import { Bell, BookOpen, Loader2, MessageCircle, MessageSquare, Trophy, Pin, Award, Star } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
 import {
   getAnnouncements,
   getBlogPosts,
-  getCommunicationCounts,
+  getSectionUnreadCounts,
+  getUnreadMessageCount,
+  getUnreadNotificationCount,
   getStudentFeedbackByFamily,
 } from '../../lib/supabase/queries';
 
@@ -78,6 +80,8 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
   const [blogPosts, setBlogPosts] = useState<BlogPost[]>([]);
   const [unreadMessages, setUnreadMessages] = useState(0);
   const [announcementCount, setAnnouncementCount] = useState(0);
+  const [blogCount, setBlogCount] = useState(0);
+  const [commentNotifCount, setCommentNotifCount] = useState(0);
   const [feedbackCount, setFeedbackCount] = useState(0);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -133,19 +137,24 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
       setLoading(true);
       setError(null);
 
-      const [announcementsResult, blogPostsResult, communicationCountsResult] = await Promise.allSettled([
+      const [announcementsResult, blogPostsResult, sectionCountsResult, unreadMessagesResult, commentCountResult] = await Promise.allSettled([
         getAnnouncements(),
         getBlogPosts(),
-        getCommunicationCounts(user.id),
+        getSectionUnreadCounts(user.id),
+        getUnreadMessageCount(),
+        getUnreadNotificationCount(),
       ]);
 
       if (announcementsResult.status === 'rejected') throw announcementsResult.reason;
       if (blogPostsResult.status === 'rejected') throw blogPostsResult.reason;
-      if (communicationCountsResult.status === 'rejected') throw communicationCountsResult.reason;
+      if (sectionCountsResult.status === 'rejected') throw sectionCountsResult.reason;
+      if (unreadMessagesResult.status === 'rejected') throw unreadMessagesResult.reason;
+      if (commentCountResult.status === 'rejected') throw commentCountResult.reason;
 
       const announcementsData = announcementsResult.value;
       const blogPostsData = blogPostsResult.value;
-      const communicationCounts = communicationCountsResult.value;
+      const sectionCounts = sectionCountsResult.value;
+      const commentCount = commentCountResult.value;
 
       setAnnouncements(
         (announcementsData as AnnouncementRecord[]).slice(0, 3).map((announcement) => ({
@@ -167,8 +176,10 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
           isPinned: Boolean(post.is_pinned),
         })),
       );
-      setUnreadMessages(communicationCounts.unreadMessages);
-      setAnnouncementCount(communicationCounts.announcements);
+      setUnreadMessages(unreadMessagesResult.value);
+      setAnnouncementCount(sectionCounts.announcements);
+      setBlogCount(sectionCounts.blog);
+      setCommentNotifCount(commentCount);
     } catch (err) {
       console.error('Error loading home dashboard data:', err);
       setError(err instanceof Error ? err.message : 'Failed to load home dashboard data');
@@ -213,10 +224,24 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
       label: 'New Announcements',
       icon: Bell,
       action: () => onNavigate('announcements')
-    }
+    },
+    {
+      type: 'blog',
+      count: blogCount,
+      label: 'New Blog Posts',
+      icon: BookOpen,
+      action: () => onNavigate('blog'),
+    },
+    {
+      type: 'comments',
+      count: commentNotifCount,
+      label: 'New Comment Replies',
+      icon: MessageCircle,
+      action: () => onNavigate('announcements'),
+    },
   ];
 
-  const totalNotifications = newFeedbackCount + unreadMessages + newAnnouncementsCount;
+  const totalNotifications = newFeedbackCount + unreadMessages + newAnnouncementsCount + blogCount + commentNotifCount;
 
   const isLoading = loading || profileLoading;
   const loadError = error || profileError;
