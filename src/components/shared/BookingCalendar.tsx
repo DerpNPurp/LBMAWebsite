@@ -36,9 +36,9 @@ function formatTime(timeStr: string): string {
 }
 
 function isWithin2Days(date: Date): boolean {
-  const today = new Date()
-  today.setHours(0, 0, 0, 0)
-  return Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) < 2
+  const now = new Date()
+  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+  return Math.floor((date.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24)) < 2
 }
 
 export function BookingCalendar({
@@ -49,13 +49,13 @@ export function BookingCalendar({
   showAutoConfirmBadge = false,
 }: BookingCalendarProps) {
   const [availableMap, setAvailableMap] = useState<Map<string, DateOption>>(new Map())
-  const [fetching, setFetching] = useState(true)
+  const [fetching, setFetching] = useState(slots.length === 0 ? false : true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Date | undefined>()
   const slotIds = slots.map(s => s.slot_id).join(',')
 
   useEffect(() => {
-    if (slots.length === 0) { setFetching(false); return }
+    if (slots.length === 0) return
     let cancelled = false
     Promise.all(
       slots.map(s =>
