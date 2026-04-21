@@ -77,6 +77,7 @@ export function BookingCalendar({
       .catch(() => { if (!cancelled) setFetchError('Failed to load available dates. Please refresh.') })
       .finally(() => { if (!cancelled) setFetching(false) })
     return () => { cancelled = true }
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- slotIds is a stable string proxy for slot identity; avoids re-fetching on array reference changes
   }, [slotIds])
 
   const availableDates = Array.from(availableMap.keys()).map(d => new Date(d + 'T12:00:00'))
