@@ -1,0 +1,47 @@
+/* Scope all overrides to our wrapper class to avoid polluting global styles */
+.booking-calendar {
+  --rdp-accent-color: #c8102e;
+  --rdp-accent-background-color: #fef2f2;
+  --rdp-today-color: #c8102e;
+}
+
+/* Available dates — light red highlight */
+.booking-calendar .rdp-day_available .rdp-day_button {
+  background-color: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #c8102e;
+  font-weight: 600;
+}
+
+.booking-calendar .rdp-day_available .rdp-day_button:hover {
+  background-color: #fee2e2;
+}
+
+/* Selected date — solid red */
+.booking-calendar .rdp-selected .rdp-day_button,
+.booking-calendar .rdp-selected .rdp-day_button:hover {
+  background-color: #c8102e !important;
+  color: #ffffff !important;
+  border-color: #c8102e !important;
+  font-weight: 700;
+}
+
+/* Today — underline only, no fill */
+.booking-calendar .rdp-today:not(.rdp-selected) .rdp-day_button {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  color: #c8102e;
+  background: transparent;
+}
+
+/* Nav buttons — match shadcn ghost button style */
+.booking-calendar .rdp-nav button {
+  border: 1px solid #e5e7eb;
+  border-radius: 6px;
+  color: #6b7280;
+}
+
+.booking-calendar .rdp-nav button:hover {
+  background-color: #f9fafb;
+  color: #111827;
+}
