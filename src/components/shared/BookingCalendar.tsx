@@ -36,9 +36,9 @@ function formatTime(timeStr: string): string {
 }
 
 function isWithin2Days(date: Date): boolean {
-  const now = new Date()
-  const todayUtc = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
-  return Math.floor((date.getTime() - todayUtc.getTime()) / (1000 * 60 * 60 * 24)) < 2
+  const today = new Date()
+  today.setHours(0, 0, 0, 0)
+  return Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24)) < 2
 }
 
 export function BookingCalendar({
@@ -52,15 +52,18 @@ export function BookingCalendar({
   const [fetching, setFetching] = useState(true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Date | undefined>()
+  const slotIds = slots.map(s => s.slot_id).join(',')
 
   useEffect(() => {
     if (slots.length === 0) { setFetching(false); return }
+    let cancelled = false
     Promise.all(
       slots.map(s =>
         getUpcomingBookableDates(s.slot_id).then(dates => ({ slot: s, dates }))
       )
     )
       .then(results => {
+        if (cancelled) return
         const map = new Map<string, DateOption>()
         for (const { slot, dates } of results) {
           for (const date of dates) {
@@ -71,9 +74,10 @@ export function BookingCalendar({
         }
         setAvailableMap(map)
       })
-      .catch(() => setFetchError('Failed to load available dates. Please refresh.'))
-      .finally(() => setFetching(false))
-  }, [slots])
+      .catch(() => { if (!cancelled) setFetchError('Failed to load available dates. Please refresh.') })
+      .finally(() => { if (!cancelled) setFetching(false) })
+    return () => { cancelled = true }
+  }, [slotIds])
 
   const availableDates = Array.from(availableMap.keys()).map(d => new Date(d + 'T12:00:00'))
   const selectedKey = selected ? toDateKey(selected) : null
