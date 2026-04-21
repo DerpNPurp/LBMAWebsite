@@ -623,9 +623,12 @@ export async function markSectionSeen(section: 'announcements' | 'blog'): Promis
 }
 
 export async function markNotificationsRead(): Promise<void> {
+  const { data: { user } } = await supabase.auth.getUser();
+  if (!user) return;
   const { error } = await supabase
     .from('user_notifications')
     .update({ is_read: true })
+    .eq('recipient_user_id', user.id)
     .eq('is_read', false);
   if (error) throw error;
 }

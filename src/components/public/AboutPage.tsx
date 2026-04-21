@@ -1,208 +1,248 @@
-import { Button } from '../ui/button';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { CheckCircle2, Shield, Users, Heart, Star } from 'lucide-react';
+import { V3 } from './design';
 
-type AboutPageProps = {
-  onRequestEnrollment?: () => void;
-};
+const VALUES = [
+  { label: 'Honor',   desc: 'Integrity in everything we do, on and off the mat.' },
+  { label: 'Loyalty', desc: 'Standing by your school, your instructors, and your fellow students.' },
+  { label: 'Family',  desc: 'Our academy is a community — every student belongs here.' },
+  { label: 'Bravery', desc: 'The courage to try, to fail, and to keep going.' },
+];
 
-export function AboutPage({ onRequestEnrollment }: AboutPageProps) {
+const FOUNDERS = [
+  {
+    name: 'Grandmaster Ernie Reyes Sr.',
+    role: 'ERWCMAA Founder',
+    bio: 'World-renowned martial arts champion, actor, and stunt coordinator. Grandmaster Reyes founded the ERWCMAA system to share the transformative power of martial arts with communities everywhere. His system has trained champions on the world stage for over 40 years.',
+  },
+  {
+    name: 'Master Tony Thompson',
+    role: 'ERWCMAA Co-Founder',
+    bio: 'Master Thompson co-founded the ERWCMAA system and has dedicated his life to spreading the martial arts philosophy of developing the whole person — physically, mentally, and spiritually. His teaching methods form the foundation of every ERWCMAA-affiliated school.',
+  },
+];
+
+const PURPOSES = [
+  { num: '01', label: 'Physical',      desc: 'Strength, coordination, flexibility, and conditioning through structured martial arts training.' },
+  { num: '02', label: 'Mental',        desc: 'Focus, discipline, and the confidence to set goals and achieve them.' },
+  { num: '03', label: 'Spiritual',     desc: 'Character, integrity, and the inner strength to do what is right.' },
+  { num: '04', label: 'Good Character', desc: 'We develop the whole person — not just a martial artist, but a leader in life.' },
+];
+
+export function AboutPage() {
   return (
     <div>
 
-      {/* ── PAGE HEADER ─────────────────────────────────── */}
-      <section className="py-20 border-b bg-slate-50">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-snug">
-            A school that feels like family.
-          </h1>
-          <p className="text-xl text-muted-foreground leading-relaxed">
-            Los Banos Martial Arts Academy was built around one belief: that every child
-            deserves a place where they feel safe, challenged, and supported. We're not a
-            franchise. We're a local, family-run school and we know every student by name.
-          </p>
-        </div>
-      </section>
-
-      {/* ── OUR STORY ───────────────────────────────────── */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-14 items-center">
-            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-muted">
+      {/* ── PAGE HERO ── */}
+      <section className="py-14" style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
+            <div>
+              <p className="v3-eyebrow mb-4">About LBMAA</p>
+              <h1
+                className="v3-h font-black leading-[1.0] mb-6"
+                style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
+              >
+                A School That Feels Like Family
+              </h1>
+              <p className="text-base leading-relaxed" style={{ color: V3.muted }}>
+                Los Banos Martial Arts Academy is an ERWCMAA-affiliated school built around one
+                belief: that every student deserves a place where they feel safe, challenged, and
+                supported. We know every student by name.
+              </p>
+            </div>
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1555597673-b21d5c935865?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
-                alt="Instructor teaching at LBMAA"
+                src="/photos/34-IMG_5055.jpg"
+                alt="LBMAA dojo"
                 className="w-full h-full object-cover"
               />
             </div>
+          </div>
+        </div>
+      </section>
 
+      {/* ── MISSION QUOTE ── */}
+      <section className="py-10" style={{ backgroundColor: V3.primary }}>
+        <div className="max-w-3xl mx-auto px-6 text-center">
+          <p
+            className="text-xs font-bold uppercase tracking-[0.2em] mb-6"
+            style={{ color: 'oklch(85% 0.055 20)', fontFamily: "'Nunito', sans-serif" }}
+          >
+            Our Mission
+          </p>
+          <blockquote
+            className="v3-h font-black leading-[1.05]"
+            style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', color: 'white' }}
+          >
+            "Impact and Empower Through Martial Arts — Developing Black Belts in Life"
+          </blockquote>
+        </div>
+      </section>
+
+      {/* ── FOUR PILLARS ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-4">What We Develop</p>
+          <h2
+            className="v3-h font-black leading-[1.0] mb-10"
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+          >
+            Our Four Pillars
+          </h2>
+          <div className="grid md:grid-cols-4 gap-0 max-w-5xl">
+            {PURPOSES.map(({ num, label, desc }, i) => (
+              <div
+                key={num}
+                className="py-6 pr-8"
+                style={{
+                  borderTop: `2px solid ${i === 0 ? V3.primary : V3.border}`,
+                }}
+              >
+                <div className="v3-h text-4xl font-black mb-3" style={{ color: V3.surface }}>
+                  {num}
+                </div>
+                <h3 className="v3-h text-xl font-bold mb-3" style={{ color: V3.text }}>
+                  {label}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                  {desc}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── STORY ── */}
+      <section className="py-24" style={{ backgroundColor: V3.surface }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl mx-auto">
             <div>
-              <h2 className="text-2xl font-bold mb-5">Our story</h2>
-              <div className="space-y-4 text-base text-muted-foreground leading-relaxed">
+              <p className="v3-eyebrow mb-4">Our Story</p>
+              <h2
+                className="v3-h font-black leading-[1.0] mb-6"
+                style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+              >
+                Built for the Community
+              </h2>
+              <div className="flex flex-col gap-4 text-[0.95rem] leading-relaxed" style={{ color: V3.muted }}>
                 <p>
-                  LBMAA started with a simple idea: that the best martial arts school for a
-                  child isn't the most decorated one — it's the one where they feel seen and
-                  respected every time they walk through the door.
+                  LBMAA is part of the Ernie Reyes World Combat Martial Arts Association (ERWCMAA) —
+                  an organization that has trained champions for over 40 years. Our curriculum is
+                  built on the World Chun Woo Martial Arts (WCWMA) system.
                 </p>
                 <p>
                   Our instructors aren't just skilled martial artists. They're mentors who
-                  understand children — how to challenge them without discouraging them, how
-                  to hold standards without creating pressure, and how to make every student
-                  feel like they belong.
+                  understand students — how to challenge them without discouraging them, and how to
+                  make every student feel like they belong.
                 </p>
                 <p>
-                  Whether your child is shy and needs a confidence boost, full of energy and
-                  needs focus, or just looking for something positive to be part of — we meet
-                  them where they are.
+                  Whether your child needs a confidence boost, more focus, or just something
+                  positive to be part of — we meet them where they are.
                 </p>
               </div>
+            </div>
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+              <ImageWithFallback
+                src="/photos/59-_MG_4959.jpg"
+                alt="LBMAA training floor"
+                className="w-full h-full object-cover"
+              />
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── THREE PILLARS ───────────────────────────────── */}
-      {/* Replace 6-card values grid with 3 clear principles */}
-      <section className="py-20 bg-slate-50 border-y">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <h2 className="text-2xl font-bold mb-10">What we build in every student</h2>
-
-          <div className="grid md:grid-cols-3 gap-8">
-            {[
-              {
-                icon: Shield,
-                heading: 'Discipline',
-                body: 'Self-control, focus, and the ability to work hard toward a goal. These habits don\'t stay in the dojo — they carry into school and home.',
-              },
-              {
-                icon: Heart,
-                heading: 'Respect',
-                body: 'For themselves, for their peers, for instructors, and for their families. Respect is the first lesson and the one we never stop teaching.',
-              },
-              {
-                icon: Star,
-                heading: 'Confidence',
-                body: 'The kind that comes from real achievement. When a student earns a belt, they know they earned it — and that feeling stays with them.',
-              },
-            ].map(({ icon: Icon, heading, body }) => (
-              <div key={heading} className="flex flex-col gap-4">
-                <div className="w-12 h-12 rounded-xl bg-primary/8 flex items-center justify-center">
-                  <Icon className="w-6 h-6 text-primary" />
+      {/* ── VALUES ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-4">Core Values</p>
+          <h2
+            className="v3-h font-black leading-[1.0] mb-10"
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+          >
+            What We Teach Every Day
+          </h2>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl">
+            {VALUES.map(({ label, desc }) => (
+              <div key={label}>
+                <div
+                  className="v3-h text-5xl font-black mb-3 leading-none"
+                  style={{ color: V3.primary }}
+                >
+                  {label[0]}
                 </div>
-                <h3 className="font-semibold text-base">{heading}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+                <h3 className="v3-h text-xl font-bold mb-2" style={{ color: V3.text }}>
+                  {label}
+                </h3>
+                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                  {desc}
+                </p>
               </div>
             ))}
           </div>
         </div>
       </section>
 
-      {/* ── WHAT MAKES US DIFFERENT ─────────────────────── */}
-      {/* Reduced from 6 cards to 4 honest differentiators */}
-      <section className="py-20">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <h2 className="text-2xl font-bold mb-10">What parents notice first</h2>
-
-          <div className="grid md:grid-cols-2 gap-x-14 gap-y-8">
-            {[
-              {
-                heading: 'Your child is not a number here',
-                body: 'We keep classes small on purpose. Every instructor knows every student — their name, their goals, and where they started.',
-              },
-              {
-                heading: 'Progress based on readiness, not schedule',
-                body: 'Students test for their next belt when their instructor says they\'re ready. There\'s no pressure, no fixed timeline. Skill drives the process.',
-              },
-              {
-                heading: 'You\'re always in the loop',
-                body: 'Parents are welcome to watch any class. Our family portal keeps you connected with announcements, updates, and direct communication from staff.',
-              },
-              {
-                heading: 'Mistakes are part of the plan',
-                body: 'We teach students that failing a technique isn\'t failure — it\'s the beginning of learning it. That mindset changes how kids approach challenges everywhere.',
-              },
-            ].map(({ heading, body }) => (
-              <div key={heading} className="flex items-start gap-4">
-                <CheckCircle2 className="w-5 h-5 text-primary flex-shrink-0 mt-0.5" />
-                <div>
-                  <h3 className="font-semibold text-sm mb-1">{heading}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── INSTRUCTOR PREVIEW ──────────────────────────── */}
-      {/* Trust anchor — real credentials, not vague claims */}
-      <section className="py-20 bg-slate-50 border-y">
-        <div className="container mx-auto px-6 max-w-4xl">
-          <h2 className="text-2xl font-bold mb-4">The people teaching your child</h2>
-          <p className="text-muted-foreground text-sm mb-10 max-w-xl">
-            Our instructors are certified, background-checked, and trained in working with children
-            across all experience levels. They're also coaches — not just technicians.
-          </p>
-
-          <div className="grid md:grid-cols-3 gap-6">
-            {[
-              {
-                name: 'Head Instructor',
-                credential: 'Black Belt — 10+ years teaching',
-                note: 'Specializes in children\'s programs, ages 4–12',
-              },
-              {
-                name: 'Assistant Instructor',
-                credential: 'Black Belt — 6+ years teaching',
-                note: 'Focus: teen and advanced programs',
-              },
-              {
-                name: 'Youth Coach',
-                credential: 'Brown Belt — 4+ years teaching',
-                note: 'Little Dragons program specialist',
-              },
-            ].map((instructor) => (
+      {/* ── FOUNDERS ── */}
+      <section className="py-14" style={{ backgroundColor: V3.surface }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-4">Our Foundation</p>
+          <h2
+            className="v3-h font-black leading-[1.0] mb-8"
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+          >
+            Built on a Legacy of Excellence
+          </h2>
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
+            {FOUNDERS.map(({ name, role, bio }) => (
               <div
-                key={instructor.name}
-                className="bg-white border border-border rounded-xl p-5 flex flex-col gap-2"
+                key={name}
+                className="p-7 rounded-xl"
+                style={{ backgroundColor: V3.surface, border: `1px solid ${V3.border}` }}
               >
-                {/* Placeholder avatar */}
-                <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-1">
-                  <Users className="w-7 h-7 text-primary" />
+                <div
+                  className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
+                  style={{ backgroundColor: V3.primaryBg }}
+                >
+                  <span className="v3-h text-xl font-black" style={{ color: V3.primary }}>
+                    {name.split(' ').pop()![0]}
+                  </span>
                 </div>
-                <p className="font-semibold text-sm">{instructor.name}</p>
-                <p className="text-xs text-primary font-medium">{instructor.credential}</p>
-                <p className="text-xs text-muted-foreground leading-relaxed">{instructor.note}</p>
+                <h3 className="v3-h text-xl font-bold mb-1" style={{ color: V3.text }}>
+                  {name}
+                </h3>
+                <p className="text-sm font-semibold mb-4" style={{ color: V3.primary }}>
+                  {role}
+                </p>
+                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                  {bio}
+                </p>
               </div>
             ))}
           </div>
-
-          <p className="text-xs text-muted-foreground mt-6">
-            All instructors are background-checked and certified in first aid.
-          </p>
         </div>
       </section>
 
-      {/* ── CLOSING CTA ─────────────────────────────────── */}
-      <section className="py-24">
-        <div className="container mx-auto px-6 text-center max-w-lg">
-          <div className="w-8 h-0.5 bg-primary rounded-full mx-auto mb-8" />
-          <h2 className="text-2xl font-bold mb-3">Come see it for yourself.</h2>
-          <p className="text-muted-foreground text-base mb-8 leading-relaxed">
-            The best way to know if LBMAA is right for your child is to bring them in.
-            First class is free, no strings attached.
-          </p>
-          <Button size="lg" className="px-10 font-semibold" onClick={onRequestEnrollment}>
-            Book a Free Trial Class
-          </Button>
-          <p className="text-sm text-muted-foreground mt-5">
-            Questions?{' '}
-            <a href="tel:+12095550123" className="font-medium text-foreground hover:underline">
-              Call us at (209) 555-0123
-            </a>
-          </p>
+      {/* ── AFFILIATION ── */}
+      <section className="py-10" style={{ backgroundColor: V3.surface, borderTop: `1px solid ${V3.border}`, borderBottom: `1px solid ${V3.border}` }}>
+        <div className="max-w-5xl mx-auto px-6 md:px-10">
+          <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
+            <img src="/logo.png" alt="ERWCMAA Logo" className="h-14 w-auto flex-shrink-0" />
+            <div>
+              <h3 className="v3-h text-lg font-bold mb-1" style={{ color: V3.text }}>
+                Ernie Reyes World Combat Martial Arts Association
+              </h3>
+              <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                LBMAA is proudly affiliated with the ERWCMAA — one of the most respected martial
+                arts organizations in the world. Our curriculum, standards, and instructor
+                certifications are backed by 40+ years of proven excellence.
+              </p>
+            </div>
+          </div>
         </div>
       </section>
+
 
     </div>
   );

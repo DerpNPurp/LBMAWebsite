@@ -1,24 +1,53 @@
 import { useState } from 'react';
-import { Button } from '../ui/button';
+import { CheckCircle2, AlertCircle } from 'lucide-react';
+import { Label } from '../ui/label';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
-import { Label } from '../ui/label';
 import { Alert, AlertDescription } from '../ui/alert';
-import { Mail, Phone, MapPin, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 import { submitEnrollmentLeadWithTimeout } from '../../lib/supabase/client';
+import { V3 } from './design';
+
+const REASSURANCES = [
+  'First class is free — no commitment',
+  'We respond within 24 hours',
+  "We're here to help, not to pressure",
+];
+
+const CONTACT_INFO = [
+  {
+    label: 'Phone',
+    value: '(209) 555-0123',
+    href: 'tel:+12095550123',
+  },
+  {
+    label: 'Email',
+    value: 'info@lbmaa.com',
+    href: 'mailto:info@lbmaa.com',
+  },
+];
+
+const HOURS = [
+  { day: 'Mon – Fri', time: '3:00 – 8:30 PM' },
+  { day: 'Saturday',  time: '9:00 AM – 2:00 PM' },
+  { day: 'Sunday',    time: 'Closed' },
+];
 
 export function ContactPage() {
   const [formData, setFormData] = useState({
-    parentName: '',
+    parentName:  '',
     parentEmail: '',
-    phone: '',
+    phone:       '',
     studentName: '',
-    studentAge: '',
-    message: '',
+    studentAge:  '',
+    message:     '',
   });
-  const [submitted, setSubmitted] = useState(false);
-  const [submitError, setSubmitError] = useState<string | null>(null);
+  const [submitted, setSubmitted]       = useState(false);
+  const [submitError, setSubmitError]   = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,10 +55,7 @@ export function ContactPage() {
     setIsSubmitting(true);
 
     const parsedAge = formData.studentAge.trim() ? Number(formData.studentAge) : undefined;
-    if (
-      parsedAge !== undefined &&
-      (!Number.isInteger(parsedAge) || parsedAge < 3 || parsedAge > 99)
-    ) {
+    if (parsedAge !== undefined && (!Number.isInteger(parsedAge) || parsedAge < 3 || parsedAge > 99)) {
       setSubmitError('Please enter a valid student age between 3 and 99.');
       setIsSubmitting(false);
       return;
@@ -37,21 +63,19 @@ export function ContactPage() {
 
     const { data, error } = await submitEnrollmentLeadWithTimeout(
       {
-        parentName: formData.parentName,
+        parentName:  formData.parentName,
         parentEmail: formData.parentEmail,
-        phone: formData.phone || undefined,
+        phone:       formData.phone || undefined,
         studentName: formData.studentName || undefined,
-        studentAge: parsedAge,
-        message: formData.message || undefined,
-        sourcePage: 'contact',
+        studentAge:  parsedAge,
+        message:     formData.message || undefined,
+        sourcePage:  'contact',
       },
       12000,
     );
 
     if (error || !data) {
-      setSubmitError(
-        error?.message || 'Unable to submit right now. Please try again or call us directly.',
-      );
+      setSubmitError(error?.message || 'Unable to submit right now. Please try again or call us directly.');
       setIsSubmitting(false);
       return;
     }
@@ -60,210 +84,153 @@ export function ContactPage() {
     setIsSubmitting(false);
   };
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
-  };
-
   return (
     <div>
 
-      {/* ── PAGE HEADER ─────────────────────────────────── */}
-      <section className="py-20 border-b bg-slate-50">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <h1 className="text-4xl md:text-5xl font-bold mb-5 leading-snug">
-            Get in touch.
+      {/* ── PAGE HERO ── */}
+      <section
+        className="py-14"
+        style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}
+      >
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-4">Get In Touch</p>
+          <h1
+            className="v3-h font-black leading-[1.0] mb-5"
+            style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
+          >
+            We'd Love to Hear From You
           </h1>
-          <p className="text-lg text-muted-foreground leading-relaxed">
-            Whether you have questions or you're ready to book a free trial class —
-            fill out the form and we'll get back to you within 24 hours.
+          <p className="text-base leading-relaxed max-w-xl" style={{ color: V3.muted }}>
+            Questions about our programs? Ready to book a trial class? We'll respond within
+            one business day — no sales calls, no pressure.
           </p>
         </div>
       </section>
 
-      {/* ── MAIN CONTENT ────────────────────────────────── */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-5xl mx-auto grid lg:grid-cols-5 gap-14">
+      {/* ── CONTACT GRID ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid lg:grid-cols-2 gap-12 max-w-5xl items-start">
 
-            {/* ── Left: Contact info ── */}
-            <div className="lg:col-span-2 space-y-8">
-              <div>
-                <h2 className="font-semibold text-base mb-5">Contact information</h2>
-                <div className="space-y-5">
-                  <div className="flex items-start gap-3">
-                    <Phone className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium mb-0.5">Phone</p>
-                      <a
-                        href="tel:+12095550123"
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        (209) 555-0123
-                      </a>
-                    </div>
-                  </div>
+            {/* ── FORM ── */}
+            <div>
+              <h2
+                className="v3-h font-black text-3xl mb-2"
+                style={{ color: V3.text }}
+              >
+                Send Us a Message
+              </h2>
+              <p className="text-sm mb-8" style={{ color: V3.muted }}>
+                Fill out the form and we'll be in touch within one business day.
+              </p>
 
-                  <div className="flex items-start gap-3">
-                    <Mail className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium mb-0.5">Email</p>
-                      <a
-                        href="mailto:info@lbmaa.com"
-                        className="text-sm text-muted-foreground hover:text-foreground transition-colors"
-                      >
-                        info@lbmaa.com
-                      </a>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        We typically respond within 24 hours
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium mb-0.5">Location</p>
-                      <p className="text-sm text-muted-foreground">
-                        123 Main Street<br />
-                        Los Banos, CA 93635
-                      </p>
-                      <p className="text-xs text-muted-foreground mt-0.5">
-                        Drop-ins welcome during class hours
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex items-start gap-3">
-                    <Clock className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <div>
-                      <p className="text-sm font-medium mb-0.5">Hours</p>
-                      <div className="text-sm text-muted-foreground space-y-0.5">
-                        <p>Mon–Fri: 3:00 – 8:30 PM</p>
-                        <p>Saturday: 9:00 AM – 2:00 PM</p>
-                        <p>Sunday: Closed</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Reassurance — moved here to reduce hesitation */}
-              <div className="border-t pt-6 space-y-3">
-                {[
-                  'First class is free — no commitment',
-                  'We respond within 24 hours',
-                  "We're here to help, not to sell",
-                ].map((point) => (
-                  <div key={point} className="flex items-center gap-2.5 text-sm text-muted-foreground">
-                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0" />
-                    <span>{point}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Right: Form ── */}
-            <div className="lg:col-span-3">
-              <div className="bg-white border border-border rounded-xl p-8 shadow-sm">
               {submitted ? (
-                <div className="py-16 text-center">
-                  <div className="w-14 h-14 rounded-full bg-primary/10 flex items-center justify-center mx-auto mb-5">
-                    <CheckCircle2 className="w-7 h-7 text-primary" />
+                <div
+                  className="py-16 text-center rounded-xl"
+                  style={{ backgroundColor: V3.surface, border: `1px solid ${V3.border}` }}
+                >
+                  <div
+                    className="w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-5"
+                    style={{ backgroundColor: V3.primaryBg }}
+                  >
+                    <CheckCircle2 className="w-8 h-8" style={{ color: V3.primary }} />
                   </div>
-                  <h3 className="text-xl font-bold mb-2">We got your message.</h3>
-                  <p className="text-muted-foreground text-sm max-w-sm mx-auto leading-relaxed">
+                  <h3 className="v3-h text-2xl font-black mb-2" style={{ color: V3.text }}>
+                    We Got Your Message
+                  </h3>
+                  <p className="text-sm max-w-sm mx-auto leading-relaxed" style={{ color: V3.muted }}>
                     We'll be in touch within 24 hours to answer your questions and get your
                     child scheduled for a free trial class.
                   </p>
                 </div>
               ) : (
-                <form onSubmit={handleSubmit} className="space-y-5">
-                  <div className="space-y-1.5">
-                    <Label htmlFor="parentName">Your name *</Label>
-                    <Input
-                      id="parentName"
-                      name="parentName"
-                      placeholder="Maria Garcia"
-                      value={formData.parentName}
-                      onChange={handleChange}
-                      disabled={isSubmitting}
-                      required
-                    />
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="parentName">
+                        Your name <span style={{ color: V3.primary }}>*</span>
+                      </Label>
+                      <Input
+                        id="parentName" name="parentName"
+                        placeholder="Jane Smith"
+                        value={formData.parentName}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                        required
+                        className="min-h-[48px]"
+                        autoComplete="name"
+                      />
+                    </div>
+                    <div className="flex flex-col gap-1.5">
+                      <Label htmlFor="phone">
+                        Phone <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
+                      </Label>
+                      <Input
+                        id="phone" name="phone" type="tel"
+                        placeholder="(209) 555-0100"
+                        value={formData.phone}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                        className="min-h-[48px]"
+                        autoComplete="tel"
+                      />
+                    </div>
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="parentEmail">Email address *</Label>
+                  <div className="flex flex-col gap-1.5">
+                    <Label htmlFor="parentEmail">
+                      Email address <span style={{ color: V3.primary }}>*</span>
+                    </Label>
                     <Input
-                      id="parentEmail"
-                      name="parentEmail"
-                      type="email"
+                      id="parentEmail" name="parentEmail" type="email"
                       placeholder="you@example.com"
                       value={formData.parentEmail}
                       onChange={handleChange}
                       disabled={isSubmitting}
                       required
+                      className="min-h-[48px]"
+                      autoComplete="email"
                     />
                   </div>
 
-                  <div className="space-y-1.5">
-                    <Label htmlFor="phone">
-                      Phone number{' '}
-                      <span className="text-muted-foreground font-normal">(optional)</span>
-                    </Label>
-                    <Input
-                      id="phone"
-                      name="phone"
-                      type="tel"
-                      placeholder="(209) 555-0100"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-
-                  <div className="grid gap-4 sm:grid-cols-2">
-                    <div className="space-y-1.5">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="flex flex-col gap-1.5">
                       <Label htmlFor="studentName">
-                        Child's name{' '}
-                        <span className="text-muted-foreground font-normal">(optional)</span>
+                        Child's name <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
                       </Label>
                       <Input
-                        id="studentName"
-                        name="studentName"
+                        id="studentName" name="studentName"
                         placeholder="Alex"
                         value={formData.studentName}
                         onChange={handleChange}
                         disabled={isSubmitting}
+                        className="min-h-[48px]"
                       />
                     </div>
-                    <div className="space-y-1.5">
+                    <div className="flex flex-col gap-1.5">
                       <Label htmlFor="studentAge">
-                        Child's age{' '}
-                        <span className="text-muted-foreground font-normal">(optional)</span>
+                        Child's age <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
                       </Label>
                       <Input
-                        id="studentAge"
-                        name="studentAge"
-                        type="number"
-                        min={3}
-                        max={99}
+                        id="studentAge" name="studentAge" type="number"
+                        min={3} max={99}
                         placeholder="9"
                         value={formData.studentAge}
                         onChange={handleChange}
                         disabled={isSubmitting}
+                        className="min-h-[48px]"
                       />
                     </div>
                   </div>
 
-                  <div className="space-y-1.5">
+                  <div className="flex flex-col gap-1.5">
                     <Label htmlFor="message">
-                      Questions or notes{' '}
-                      <span className="text-muted-foreground font-normal">(optional)</span>
+                      Questions or notes <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
                     </Label>
                     <Textarea
-                      id="message"
-                      name="message"
-                      placeholder="Preferred schedule, any questions you have, or what you're hoping your child gets out of martial arts."
+                      id="message" name="message"
+                      placeholder="Preferred schedule, questions about programs, or anything else on your mind."
                       rows={4}
                       value={formData.message}
                       onChange={handleChange}
@@ -278,35 +245,100 @@ export function ContactPage() {
                     </Alert>
                   )}
 
-                  <Button
+                  <button
                     type="submit"
-                    className="w-full font-semibold"
-                    size="lg"
                     disabled={isSubmitting}
+                    className="v3-btn-primary w-full"
+                    style={{ opacity: isSubmitting ? 0.6 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}
                   >
-                    {isSubmitting ? 'Sending...' : 'Send Message'}
-                  </Button>
+                    {isSubmitting ? 'Sending…' : 'Send Message'}
+                  </button>
 
-                  <p className="text-xs text-muted-foreground text-center">
+                  <p className="text-xs text-center" style={{ color: V3.muted }}>
                     * Required. We'll never share your information.
                   </p>
                 </form>
               )}
+            </div>
+
+            {/* ── INFO SIDE ── */}
+            <div>
+              <h2
+                className="v3-h font-black text-3xl mb-2"
+                style={{ color: V3.text }}
+              >
+                Find Us
+              </h2>
+              <p className="text-sm mb-8" style={{ color: V3.muted }}>
+                Stop by, call, or drop us a line.
+              </p>
+
+              {/* Location */}
+              <div className="mb-6">
+                <p className="v3-eyebrow mb-2">Location</p>
+                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                  123 Main Street<br />Los Banos, CA 93635
+                </p>
+              </div>
+
+              {/* Hours */}
+              <div className="mb-6 pt-6" style={{ borderTop: `1px solid ${V3.border}` }}>
+                <p className="v3-eyebrow mb-3">Class Hours</p>
+                <div className="flex flex-col gap-1.5">
+                  {HOURS.map(({ day, time }) => (
+                    <div key={day} className="flex justify-between text-sm gap-4">
+                      <span style={{ color: V3.text }}>{day}</span>
+                      <span style={{ color: V3.muted }}>{time}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Phone & Email */}
+              <div className="mb-8 pt-6" style={{ borderTop: `1px solid ${V3.border}` }}>
+                <p className="v3-eyebrow mb-3">Phone &amp; Email</p>
+                <div className="flex flex-col gap-2">
+                  {CONTACT_INFO.map(({ label, value, href }) => (
+                    <div key={label} className="flex items-center gap-3 text-sm">
+                      <span className="w-10 flex-shrink-0 font-semibold" style={{ color: V3.muted }}>{label}</span>
+                      <a
+                        href={href}
+                        className="transition-colors hover:opacity-80"
+                        style={{ color: V3.primary }}
+                      >
+                        {value}
+                      </a>
+                    </div>
+                  ))}
+                  <p className="text-xs mt-1" style={{ color: V3.muted }}>
+                    We reply within 1 business day
+                  </p>
+                </div>
+              </div>
+
+              {/* Reassurances */}
+              <div className="flex flex-col gap-3 pt-6" style={{ borderTop: `1px solid ${V3.border}` }}>
+                {REASSURANCES.map((pt) => (
+                  <div key={pt} className="flex items-center gap-2.5">
+                    <CheckCircle2 className="w-4 h-4 flex-shrink-0" style={{ color: V3.primary }} />
+                    <span className="text-sm" style={{ color: V3.muted }}>{pt}</span>
+                  </div>
+                ))}
               </div>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── MAP ─────────────────────────────────────────── */}
-      <section className="border-t">
-        <div className="container mx-auto px-6 py-12">
-          <div className="max-w-5xl mx-auto overflow-hidden rounded-xl border">
+      {/* ── MAP ── */}
+      <section style={{ borderTop: `1px solid ${V3.border}` }}>
+        <div className="max-w-5xl mx-auto px-6 py-12">
+          <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${V3.border}` }}>
             <iframe
               title="LBMAA Location"
               src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=Los+Banos,CA"
               width="100%"
-              height="340"
+              height="320"
               style={{ border: 0, display: 'block' }}
               allowFullScreen
               loading="lazy"

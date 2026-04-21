@@ -1,142 +1,122 @@
-import { ChevronDown, Phone } from 'lucide-react';
+import { useState } from 'react';
+import { V3 } from './design';
 
-// ─── Data ─────────────────────────────────────────────────────────────────────
-
-const FAQ_SECTIONS = [
+const FAQS = [
   {
-    heading: 'Getting started',
+    category: 'Getting Started',
     items: [
-      {
-        q: 'Does my child need any prior experience?',
-        a: 'None at all. Every student starts at the beginning. Our instructors meet each child where they are and work at their pace.',
-      },
-      {
-        q: 'How does the free trial class work?',
-        a: "Just come in. Your child will join a regular class alongside students at a similar level. You're welcome to watch from the sideline. After class, an instructor will share observations and answer your questions — no pressure to sign up that day.",
-      },
-      {
-        q: 'What should they wear?',
-        a: 'Comfortable athletic clothes are perfect for the trial. No uniform or equipment needed. Bare feet are required on the mat.',
-      },
-      {
-        q: 'Are there long-term contracts?',
-        a: "No. We're month-to-month. Families stay because they love it, not because they're locked in.",
-      },
+      { q: 'Does my child need any experience?', a: "None at all. Every student starts at the beginning. Our instructors are trained to work with students at every level, from the very first day." },
+      { q: 'What should my child wear to the trial class?', a: "Just comfortable athletic clothes. No uniform, no equipment, and no gear needed. We provide everything for the first class." },
+      { q: 'How does the free trial class work?', a: "You and your child come in, meet the instructors, and your child joins a real class with students at their age and level. You watch from the side. Afterward, we'll answer any questions — no pressure to sign up that day." },
+      { q: 'What age can my child start?', a: "Our youngest program, Little Dragons, starts at age 4. We have programs for all ages up through adults. Call us and we can help figure out which class is the right fit." },
     ],
   },
   {
-    heading: 'Programs and age groups',
+    category: 'Programs & Schedule',
     items: [
-      {
-        q: 'Which program is right for my child?',
-        a: "Programs are grouped by age — Little Dragons (4–6), Junior Warriors (7–12), and Teen Program (13–16). We'll help you figure out the best fit when you visit.",
-      },
-      {
-        q: 'How long is each class?',
-        a: 'Little Dragons classes run 30 minutes. Junior Warriors run 45 minutes. Teen Program classes are 60 minutes. Each is designed to match that age group\'s attention span and physical development.',
-      },
-      {
-        q: 'What if my child has special needs or learning differences?',
-        a: "Please talk to us before the trial class. Our instructors adapt their teaching to individual needs and we want every child to feel set up to succeed from day one.",
-      },
+      { q: 'What programs do you offer?', a: "We offer Kids Martial Arts (split into Little Dragons for ages 4–6, and Juniors for ages 7–12), a Teens & Adults program for age 13 and up, and Kickboxing Fitness for all ages. All programs are taught by ERWCMAA-certified instructors." },
+      { q: 'What days and times are classes?', a: "Classes run Monday through Friday from 3:00 PM – 8:30 PM, and Saturday from 9:00 AM – 2:00 PM. Specific class times vary by program — contact us and we'll match you with a schedule that works." },
+      { q: 'Do you offer adult classes?', a: "Yes. Our Teens & Adults program is for ages 13+ and covers the full WCWMA mixed martial arts curriculum. Adults are very welcome — many join with no prior experience." },
     ],
   },
   {
-    heading: 'Belt progression and testing',
+    category: 'Enrollment & Commitment',
     items: [
-      {
-        q: 'How do belt promotions work?',
-        a: "Students test when their instructor says they're ready — based on demonstrated skill, effort, and attitude, not a fixed schedule. We won't rush it.",
-      },
-      {
-        q: 'How long does it take to reach black belt?',
-        a: 'Typically 4–6 years of consistent training. The focus is on genuine skill and character development, not speed.',
-      },
-      {
-        q: 'What if my child misses a class?',
-        a: "Life happens. Makeup options are available and can be managed through the parent portal. Just let us know.",
-      },
+      { q: 'Are there long-term contracts?', a: "No. We're month-to-month. We want families here because they love it, not because they're locked in." },
+      { q: 'How much does it cost?', a: "Tuition varies by program. Contact us and we'll walk you through current rates — there's no obligation." },
+      { q: 'Do I need to buy a uniform right away?', a: "No. For the first few classes, athletic clothes are fine. When your child is enrolled and ready to start training regularly, we'll guide you through getting a uniform." },
     ],
   },
   {
-    heading: 'Safety and environment',
+    category: 'Belt Progression',
     items: [
-      {
-        q: 'Is this safe for children?',
-        a: 'Safety is the first thing we teach. All instructors are background-checked and CPR/First Aid certified. Training areas are fully padded and contact is always age-appropriate. Class ratios stay low so every child is supervised.',
-      },
-      {
-        q: 'Will my child be taught to fight?',
-        a: "They'll learn self-defense techniques, but the emphasis is on discipline, respect, and de-escalation. Students learn when — and when not — to use their skills.",
-      },
-      {
-        q: 'Do you address bullying?',
-        a: 'Yes. Anti-bullying principles are integrated throughout the curriculum — how to recognize it, how to respond, and when to ask for help.',
-      },
+      { q: 'How do belt promotions work?', a: "Students are promoted when their instructor determines they're ready — based on demonstrated skill, effort, and character. There's no fixed schedule or mandatory testing fee cycle." },
+      { q: 'How long does it take to earn a black belt?', a: "It varies significantly by student. A dedicated student training consistently might earn a black belt in 4–7 years. But the journey is the point — each rank represents real growth." },
+      { q: 'Is there pressure to test or advance quickly?', a: "None at all. We never rush promotions. Students advance when they're genuinely ready, which makes every belt meaningful." },
     ],
   },
   {
-    heading: 'Practical details',
+    category: 'Safety',
     items: [
-      {
-        q: 'Where are you located?',
-        a: '123 Main Street, Los Banos, CA 93635. There is ample parking.',
-      },
-      {
-        q: 'What are your hours?',
-        a: 'Classes run Monday–Friday from 3:00–8:30 PM and Saturday 9:00 AM–2:00 PM.',
-      },
-      {
-        q: 'Do you offer family discounts?',
-        a: 'Yes — ask us about multi-sibling rates when you visit or get in touch.',
-      },
-      {
-        q: 'How do I stay informed about my child\'s progress?',
-        a: 'Enrolled families get access to the parent portal, where you can view belt progress, read instructor feedback, and receive announcements directly.',
-      },
+      { q: 'Is martial arts safe for young kids?', a: "Safety is the first thing we teach. All classes are supervised by certified instructors. Training areas are fully padded. Contact is always age-appropriate — Little Dragons, for example, focuses on movement, not sparring." },
+      { q: 'Are instructors background-checked?', a: "Yes. All LBMAA instructors are background-checked and certified through the ERWCMAA." },
+      { q: 'My child is shy or has anxiety. Is this a good fit?', a: "Many of our students start out shy or anxious — and that's exactly why they benefit so much. Our instructors are patient and encouraging. We've seen remarkable transformations in students who struggled with confidence." },
     ],
   },
 ];
 
-// ─── Sub-components ────────────────────────────────────────────────────────────
-
 function FaqItem({ q, a }: { q: string; a: string }) {
+  const [open, setOpen] = useState(false);
+
   return (
-    <details className="group border-b border-border last:border-0">
-      <summary className="flex cursor-pointer items-center justify-between gap-4 min-h-[44px] py-3 text-sm font-semibold text-foreground list-none select-none">
-        {q}
-        <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-      </summary>
-      <p className="pb-4 text-sm text-muted-foreground leading-relaxed pr-6">{a}</p>
-    </details>
+    <div style={{ borderBottom: `1px solid ${V3.border}` }}>
+      <button
+        className="w-full flex items-center justify-between gap-4 min-h-[56px] py-3 text-left"
+        onClick={() => setOpen((v) => !v)}
+        aria-expanded={open}
+      >
+        <span className="text-sm font-semibold leading-snug" style={{ color: V3.text }}>
+          {q}
+        </span>
+        <span
+          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-base font-bold leading-none transition-colors"
+          style={{
+            backgroundColor: open ? V3.primaryBg : V3.surface,
+            color: open ? V3.primary : V3.muted,
+            fontFamily: 'monospace',
+          }}
+          aria-hidden="true"
+        >
+          {open ? '−' : '+'}
+        </span>
+      </button>
+      {open && (
+        <p className="pb-5 text-sm leading-relaxed" style={{ color: V3.muted }}>
+          {a}
+        </p>
+      )}
+    </div>
   );
 }
-
-// ─── Main Component ────────────────────────────────────────────────────────────
 
 export function FAQPage() {
   return (
     <div>
-      {/* ── PAGE HEADER ── */}
-      <section className="py-14 border-b bg-slate-50">
-        <div className="container mx-auto px-6">
-          <h1 className="text-3xl md:text-4xl font-bold mb-2">Frequently asked questions</h1>
-          <p className="text-muted-foreground text-base max-w-xl">
-            Common questions from parents who are new to LBMAA. Don't see yours?{' '}
-            <span className="font-medium text-foreground">Call or message us anytime.</span>
+
+      {/* ── PAGE HERO ── */}
+      <section className="py-14" style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-4">Common Questions</p>
+          <h1
+            className="v3-h font-black leading-[1.0] mb-6"
+            style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
+          >
+            Everything You Need to Know
+          </h1>
+          <p className="text-base leading-relaxed max-w-xl" style={{ color: V3.muted }}>
+            If you don't find your answer here, just reach out. We're happy to help.
           </p>
         </div>
       </section>
 
       {/* ── FAQ SECTIONS ── */}
-      <section className="py-16">
-        <div className="container mx-auto px-6 max-w-3xl">
-          <div className="space-y-14">
-            {FAQ_SECTIONS.map((section) => (
-              <div key={section.heading}>
-                <h2 className="text-lg font-bold mb-1 text-foreground">{section.heading}</h2>
-                <div className="border-t border-border mt-3">
-                  {section.items.map((item) => (
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-3xl mx-auto px-6 md:px-10">
+          <div className="flex flex-col gap-10">
+            {FAQS.map(({ category, items }) => (
+              <div key={category}>
+                <h2
+                  className="v3-h text-xl font-bold mb-1"
+                  style={{ color: V3.text }}
+                >
+                  {category}
+                </h2>
+                <div
+                  className="mb-6"
+                  style={{ width: '2.5rem', height: '3px', backgroundColor: V3.primary, borderRadius: '2px' }}
+                />
+                <div style={{ borderTop: `1px solid ${V3.border}` }}>
+                  {items.map((item) => (
                     <FaqItem key={item.q} q={item.q} a={item.a} />
                   ))}
                 </div>
@@ -146,32 +126,7 @@ export function FAQPage() {
         </div>
       </section>
 
-      {/* ── CLOSING ── */}
-      <section className="py-16 bg-slate-50 border-t">
-        <div className="container mx-auto px-6 max-w-2xl text-center">
-          <h2 className="text-2xl font-bold mb-3">Still have questions?</h2>
-          <p className="text-muted-foreground text-sm leading-relaxed mb-6">
-            We're a family-run school and we're happy to talk through anything — before you ever step
-            through the door. There's no sales pitch.
-          </p>
-          <div className="flex flex-col sm:flex-row justify-center items-center gap-4 text-sm">
-            <a
-              href="tel:+12095550123"
-              className="inline-flex items-center gap-2 min-h-[44px] px-4 font-medium text-foreground hover:underline"
-            >
-              <Phone className="w-4 h-4 text-primary" />
-              (209) 555-0123
-            </a>
-            <span className="hidden sm:block text-muted-foreground">·</span>
-            <a
-              href="mailto:info@lbmaa.com"
-              className="inline-flex items-center gap-2 min-h-[44px] px-4 font-medium text-foreground hover:underline"
-            >
-              info@lbmaa.com
-            </a>
-          </div>
-        </div>
-      </section>
+
     </div>
   );
 }

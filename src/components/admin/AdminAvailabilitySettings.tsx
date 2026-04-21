@@ -10,6 +10,21 @@ import type { AppointmentSlot, AppointmentSlotOverride, AdminNotificationSetting
 
 const DAY_NAMES = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
 
+const WEEK_OPTIONS: { value: number | null; label: string }[] = [
+  { value: null, label: 'Every' },
+  { value: 1,    label: '1st' },
+  { value: 2,    label: '2nd' },
+  { value: 3,    label: '3rd' },
+  { value: 4,    label: '4th' },
+  { value: -1,   label: 'Last' },
+]
+
+function slotScheduleLabel(slot: AppointmentSlot): string {
+  const day = DAY_NAMES[slot.day_of_week]
+  const freq = WEEK_OPTIONS.find(o => o.value === slot.week_of_month)?.label ?? 'Every'
+  return `${freq} ${day}  ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`
+}
+
 export function AdminAvailabilitySettings() {
   const [slots, setSlots] = useState<AppointmentSlot[]>([])
   const [overrides, setOverrides] = useState<AppointmentSlotOverride[]>([])
@@ -20,6 +35,7 @@ export function AdminAvailabilitySettings() {
   const [showSlotForm, setShowSlotForm] = useState(false)
   const [editSlotId, setEditSlotId] = useState<string | null>(null)
   const [slotDay, setSlotDay] = useState('1')
+  const [slotWeekOfMonth, setSlotWeekOfMonth] = useState<number | null>(null)
   const [slotStart, setSlotStart] = useState('')
   const [slotEnd, setSlotEnd] = useState('')
   const [slotLabel, setSlotLabel] = useState('')
@@ -63,6 +79,7 @@ export function AdminAvailabilitySettings() {
   function startEditSlot(slot: AppointmentSlot) {
     setEditSlotId(slot.slot_id)
     setSlotDay(String(slot.day_of_week))
+    setSlotWeekOfMonth(slot.week_of_month ?? null)
     setSlotStart(slot.start_time.slice(0, 5))
     setSlotEnd(slot.end_time.slice(0, 5))
     setSlotLabel(slot.label)
@@ -72,6 +89,7 @@ export function AdminAvailabilitySettings() {
   function resetSlotForm() {
     setEditSlotId(null)
     setSlotDay('1')
+    setSlotWeekOfMonth(null)
     setSlotStart('')
     setSlotEnd('')
     setSlotLabel('')
@@ -87,15 +105,17 @@ export function AdminAvailabilitySettings() {
         p_start_time: slotStart,
         p_end_time: slotEnd,
         p_label: slotLabel,
+        p_week_of_month: slotWeekOfMonth,
       })
       if (editSlotId) {
         setSlots(prev => prev.map(s => s.slot_id === editSlotId
-          ? { ...s, day_of_week: parseInt(slotDay), start_time: slotStart, end_time: slotEnd, label: slotLabel }
+          ? { ...s, day_of_week: parseInt(slotDay), week_of_month: slotWeekOfMonth, start_time: slotStart, end_time: slotEnd, label: slotLabel }
           : s))
       } else {
         const newSlot: AppointmentSlot = {
           slot_id: data as string,
           day_of_week: parseInt(slotDay),
+          week_of_month: slotWeekOfMonth,
           start_time: slotStart,
           end_time: slotEnd,
           label: slotLabel,
@@ -191,7 +211,7 @@ export function AdminAvailabilitySettings() {
             <div key={slot.slot_id} className="flex items-center justify-between min-h-[44px] px-3 py-2 rounded border">
               <div>
                 <span className="font-medium text-sm">{slot.label}</span>
-                <span className="text-xs text-muted-foreground ml-2">{DAY_NAMES[slot.day_of_week]} {slot.start_time.slice(0,5)}–{slot.end_time.slice(0,5)}</span>
+                <span className="text-xs text-muted-foreground ml-2">{slotScheduleLabel(slot)}</span>
               </div>
               <div className="flex gap-1.5">
                 <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => startEditSlot(slot)}><Pencil className="w-3.5 h-3.5" /></Button>
@@ -214,8 +234,29 @@ export function AdminAvailabilitySettings() {
               </div>
               <div>
                 <Label>Label</Label>
-                <Input value={slotLabel} onChange={e => setSlotLabel(e.target.value)} className="mt-1" placeholder="e.g. Wednesday 4–6pm" />
+                <Input value={slotLabel} onChange={e => setSlotLabel(e.target.value)} className="mt-1" placeholder="e.g. 1st Monday 4–6pm" />
               </div>
+            </div>
+            <div>
+              <Label>Frequency</Label>
+              <div className="mt-1 flex gap-1 flex-wrap">
+                {WEEK_OPTIONS.map(opt => (
+                  <button
+                    key={String(opt.value)}
+                    type="button"
+                    onClick={() => setSlotWeekOfMonth(opt.value)}
+                    className={`px-3 py-1.5 text-sm rounded border transition-colors ${
+                      slotWeekOfMonth === opt.value
+                        ? 'border-primary bg-primary/5 text-primary font-medium'
+                        : 'border-border text-muted-foreground hover:border-primary/50 hover:text-foreground'
+                    }`}
+                  >
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
               <div>
                 <Label>Start time</Label>
                 <Input type="time" value={slotStart} onChange={e => setSlotStart(e.target.value)} className="mt-1" />

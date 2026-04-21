@@ -127,7 +127,7 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
     .single()
 
   const senderName = senderProfile?.display_name ?? 'Someone'
-  const portalUrl = `${Deno.env.get('APP_URL') ?? 'http://localhost:5173'}/dashboard`
+  const portalUrl = `${Deno.env.get('APP_URL') ?? 'http://localhost:5173'}/dashboard?tab=messages`
 
   // Check if the recipient has opted out of message emails
   const { data: prefRow } = await supabase

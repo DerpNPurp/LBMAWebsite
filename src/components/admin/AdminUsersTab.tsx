@@ -11,7 +11,6 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
 import { Search, Eye, UserPlus, Mail, Edit2, Loader2, UserX, UserCheck, Archive } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
-import { registerInvitedEmail } from '../../lib/supabase/mutations';
 import { supabase } from '../../lib/supabase/client';
 import { formatShortDate } from '../../lib/format';
 import type { User } from '../../lib/types';
@@ -67,12 +66,19 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
       return;
     }
     try {
-      await registerInvitedEmail(normalizedEmail);
-      const { error } = await supabase.auth.signInWithOtp({
-        email: normalizedEmail,
-        options: { shouldCreateUser: true, emailRedirectTo: `${window.location.origin}/dashboard` },
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await supabase.functions.invoke('invite-family', {
+        body: { email: normalizedEmail },
+        headers: session?.access_token ? { Authorization: `Bearer ${session.access_token}` } : {},
       });
-      if (error) throw error;
+      if (res.error) {
+        let detail: string = res.error.message;
+        try {
+          const body = await (res.error as any).context?.json?.();
+          if (body?.error) detail = body.error;
+        } catch { /* ignore */ }
+        throw new Error(detail);
+      }
       toast.success(`Invitation sent to ${normalizedEmail}.`);
       setInviteEmail('');
       setIsInviteDialogOpen(false);
