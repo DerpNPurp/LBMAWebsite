@@ -1,299 +1,194 @@
-import { Button } from '../ui/button';
+import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import {
-  Shield,
-  Users,
-  Heart,
-  Star,
-  ChevronDown,
-  CheckCircle2,
-  Sparkles,
-  Zap,
-  ArrowRight,
-} from 'lucide-react';
-
-type HomePageProps = {
-  onRequestEnrollment: () => void;
-};
-
-// ─── Data ────────────────────────────────────────────────────────────────────
+import { CheckCircle2 } from 'lucide-react';
+import { BASE, V3 } from './design';
 
 const PROGRAMS = [
-  {
-    icon: Sparkles,
-    name: 'Little Dragons',
-    ages: 'Ages 4–6',
-    description:
-      'Fun, movement-based classes where young children learn to listen, follow direction, and move with confidence. Big growth in small bodies.',
-  },
-  {
-    icon: Shield,
-    name: 'Junior Warriors',
-    ages: 'Ages 7–12',
-    description:
-      'Structured classes with real belt progression. Students develop focus, self-discipline, and the ability to work hard toward a goal.',
-  },
-  {
-    icon: Zap,
-    name: 'Teen Program',
-    ages: 'Ages 13–16',
-    description:
-      'Advanced training, leadership responsibilities, and genuine self-defense skills. A positive peer environment during the years it matters most.',
-  },
+  { name: 'Little Dragons',   ages: 'Ages 4–6',  desc: 'Fun, movement-based classes that build listening, coordination, and early discipline in our youngest students.' },
+  { name: 'Kids Martial Arts', ages: 'Ages 7–12', desc: 'Structured belt progression and real martial arts skills. Students develop focus, self-discipline, and confidence.' },
+  { name: 'Teens & Adults',   ages: 'Ages 13+',  desc: 'Advanced training, leadership, and genuine self-defense. A positive environment during the years it matters most.' },
+];
+
+const STEPS = [
+  { step: '01', heading: 'Arrive and meet the team',     body: "You and your child will be greeted by an instructor. We'll answer any questions before class starts." },
+  { step: '02', heading: 'Your child joins the class',   body: "We pair your child with students at their level. You're welcome to watch from the side — most parents do." },
+  { step: '03', heading: 'Talk to us afterward',         body: "We'll share what we observed and which program fits best. No pressure to sign up that day." },
 ];
 
 const TESTIMONIALS = [
-  {
-    quote:
-      'My son has completely changed since joining. He listens better, focuses in school, and actually looks forward to going to class.',
-    name: 'Maria G.',
-    detail: 'Parent of a 9-year-old',
-  },
-  {
-    quote:
-      'The instructors are patient and genuinely care. My daughter went from shy to confident in just a few months.',
-    name: 'James T.',
-    detail: 'Parent of a 7-year-old',
-  },
-  {
-    quote:
-      'We tried another school first. LBMAA is different — it feels like a real community. Best decision we made for our kids.',
-    name: 'Priya S.',
-    detail: 'Parent of two students',
-  },
+  { quote: 'My son has completely changed since joining. He listens better, focuses in school, and actually looks forward to going to class.', name: 'Maria G.', detail: 'Parent of a 9-year-old' },
+  { quote: 'The instructors are patient and genuinely care. My daughter went from shy to confident in just a few months.', name: 'James T.', detail: 'Parent of a 7-year-old' },
+  { quote: 'We tried another school first. LBMAA is different — it feels like a real community. Best decision we made for our kids.', name: 'Priya S.', detail: 'Parent of two students' },
 ];
 
-const FAQ = [
-  {
-    q: 'Does my child need any experience?',
-    a: "None at all. Every student starts at the beginning. Our instructors work at each child's pace.",
-  },
-  {
-    q: 'What should they wear to the trial class?',
-    a: 'Just comfortable athletic clothes. No uniform or equipment needed.',
-  },
-  {
-    q: 'Are there long-term contracts?',
-    a: "No. We're month-to-month. We want families here because they love it, not because they're locked in.",
-  },
-  {
-    q: 'How do belt promotions work?',
-    a: "Students test when their instructor says they're ready — based on skill, not a fixed schedule.",
-  },
-  {
-    q: 'Is this safe for kids with no martial arts background?',
-    a: 'Safety is the first thing we teach. Classes are supervised, training areas are fully padded, and contact is always age-appropriate.',
-  },
+const FILMSTRIP = [
+  '/photos/1-_MG_5182.jpg',
+  '/photos/5-IMG_5156.jpg',
+  '/photos/10-IMG_5137.jpg',
+  '/photos/16-IMG_5107.jpg',
+  '/photos/17-IMG_5102.jpg',
+  '/photos/18-IMG_5097.jpg',
 ];
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+export function HomePage() {
+  const navigate = useNavigate();
+  const goToTrial = () => navigate(`${BASE}/contact`);
 
-function FaqItem({ q, a }: { q: string; a: string }) {
-  return (
-    <details className="group border-b border-border last:border-0">
-      {/* min-h-[44px] ensures touch target meets 44×44px guideline (UX rule #22) */}
-      <summary className="flex cursor-pointer items-center justify-between gap-4 min-h-[44px] py-3 text-sm font-semibold text-foreground list-none select-none">
-        {q}
-        <ChevronDown className="w-4 h-4 flex-shrink-0 text-muted-foreground transition-transform duration-200 group-open:rotate-180" />
-      </summary>
-      <p className="pb-4 text-sm text-muted-foreground leading-relaxed pr-6">{a}</p>
-    </details>
-  );
-}
-
-// ─── Main Component ───────────────────────────────────────────────────────────
-
-export function HomePage({ onRequestEnrollment }: HomePageProps) {
   return (
     <div>
 
-      {/* ── HERO ────────────────────────────────────────── */}
-      <section className="relative min-h-[88svh] flex items-center">
-        {/* Background photo with lighter overlay so it breathes */}
-        <div className="absolute inset-0">
-          <ImageWithFallback
-            src="https://images.unsplash.com/photo-1769095211505-fbcbf6530f02?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=1080"
-            alt="Children training martial arts at LBMAA"
-            className="w-full h-full object-cover"
-          />
-          <div className="absolute inset-0 bg-gradient-to-r from-black/65 via-black/40 to-black/10" />
-          {/* Bottom fade — bleeds the photo into the white page below */}
-          <div className="absolute inset-0 bg-gradient-to-b from-transparent via-transparent to-white" />
-        </div>
+      {/* ── HERO ── */}
+      <section className="relative overflow-hidden" style={{ minHeight: 'max(60svh, 420px)' }}>
+        <ImageWithFallback
+          src="/photos/33-_MG_5061.jpg"
+          alt="Los Banos Martial Arts Academy dojo"
+          className="absolute inset-0 w-full h-full object-cover"
+        />
+        <div
+          className="absolute inset-0"
+          style={{
+            background: 'linear-gradient(108deg, oklch(14% 0.018 30 / 0.9) 0%, oklch(14% 0.018 30 / 0.65) 55%, oklch(14% 0.018 30 / 0.2) 100%)',
+          }}
+        />
 
-        <div className="relative container mx-auto px-6 py-24 md:py-32">
-          <div className="max-w-xl">
-            {/* Red accent marker — controlled brand signal */}
-            <div className="w-10 h-1 bg-primary rounded-full mb-6" />
+        <div className="relative h-full flex items-center">
+          <div className="max-w-7xl mx-auto px-6 md:px-10 py-14 w-full">
+            <div style={{ maxWidth: '520px' }}>
 
-            <h1 className="text-4xl md:text-5xl font-bold leading-[1.1] text-white mb-5">
-              Where Kids Build Confidence,
-              Discipline, and Respect.
-            </h1>
-            <p className="text-base md:text-lg text-white/85 mb-10 leading-relaxed max-w-md">
-              Safe, structured martial arts for children ages 4–16 in Los Banos.
-              Family-run. No pressure. First class is free.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <Button
-                size="lg"
-                className="bg-primary hover:bg-primary/90 text-primary-foreground font-semibold px-8 shadow-md"
-                onClick={onRequestEnrollment}
-              >
-                Book a Free Trial Class
-              </Button>
-              <Button
-                size="lg"
-                variant="outline"
-                className="border-white/60 text-white bg-white/5 hover:bg-white/15 backdrop-blur-sm font-medium px-8"
-                onClick={() => {
-                  document.getElementById('programs')?.scrollIntoView({ behavior: 'smooth' });
+              {/* Heading */}
+              <h1
+                className="v3-h font-extrabold leading-[0.95] mb-5"
+                style={{
+                  fontSize: 'clamp(2.5rem, 6vw, 4.25rem)',
+                  color: 'oklch(96% 0.005 30)',
+                  letterSpacing: '-0.01em',
                 }}
               >
-                See Our Programs
-              </Button>
-            </div>
+                Develop Your Child<br />
+                Physically, Mentally<br />
+                <span style={{ color: V3.primary }}>&amp; Spiritually.</span>
+              </h1>
 
-            <p className="text-white/55 text-sm mt-5">
-              No commitment · No uniform needed · We'll guide you
-            </p>
-          </div>
-        </div>
-      </section>
+              {/* Body */}
+              <p
+                className="text-[0.95rem] leading-relaxed mb-7"
+                style={{ color: 'oklch(82% 0.006 30)', maxWidth: '400px' }}
+              >
+                Safe, structured martial arts for children of all ages in Los Banos.
+                Family-run. No pressure. First class is free.
+              </p>
 
-      {/* ── PROGRAMS ────────────────────────────────────── */}
-      <section id="programs" className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-xl mb-12">
-            <h2 className="text-3xl font-bold mb-3">Find the Right Class for Your Child</h2>
-            <p className="text-muted-foreground text-base leading-relaxed">
-              Every program is age-appropriate, structured, and taught by the same certified
-              instructors who know every student by name.
-            </p>
-          </div>
-
-          <div className="grid gap-5 md:grid-cols-3 max-w-4xl">
-            {PROGRAMS.map((program) => {
-              const Icon = program.icon;
-              return (
-                <div
-                  key={program.name}
-                  className="bg-white border border-border rounded-xl p-6 flex flex-col gap-4 hover:shadow-md transition-all duration-200 hover:-translate-y-0.5"
+              {/* CTAs */}
+              <div className="flex flex-col sm:flex-row gap-3 mb-4">
+                <button
+                  className="v3-btn-ghost"
+                  onClick={() => navigate(`${BASE}/programs`)}
                 >
-                  {/* Icon + age badge in flex row */}
-                  <div className="flex items-start justify-between">
-                    <div className="w-12 h-12 rounded-xl bg-primary/8 flex items-center justify-center flex-shrink-0">
-                      <Icon className="w-6 h-6 text-primary" />
-                    </div>
-                    <span className="text-xs font-semibold uppercase tracking-wider text-primary bg-primary/8 px-2.5 py-1 rounded-full">
-                      {program.ages}
-                    </span>
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-bold mb-1">{program.name}</h3>
-                    <p className="text-sm text-muted-foreground leading-relaxed">
-                      {program.description}
-                    </p>
-                  </div>
-                  <button
-                    onClick={onRequestEnrollment}
-                    className="flex items-center gap-1.5 text-sm font-semibold text-primary hover:gap-2.5 transition-all duration-150 mt-auto cursor-pointer"
-                  >
-                    Book a trial class <ArrowRight className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              );
-            })}
-          </div>
+                  See Our Programs
+                </button>
+              </div>
 
-          <p className="text-sm text-muted-foreground mt-6">
-            Not sure which program fits?{' '}
-            <button
-              onClick={onRequestEnrollment}
-              className="font-medium text-primary hover:underline inline-flex items-center min-h-[44px] px-1 cursor-pointer"
-            >
-              Contact us — we'll help you figure it out.
-            </button>
-          </p>
+              {/* Trust note */}
+              <p style={{ color: 'oklch(60% 0.006 30)', fontSize: '0.75rem', fontFamily: "'Nunito', sans-serif" }}>
+                No commitment · No uniform needed · We'll guide you
+              </p>
+            </div>
+          </div>
         </div>
       </section>
 
-      {/* ── WHY LBMAA ───────────────────────────────────── */}
-      <section className="py-20 bg-slate-50 border-y">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto grid md:grid-cols-2 gap-14 items-center">
-
-            {/* Image */}
-            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-muted order-last md:order-first">
+      {/* ── MISSION SPLIT ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl mx-auto">
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100 order-last md:order-first">
               <ImageWithFallback
-                src="https://images.unsplash.com/photo-1555597673-b21d5c935865?crop=entropy&cs=tinysrgb&fit=max&fm=jpg&q=80&w=800"
-                alt="Instructor working with a young student at LBMAA"
+                src="/photos/12-IMG_5132.jpg"
+                alt="LBMAA instructor with students"
                 className="w-full h-full object-cover"
               />
             </div>
-
-            {/* Text */}
             <div>
-              <h2 className="text-2xl md:text-3xl font-bold mb-4 leading-snug">
-                We're not just teaching martial arts.
+              <p className="v3-eyebrow mb-4">Our Mission</p>
+              <h2
+                className="v3-h font-black leading-[1.0] mb-6"
+                style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: V3.text }}
+              >
+                Impact and Empower Through Martial Arts
               </h2>
-              <p className="text-muted-foreground text-base leading-relaxed mb-7">
-                Every class at LBMAA is built around three things: safety, respect, and real
-                progress. Our instructors know every student's name, remember where they started,
-                and celebrate every step forward.
+              <p className="leading-relaxed mb-5 text-[0.95rem]" style={{ color: V3.muted }}>
+                LBMAA is part of the World Chun Woo Martial Arts system — a comprehensive
+                mixed martial arts curriculum incorporating Taekwondo, boxing, kickboxing,
+                grappling, and Filipino stick fighting.
               </p>
-
-              <ul className="space-y-3.5">
-                {[
-                  'Certified, background-checked instructors',
-                  'Small classes — every child gets individual attention',
-                  'Structured belt progression with clear milestones',
-                  'A welcoming environment for the whole family',
-                ].map((point) => (
-                  <li key={point} className="flex items-start gap-3">
-                    <CheckCircle2 className="w-4 h-4 text-primary flex-shrink-0 mt-0.5" />
-                    <span className="text-sm text-foreground">{point}</span>
-                  </li>
-                ))}
-              </ul>
+              <p className="leading-relaxed mb-8 text-[0.95rem]" style={{ color: V3.muted }}>
+                Our goal is simple: develop Black Belts in life. Students who carry discipline,
+                character, and confidence into everything they do — on and off the mat.
+              </p>
+              <button
+                onClick={() => navigate(`${BASE}/about`)}
+                className="v3-h font-bold text-sm uppercase tracking-wide transition-colors"
+                style={{ color: V3.primary, letterSpacing: '0.08em' }}
+              >
+                Our story →
+              </button>
             </div>
           </div>
         </div>
       </section>
 
-      {/* ── WHAT TO EXPECT ──────────────────────────────── */}
-      {/* Answers "What will my child experience here?" */}
-      <section className="py-20">
-        <div className="container mx-auto px-6">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-3">What to expect at your first visit</h2>
-            <p className="text-muted-foreground text-base mb-12 max-w-xl">
-              Most parents aren't sure what to expect. Here's exactly how a trial class works.
-            </p>
+      {/* ── PROGRAMS — Editorial rows ── */}
+      <section className="py-24" style={{ backgroundColor: V3.surface }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-5 gap-12 md:gap-16 items-start max-w-5xl mx-auto">
 
-            <div className="grid md:grid-cols-3 gap-8">
-              {[
-                {
-                  step: '01',
-                  heading: 'Arrive and meet the team',
-                  body: "You and your child will be greeted by an instructor. We'll answer any questions before the class starts.",
-                },
-                {
-                  step: '02',
-                  heading: 'Your child joins the class',
-                  body: "We pair your child with students at their level. You're welcome to watch from the side — most parents do.",
-                },
-                {
-                  step: '03',
-                  heading: 'Talk to us afterward',
-                  body: "After class we'll share what we observed and which program fits best. No pressure to sign up that day.",
-                },
-              ].map(({ step, heading, body }) => (
-                <div key={step} className="flex flex-col gap-3">
-                  <span className="text-4xl font-bold text-primary/15 leading-none">{step}</span>
-                  <h3 className="font-semibold text-base">{heading}</h3>
-                  <p className="text-sm text-muted-foreground leading-relaxed">{body}</p>
+            {/* Left: heading */}
+            <div className="md:col-span-2">
+              <p className="v3-eyebrow mb-4">Our Programs</p>
+              <h2
+                className="v3-h font-black leading-[1.0] mb-6"
+                style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: V3.text }}
+              >
+                Training for Every Stage of Life
+              </h2>
+              <p className="text-[0.9rem] leading-relaxed mb-8" style={{ color: V3.muted }}>
+                Every program is age-appropriate and taught by ERWCMAA-certified instructors
+                who know every student by name.
+              </p>
+              <button
+                onClick={() => navigate(`${BASE}/programs`)}
+                className="v3-h font-bold text-sm uppercase tracking-wide"
+                style={{ color: V3.primary, letterSpacing: '0.08em' }}
+              >
+                View all programs →
+              </button>
+            </div>
+
+            {/* Right: editorial program rows */}
+            <div className="md:col-span-3">
+              {PROGRAMS.map((p, i) => (
+                <div
+                  key={p.name}
+                  className="py-6"
+                  style={{
+                    borderTop: `1px solid ${V3.border}`,
+                    ...(i === PROGRAMS.length - 1 ? { borderBottom: `1px solid ${V3.border}` } : {}),
+                  }}
+                >
+                  <div className="flex items-baseline gap-3 flex-wrap mb-2">
+                    <span className="v3-h text-xl font-bold" style={{ color: V3.text }}>
+                      {p.name}
+                    </span>
+                    <span
+                      className="text-[0.65rem] font-bold uppercase tracking-wide px-2.5 py-0.5 rounded-full flex-shrink-0"
+                      style={{ backgroundColor: V3.primaryBg, color: V3.primary }}
+                    >
+                      {p.ages}
+                    </span>
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                    {p.desc}
+                  </p>
                 </div>
               ))}
             </div>
@@ -301,80 +196,162 @@ export function HomePage({ onRequestEnrollment }: HomePageProps) {
         </div>
       </section>
 
-      {/* ── TESTIMONIALS ────────────────────────────────── */}
-      <section className="py-20 bg-slate-50 border-y">
-        <div className="container mx-auto px-6">
-          <div className="mb-12">
-            <h2 className="text-3xl font-bold mb-2">What LBMAA families say</h2>
-            <p className="text-muted-foreground text-base">
-              From parents who were exactly where you are right now.
+      {/* ── FIRST VISIT ── */}
+      <section className="py-20" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="max-w-4xl">
+            <p className="v3-eyebrow mb-4">Getting Started</p>
+            <h2
+              className="v3-h font-black leading-[1.0] mb-10"
+              style={{ fontSize: 'clamp(2rem, 4vw, 3rem)', color: V3.text }}
+            >
+              What to Expect at Your First Visit
+            </h2>
+
+            <div className="grid md:grid-cols-3 gap-10 md:gap-6">
+              {STEPS.map(({ step, heading, body }) => (
+                <div key={step} className="relative">
+                  <div
+                    className="v3-h font-black leading-none mb-4 select-none"
+                    style={{ fontSize: '5rem', color: V3.surface, lineHeight: 1 }}
+                    aria-hidden="true"
+                  >
+                    {step}
+                  </div>
+                  <div
+                    className="v3-h text-xl font-bold mb-3 -mt-2"
+                    style={{ color: V3.text }}
+                  >
+                    {heading}
+                  </div>
+                  <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                    {body}
+                  </p>
+                </div>
+              ))}
+            </div>
+
+            <div className="mt-14">
+              <p className="text-sm" style={{ color: V3.muted }}>
+                Ready to visit? Find us on the <button onClick={() => navigate(`${BASE}/contact`)} className="underline underline-offset-2 font-semibold" style={{ color: V3.primary }}>Contact page</button> — first class is free.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── TESTIMONIALS ── */}
+      <section className="py-24" style={{ backgroundColor: V3.surface }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <p className="v3-eyebrow mb-6">From LBMAA Families</p>
+
+          {/* Featured quote */}
+          <div className="max-w-3xl mb-16">
+            <div
+              className="v3-h font-black leading-none mb-4 select-none"
+              style={{ fontSize: '7rem', color: 'oklch(90% 0.020 20)', lineHeight: 0.8 }}
+              aria-hidden="true"
+            >
+              "
+            </div>
+            <blockquote
+              className="v3-h font-semibold leading-[1.15] mb-6"
+              style={{ fontSize: 'clamp(1.5rem, 3.5vw, 2.25rem)', color: V3.text }}
+            >
+              {TESTIMONIALS[0].quote}
+            </blockquote>
+            <p className="text-sm font-semibold" style={{ color: V3.primary }}>
+              — {TESTIMONIALS[0].name}, <span style={{ color: V3.muted, fontWeight: 400 }}>{TESTIMONIALS[0].detail}</span>
             </p>
           </div>
 
-          <div className="grid gap-6 md:grid-cols-3 max-w-5xl">
-            {TESTIMONIALS.map((t) => (
+          {/* Supporting quotes */}
+          <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
+            {TESTIMONIALS.slice(1).map((t) => (
               <div
                 key={t.name}
-                className="bg-white border border-border rounded-xl p-6 flex flex-col gap-4"
+                className="py-6"
+                style={{ borderTop: `1px solid ${V3.border}` }}
               >
-                <div className="flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star key={i} className="w-3.5 h-3.5 fill-amber-400 text-amber-400" />
-                  ))}
-                </div>
-                <p className="text-sm leading-relaxed text-foreground flex-1">"{t.quote}"</p>
-                <div>
-                  <p className="text-sm font-semibold">{t.name}</p>
-                  <p className="text-xs text-muted-foreground">{t.detail}</p>
-                </div>
+                <p className="text-base leading-relaxed mb-4 italic" style={{ color: V3.muted }}>
+                  "{t.quote}"
+                </p>
+                <p className="text-sm font-semibold" style={{ color: V3.text }}>
+                  — {t.name}, <span style={{ color: V3.muted, fontWeight: 400 }}>{t.detail}</span>
+                </p>
               </div>
             ))}
           </div>
-        </div>
-      </section>
 
-      {/* ── CLOSING CTA ─────────────────────────────────── */}
-      {/* Calm, not a billboard */}
-      <section className="py-24 bg-slate-50 border-t">
-        <div className="container mx-auto px-6 text-center max-w-lg">
-          {/* Red accent line — minimal brand signal above CTA */}
-          <div className="w-8 h-0.5 bg-primary rounded-full mx-auto mb-8" />
-          <h2 className="text-3xl font-bold mb-3">Ready to see if it's a good fit?</h2>
-          <p className="text-muted-foreground text-base mb-8 leading-relaxed">
-            The first class is free. No uniform, no commitment —
-            just come and see what we're about.
-          </p>
-          <Button
-            size="lg"
-            className="px-10 font-semibold"
-            onClick={onRequestEnrollment}
-          >
-            Book a Free Trial Class
-          </Button>
-          <p className="text-sm text-muted-foreground mt-5">
-            Prefer to call first?{' '}
-            <a
-              href="tel:+12095550123"
-              className="font-medium text-foreground hover:underline"
+          <div className="mt-10">
+            <button
+              onClick={() => navigate(`${BASE}/reviews`)}
+              className="v3-btn-primary"
             >
-              (209) 555-0123
-            </a>
-          </p>
-        </div>
-      </section>
-
-      {/* ── FAQ ─────────────────────────────────────────── */}
-      <section className="py-16 bg-slate-50 border-t">
-        <div className="container mx-auto px-6 max-w-2xl">
-          <h2 className="text-2xl font-bold mb-8">Common questions</h2>
-
-          <div className="border-t border-border">
-            {FAQ.map((item) => (
-              <FaqItem key={item.q} q={item.q} a={item.a} />
-            ))}
+              Read All Reviews
+            </button>
           </div>
         </div>
       </section>
+
+      {/* ── PHOTO FILMSTRIP ── */}
+      <section className="py-5 overflow-x-auto" style={{ backgroundColor: V3.bg }}>
+        <div className="flex gap-2.5 min-w-max px-6">
+          {FILMSTRIP.map((src, i) => (
+            <div key={i} className="w-56 h-40 flex-shrink-0 rounded-lg overflow-hidden">
+              <ImageWithFallback
+                src={src}
+                alt="LBMAA students training"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          ))}
+        </div>
+      </section>
+
+      {/* ── WHY CHOOSE US ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl mx-auto">
+            <div>
+              <p className="v3-eyebrow mb-4">Why LBMAA</p>
+              <h2
+                className="v3-h font-black leading-[1.0] mb-8"
+                style={{ fontSize: 'clamp(1.8rem, 3.5vw, 2.75rem)', color: V3.text }}
+              >
+                More Than Martial Arts — It's a Community
+              </h2>
+              <ul className="flex flex-col gap-4">
+                {[
+                  'Every instructor knows every student by name',
+                  'Background-checked instructors · fully padded facility',
+                  'Belt promotions based on skill and character, not a fixed calendar',
+                  'Month-to-month · no long-term contracts',
+                  'Part of the 40-year ERWCMAA legacy',
+                ].map((point) => (
+                  <li key={point} className="flex items-start gap-3">
+                    <CheckCircle2
+                      className="w-4 h-4 flex-shrink-0 mt-0.5"
+                      style={{ color: V3.primary }}
+                    />
+                    <span className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                      {point}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+              <ImageWithFallback
+                src="/photos/29-IMG_5072.jpg"
+                alt="LBMAA class in session"
+                className="w-full h-full object-cover"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
 
     </div>
   );

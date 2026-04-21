@@ -644,7 +644,7 @@ export async function getAppointmentSlots(): Promise<AppointmentSlot[]> {
   return data ?? []
 }
 
-export async function getUpcomingBookableDates(slotId: string, weeksAhead = 8): Promise<string[]> {
+export async function getUpcomingBookableDates(slotId: string, weeksAhead = 20): Promise<string[]> {
   const { data, error } = await supabase.rpc('get_upcoming_bookable_dates', {
     p_slot_id: slotId,
     p_weeks_ahead: weeksAhead,

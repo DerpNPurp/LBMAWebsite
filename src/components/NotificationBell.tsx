@@ -93,7 +93,7 @@ export function NotificationBell({ userId, onNavigate }: NotificationBellProps) 
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={(val) => { setOpen(val); if (val) loadSummary(); }}>
       <PopoverTrigger asChild>
         <button
           className="relative p-1.5 rounded-md hover:bg-sidebar-accent text-sidebar-foreground/70 hover:text-sidebar-foreground transition-colors"

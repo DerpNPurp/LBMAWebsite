@@ -170,9 +170,10 @@ export type EnrollmentLead = {
 
 export type AppointmentSlot = {
   slot_id: string;
-  day_of_week: number;   // 0=Sun, 1=Mon … 6=Sat
-  start_time: string;    // "HH:MM:SS"
-  end_time: string;      // "HH:MM:SS"
+  day_of_week: number;       // 0=Sun, 1=Mon … 6=Sat
+  week_of_month: number | null; // null=every, 1–4=nth, -1=last
+  start_time: string;        // "HH:MM:SS"
+  end_time: string;          // "HH:MM:SS"
   label: string;
   is_active: boolean;
   created_at: string;

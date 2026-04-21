@@ -1,11 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { PublicWebsite } from './components/PublicWebsite';
-import { LoginModal } from './components/LoginModal';
 import { FirstLoginOnboarding } from './components/FirstLoginOnboarding';
 import { DashboardV2 } from './components/DashboardV2';
 import { AdminDashboardV2 } from './components/AdminDashboardV2';
 import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
+import { PublicWebsite } from './components/PublicWebsite';
 import { BookingPage } from './pages/BookingPage';
 import { ConfirmPage } from './pages/ConfirmPage';
 import { useAuth } from './hooks/useAuth';
@@ -60,13 +59,8 @@ function ProtectedRoute({
 
 function AppRoutes() {
   const { user, loading, accessState, accessMessage, signOut, refreshUser } = useAuth();
-  const [showLoginModal, setShowLoginModal] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
-
-  const handleLoginClick = () => {
-    setShowLoginModal(true);
-  };
 
   const handleLogout = async () => {
     await signOut();
@@ -85,7 +79,7 @@ function AppRoutes() {
     <>
       <Routes>
         <Route
-          path="/"
+          path="/*"
           element={
             <>
               {accessMessage && (
@@ -96,10 +90,7 @@ function AppRoutes() {
                   </Alert>
                 </div>
               )}
-              <PublicWebsite onLogin={handleLoginClick} />
-              {showLoginModal && (
-                <LoginModal onClose={() => setShowLoginModal(false)} />
-              )}
+              <PublicWebsite />
             </>
           }
         />
