@@ -11,6 +11,11 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: true,
+    // flowType must be 'implicit' so magic links arrive as #access_token= hash
+    // fragments, which our manual handler in useAuth.ts reads. The default PKCE
+    // flow sends ?code= query params instead and would require a server-side
+    // code exchange that this SPA cannot perform.
+    flowType: 'implicit',
     // We handle magic-link sessions manually in useAuth to avoid race conditions
     detectSessionInUrl: false,
   },
