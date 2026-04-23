@@ -1,4 +1,4 @@
-# Multi-Child Enrollment Form + Per-Child Appointment Booking
+# Multi-Child Enrollment Form + Per-Program Appointment Booking
 
 **Date:** 2026-04-22  
 **Status:** Approved for implementation
@@ -7,7 +7,7 @@
 
 ## Overview
 
-Replace the single-child enrollment form with a multi-child form, add program-typed appointment slots, and route each child to their own exclusive booking slot via a per-child booking link included in a single approval email.
+Replace the single-child enrollment form with a multi-child form. Siblings in the same program share one appointment slot — one booking link, one visit. A family with 3 kids (1 Little Dragons, 2 Youth) receives 2 booking links and schedules 2 appointments, not 3.
 
 Two programs:
 - **Little Dragons** — ages 4–7
@@ -37,7 +37,7 @@ Compact inline rows replace the single `studentName`/`studentAge` fields:
 
 ### Validation (client + server)
 - Each child row requires both name and age.
-- Age must be 4–17 inclusive. Any age outside this range blocks form submission with the message: *"We currently enroll ages 4–17. Please contact us directly for other inquiries."*
+- Age must be 4–17 inclusive. Any age outside this range blocks form submission with: *"We currently enroll ages 4–17. Please contact us directly for other inquiries."*
 - Parent name and email remain required; phone remains optional.
 - Single optional notes `Textarea` at the bottom (family-level, unchanged).
 
@@ -60,25 +60,41 @@ Compact inline rows replace the single `studentName`/`studentAge` fields:
 
 ### New table: `enrollment_lead_children`
 
+Stores child identity only — no booking fields.
+
 ```sql
 CREATE TABLE public.enrollment_lead_children (
-  child_id             UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-  lead_id              UUID NOT NULL REFERENCES public.enrollment_leads(lead_id) ON DELETE CASCADE,
-  name                 TEXT NOT NULL,
-  age                  INTEGER NOT NULL,
-  program_type         TEXT NOT NULL CHECK (program_type IN ('little_dragons', 'youth')),
-  booking_token        UUID UNIQUE,             -- generated on approval
-  appointment_slot_id  UUID REFERENCES public.appointment_slots(slot_id),
-  appointment_date     DATE,
-  appointment_time     TIME,
-  status               TEXT NOT NULL DEFAULT 'pending'
-                         CHECK (status IN ('pending','link_sent','scheduled','confirmed')),
-  created_at           TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  child_id      UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lead_id       UUID NOT NULL REFERENCES public.enrollment_leads(lead_id) ON DELETE CASCADE,
+  name          TEXT NOT NULL,
+  age           INTEGER NOT NULL,
+  program_type  TEXT NOT NULL CHECK (program_type IN ('little_dragons', 'youth')),
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW(),
   CONSTRAINT children_age_range CHECK (age >= 4 AND age <= 17)
 );
 ```
 
-RLS: admins can SELECT/UPDATE; anon/authenticated cannot read directly.
+### New table: `enrollment_lead_program_bookings`
+
+One row per `(lead_id, program_type)` pair. Siblings sharing a program share this row.
+
+```sql
+CREATE TABLE public.enrollment_lead_program_bookings (
+  booking_id          UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  lead_id             UUID NOT NULL REFERENCES public.enrollment_leads(lead_id) ON DELETE CASCADE,
+  program_type        TEXT NOT NULL CHECK (program_type IN ('little_dragons', 'youth')),
+  booking_token       UUID UNIQUE,              -- generated on approval
+  appointment_slot_id UUID REFERENCES public.appointment_slots(slot_id),
+  appointment_date    DATE,
+  appointment_time    TIME,
+  status              TEXT NOT NULL DEFAULT 'pending'
+                        CHECK (status IN ('pending', 'link_sent', 'scheduled', 'confirmed')),
+  created_at          TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  UNIQUE (lead_id, program_type)                -- one booking per program per family
+);
+```
+
+RLS: admins can SELECT/UPDATE; anon/authenticated cannot read directly (token-based access via edge functions only).
 
 ### `appointment_slots` — add program_type
 
@@ -88,11 +104,11 @@ ALTER TABLE public.appointment_slots
     CHECK (program_type IN ('little_dragons', 'youth', 'all'));
 ```
 
-Existing slots default to `'all'` (remain bookable by either program) until the admin re-tags them.
+Existing slots default to `'all'` and remain bookable by either program until re-tagged.
 
 ### Booked-date exclusion
 
-`get_upcoming_bookable_dates(slot_id)` is updated to exclude any date already present in `enrollment_lead_children` for that `(slot_id, appointment_date)` pair with `status IN ('scheduled', 'confirmed')`. This enforces one booking per slot occurrence.
+`get_upcoming_bookable_dates(slot_id)` is updated to exclude any `(slot_id, appointment_date)` pair where a row in `enrollment_lead_program_bookings` has `status IN ('scheduled', 'confirmed')`. One booking per slot occurrence, regardless of program type.
 
 ### `submit_enrollment_lead` RPC
 
@@ -108,7 +124,11 @@ CREATE OR REPLACE FUNCTION public.submit_enrollment_lead(
 )
 ```
 
-After inserting the lead row, iterates `p_children` and inserts one `enrollment_lead_children` row per child. `program_type` is derived: age 4–7 → `little_dragons`, age 8–17 → `youth`. Old `p_student_name`/`p_student_age` parameters are removed from the public-facing call; the columns remain on the table for backward-compatible reads of legacy leads.
+After inserting the lead row:
+1. Iterates `p_children`, inserts one `enrollment_lead_children` row per child with `program_type` derived from age.
+2. Inserts one `enrollment_lead_program_bookings` row per distinct `program_type` found in the children list (status = `pending`).
+
+Old `p_student_name`/`p_student_age` parameters are removed from the public-facing call; the columns remain on `enrollment_leads` for backward-compatible reads of legacy leads.
 
 ### Backward compatibility
 
@@ -120,14 +140,18 @@ After inserting the lead row, iterates `p_children` and inserts one `enrollment_
 
 ### Children section
 
-Inserted between the contact info row and the message/notes area:
+Children are displayed **grouped by program type**, with the booking status shown once per group:
 
 ```
-Alex     age 6   [Little Dragons]   📅 Sat Jan 11 · 10:00 AM
-Jordan   age 15  [Youth Program]    link sent · not booked yet
+[Little Dragons]  📅 Sat Jan 11 · 10:00 AM
+  Alex · age 6
+
+[Youth Program]   link sent · not booked yet
+  Jordan · age 15
+  Sam · age 12
 ```
 
-Per-child status display:
+Per-program booking status display:
 | `status`    | Display |
 |-------------|---------|
 | `pending`   | awaiting approval |
@@ -137,13 +161,11 @@ Per-child status display:
 
 ### Lead-level status aggregation
 
-The parent lead's `status` reflects the least-advanced child. Evaluated in order (first match wins):
+Based on `enrollment_lead_program_bookings` statuses (one per program group). Evaluated in order (first match wins):
 
-1. Any child `pending` or `link_sent`, none `scheduled`/`confirmed` → lead = `approved`
-2. All children `confirmed` → lead = `appointment_confirmed`
-3. Otherwise (at least one `scheduled` or `confirmed`, remainder `link_sent`/`pending`) → lead = `appointment_scheduled`
-
-This ensures a lead never "disappears" from the admin's view while any child is still unbooked.
+1. Any program booking `pending` or `link_sent`, none `scheduled`/`confirmed` → lead = `approved`
+2. All program bookings `confirmed` → lead = `appointment_confirmed`
+3. Otherwise (at least one `scheduled`/`confirmed`, remainder not yet) → lead = `appointment_scheduled`
 
 ### Action buttons
 
@@ -156,11 +178,18 @@ This ensures a lead never "disappears" from the admin's view while any child is 
 
 ### "Pick Dates for Them" modal (stacked layout)
 
-One calendar section per child, stacked vertically. Each section is color-coded to program type (purple = Little Dragons, blue = Youth). Calendar shows only slots matching the child's `program_type` (plus `'all'` slots), with already-booked dates excluded. Admin picks a date per child. "Confirm All" writes all children's appointments at once; partial confirmation (some children picked, some not) is allowed — the admin can come back.
+One calendar section per **program type** (not per child), stacked vertically. Each section is color-coded (purple = Little Dragons, blue = Youth) and shows only slots matching that program type (plus `'all'` slots), with already-booked dates excluded.
+
+For the example family: two calendar sections — Little Dragons and Youth. Admin picks one date per section. "Confirm All" writes both program bookings at once; partial save is allowed (admin can come back for the remaining program).
 
 ### Data loading
 
-`getEnrollmentLeads` is updated to join `enrollment_lead_children` and return children inline on each lead object (`lead.children: EnrollmentLeadChild[]`). This avoids N+1 queries — the admin list loads all children in one query alongside their leads.
+`getEnrollmentLeads` is updated to join both `enrollment_lead_children` and `enrollment_lead_program_bookings`, returning them inline on each lead:
+```ts
+lead.children: EnrollmentLeadChild[]
+lead.programBookings: EnrollmentLeadProgramBooking[]
+```
+No N+1 queries — all data loads in one query.
 
 ### Search
 
@@ -168,7 +197,7 @@ Search matches on parent name, parent email, and any child name within `enrollme
 
 ### Legacy leads
 
-Leads with no child rows display: `[legacy] {student_name} · age {student_age}` or `[legacy] no child info` if both are null. All existing actions work unchanged for legacy leads.
+Leads with no child rows display: `[legacy] {student_name} · age {student_age}` or `[legacy] no child info` if both are null. All existing actions work unchanged.
 
 ---
 
@@ -177,37 +206,39 @@ Leads with no child rows display: `[legacy] {student_name} · age {student_age}`
 ### Approval (`approve-enrollment-lead` edge function)
 
 1. Verify admin auth (unchanged).
-2. Generate a `booking_token` (UUID) for each child row where `booking_token IS NULL`; set those children's `status = 'link_sent'`.
-3. Update `enrollment_leads.status = 'approved'` and set `approved_at`.
-4. Send one approval email to the parent. Email body lists a booking link per child:
-   - `Book Alex's Little Dragons intro →  /book/{token_alex}`
-   - `Book Jordan's Youth Program intro → /book/{token_jordan}`
-5. **Idempotent**: re-approving a lead only generates tokens for children that don't have one yet; existing tokens are preserved.
+2. For each `enrollment_lead_program_bookings` row where `booking_token IS NULL`: generate a UUID token, set `status = 'link_sent'`.
+3. Update `enrollment_leads.status = 'approved'`, set `approved_at`.
+4. Send one approval email listing one booking link per program type:
+   - `Book Little Dragons intro for Alex → /book/{token_ld}`
+   - `Book Youth Program intro for Jordan & Sam → /book/{token_youth}`
+5. **Idempotent**: re-approving only generates tokens for program bookings that don't have one yet.
 
 ### `BookingPage` (`/book/:token`)
 
-Token resolves to `enrollment_lead_children` row (not `enrollment_leads.booking_token`). Page fetches:
-- Child's `name`, `program_type`, `status`, `appointment_date`, `appointment_time`
+Token resolves to `enrollment_lead_program_bookings` row. Page fetches:
+- Program booking: `program_type`, `status`, `appointment_date`, `appointment_time`
+- All children in this program for this family (via `lead_id + program_type` join to `enrollment_lead_children`)
 - Parent's `parent_name` (via join to lead)
 
-Passes `program_type` to `getAppointmentSlots` — returns slots where `program_type IN (child.program_type, 'all')` with booked dates excluded.
+Page title: **"Book your [Little Dragons / Youth Program] intro"** with children's names listed.
 
-If child `status` is already `scheduled` or `confirmed`, shows the existing appointment with reschedule option (same behavior as today).
+Passes `program_type` to `getAppointmentSlots` — returns slots where `program_type IN (booking.program_type, 'all')` with booked dates excluded.
+
+If booking `status` is already `scheduled` or `confirmed`, shows the appointment with reschedule option.
 
 ### `book-appointment` edge function
 
-Updated to:
-1. Resolve token → `enrollment_lead_children` row.
-2. Write `appointment_date`, `appointment_time`, `appointment_slot_id`, `status = 'scheduled'` to the child row.
-3. Recalculate and update `enrollment_leads.status` based on all children's statuses (aggregation rule above).
+1. Resolve token → `enrollment_lead_program_bookings` row.
+2. Write `appointment_date`, `appointment_time`, `appointment_slot_id`, `status = 'scheduled'` to that program booking row.
+3. Recalculate and update `enrollment_leads.status` based on all program booking statuses (aggregation rule above).
 
 ### `resend-booking-link` edge function
 
-Sends one email with booking links for all children where `status IN ('pending', 'link_sent')` (i.e., not yet scheduled).
+Sends one email with booking links for all program bookings where `status IN ('pending', 'link_sent')`.
 
 ### `confirm-appointment` edge function
 
-Updated to write `status = 'confirmed'` to the child row (resolved via token), then recalculate and update the parent lead's status.
+Writes `status = 'confirmed'` to the program booking row (resolved via token), then recalculates and updates the parent lead's status.
 
 ---
 
@@ -217,26 +248,26 @@ Updated to write `status = 'confirmed'` to the child row (resolved via token), t
 
 Gains a **Program Type** dropdown:
 - Little Dragons
-- Youth Program  
+- Youth Program
 - All programs (default)
 
 ### Slot list display
 
-Each slot row shows the program type label alongside the existing schedule string:
 ```
 Every Saturday  10:00–10:30   Little Dragons   [active]  [edit] [delete]
 Every Monday    18:00–18:30   Youth Program    [active]  [edit] [delete]
+Every Tuesday   17:00–17:30   All programs     [active]  [edit] [delete]
 ```
 
 ### `getAppointmentSlots` query
 
-Gains optional `programType?: 'little_dragons' | 'youth' | 'all'` parameter. When provided, returns slots where `program_type IN (programType, 'all')`. When omitted (admin management view), returns all slots.
+Gains optional `programType?: 'little_dragons' | 'youth'` parameter. When provided, returns slots where `program_type IN (programType, 'all')`. When omitted (admin management view), returns all slots.
 
 ---
 
 ## 6. `NewLeadModal` (admin-created leads)
 
-Updated to match the public form's multi-child UI — same compact inline rows (name + age + ×), same "+ Add another child" link, same age validation (4–17), same program label preview. Submits the same `children` array to `submit_enrollment_lead`.
+Updated to match the public form's multi-child UI — same compact inline rows (name + age + ×), same `+ Add another child` link, same age validation (4–17), same program label preview. Submits the same `children` array to `submit_enrollment_lead`.
 
 ---
 
@@ -245,9 +276,9 @@ Updated to match the public form's multi-child UI — same compact inline rows (
 | Layer | File |
 |-------|------|
 | Migration | `supabase/migrations/007_multi_child_enrollment.sql` |
-| Types | `src/lib/types.ts` — add `EnrollmentLeadChild`, update `AppointmentSlot`, update `EnrollmentLead` |
-| Queries | `src/lib/supabase/queries.ts` — update `getAppointmentSlots`, `get_upcoming_bookable_dates`, add `getLeadChildren` |
-| Mutations | `src/lib/supabase/mutations.ts` — update `submit_enrollment_lead` wrapper |
+| Types | `src/lib/types.ts` — add `EnrollmentLeadChild`, `EnrollmentLeadProgramBooking`; update `AppointmentSlot`, `EnrollmentLead` |
+| Queries | `src/lib/supabase/queries.ts` — update `getEnrollmentLeads` (join children + program bookings), update `getAppointmentSlots`, update `get_upcoming_bookable_dates` |
+| Mutations | `src/lib/supabase/mutations.ts` — update `submitEnrollmentLead` wrapper |
 | Public form | `src/components/public/ContactPage.tsx` |
 | Admin lead list | `src/components/admin/AdminEnrollmentLeadsTab.tsx` |
 | Pick date modal | `src/components/admin/PickDateModal.tsx` |
@@ -264,6 +295,6 @@ Updated to match the public form's multi-child UI — same compact inline rows (
 
 ## Out of Scope
 
-- Enrollment status per child beyond `confirmed` (e.g., per-child `enrolled` tracking) — lead-level `enrolled` status is set manually by admin as today.
+- Per-child `enrolled` tracking — lead-level `enrolled` status is set manually by admin as today.
 - Admin notification email changes (still fires on new lead submission, unchanged).
 - Public-facing booking page redesign beyond token resolution and slot filtering.
