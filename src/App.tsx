@@ -7,6 +7,7 @@ import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
 import { PublicWebsite } from './components/PublicWebsite';
 import { BookingPage } from './pages/BookingPage';
 import { ConfirmPage } from './pages/ConfirmPage';
+import { AuthCallback } from './components/AuthCallback';
 import { useAuth } from './hooks/useAuth';
 import { Alert, AlertDescription } from './components/ui/alert';
 import { AlertCircle } from 'lucide-react';
@@ -66,8 +67,8 @@ function AppRoutes() {
     await signOut();
   };
 
-  // Redirect logged-in users from public home to onboarding/dashboard after magic link.
-  if (user && location.pathname === '/') {
+  // Redirect logged-in users from public home or auth callback to onboarding/dashboard.
+  if (user && (location.pathname === '/' || location.pathname === '/auth/callback')) {
     if (accessState === 'needs_onboarding') {
       return <Navigate to="/onboarding" replace />;
     }
@@ -130,6 +131,7 @@ function AppRoutes() {
           }
         />
         <Route path="/experimental/public/*" element={<PublicWebsiteV2 />} />
+        <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/book/:token" element={<BookingPage />} />
         <Route path="/confirm/:token" element={<ConfirmPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
