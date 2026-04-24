@@ -68,3 +68,12 @@ export interface PortalEmailQueueRecord {
   status: string
   created_at: string
 }
+
+export interface AppointmentInfo {
+  programLabel: string
+  childNames: string      // e.g. "Emma & Lily" — empty string if no children records
+  date: string            // formatted, e.g. "Monday, April 28, 2026"
+  time: string            // formatted, e.g. "4:00 PM"
+  rebookingUrl: string    // ${appUrl}/book/${booking_token}
+  bookingToken: string | null
+}
