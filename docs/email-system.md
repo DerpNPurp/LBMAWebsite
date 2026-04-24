@@ -373,8 +373,8 @@ The button is an `<a>` tag styled to look like a button, not an actual `<button>
 | `submissionConfirmationHtml(lead)` | `submission` thank-you to prospect | `parent_name`, `student_name`, `parent_email` |
 | `approvalEmailHtml(lead, bookingUrl)` | `approval` booking invite | `parent_name`, link to `/book/{token}` |
 | `denialEmailHtml(lead)` | `denial` rejection | `parent_name`, `denial_message` (with fallback) |
-| `bookingConfirmationHtml(lead, rebookingUrl)` | `booking_confirmation` | `parent_name`, `appointment_date`, `appointment_time`, rebook link |
-| `reminderEmailHtml(lead, confirmUrl, rebookingUrl)` | `reminder` | `parent_name`, `appointment_date`, `appointment_time`, confirm link, rebook link |
+| `bookingConfirmationHtml(parentName, appointments[])` | `booking_confirmation` | parent name, array of `AppointmentInfo` (program label, child names, date, time, rebook link per program) |
+| `reminderEmailHtml(parentName, appointments[], confirmUrl)` | `reminder` | parent name, array of `AppointmentInfo`, single confirm URL derived from earliest booking token |
 | `messagingNotificationHtml(senderName, portalUrl)` | Portal message alerts | Sender's display name, link to `/dashboard` |
 
 ### Date/time formatting in templates

@@ -161,12 +161,20 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
       break
     case 'booking_confirmation': {
       const appointments = await getLeadAppointments(supabase, record.lead_id, appUrl)
+      if (appointments.length === 0) {
+        console.warn('[send-email] booking_confirmation: no booked appointments for lead', record.lead_id)
+        return
+      }
       subject = appointments.length > 1 ? 'Appointments confirmed — LBMAA' : 'Appointment confirmed — LBMAA'
       html = bookingConfirmationHtml(lead.parent_name, appointments)
       break
     }
     case 'reminder': {
       const appointments = await getLeadAppointments(supabase, record.lead_id, appUrl)
+      if (appointments.length === 0) {
+        console.warn('[send-email] reminder: no booked appointments for lead', record.lead_id)
+        return
+      }
       const firstToken = appointments[0]?.bookingToken ?? lead.booking_token
       const reminderConfirmUrl = firstToken ? `${appUrl}/confirm/${firstToken}` : appUrl
       subject = appointments.length > 1
