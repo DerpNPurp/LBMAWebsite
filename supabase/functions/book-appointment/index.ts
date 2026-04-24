@@ -19,21 +19,21 @@ function adminClient() {
 async function recalculateLeadStatus(
   supabase: ReturnType<typeof adminClient>,
   leadId: string
-): Promise<void> {
+): Promise<boolean> {
   const { data: bookings } = await supabase
     .from('enrollment_lead_program_bookings')
     .select('status')
     .eq('lead_id', leadId)
 
-  if (!bookings || bookings.length === 0) return
+  if (!bookings || bookings.length === 0) return false
 
   const statuses = bookings.map((b: { status: string }) => b.status)
-  const hasScheduledOrConfirmed = statuses.some((s: string) => s === 'scheduled' || s === 'confirmed')
+  const allScheduledOrConfirmed = statuses.every((s: string) => s === 'scheduled' || s === 'confirmed')
   const allConfirmed = statuses.every((s: string) => s === 'confirmed')
 
   const leadStatus = allConfirmed
     ? 'appointment_confirmed'
-    : hasScheduledOrConfirmed
+    : allScheduledOrConfirmed
     ? 'appointment_scheduled'
     : 'approved'
 
@@ -41,6 +41,8 @@ async function recalculateLeadStatus(
     .from('enrollment_leads')
     .update({ status: leadStatus })
     .eq('lead_id', leadId)
+
+  return allScheduledOrConfirmed
 }
 
 const BOOKABLE_STATUSES = ['link_sent', 'scheduled', 'confirmed']
@@ -118,21 +120,23 @@ Deno.serve(async (req) => {
 
   if (updateError) return new Response('Booking failed', { status: 500, headers: CORS_HEADERS })
 
-  await recalculateLeadStatus(supabase, lead.lead_id)
+  const allBooked = await recalculateLeadStatus(supabase, lead.lead_id)
 
-  const { error: notifError } = await supabase
-    .from('enrollment_lead_notifications')
-    .insert({
-      lead_id: lead.lead_id,
-      recipient_email: lead.parent_email,
-      channel: 'email',
-      type: 'booking_confirmation',
-      status: 'queued',
-    })
+  if (allBooked) {
+    const { error: notifError } = await supabase
+      .from('enrollment_lead_notifications')
+      .insert({
+        lead_id: lead.lead_id,
+        recipient_email: lead.parent_email,
+        channel: 'email',
+        type: 'booking_confirmation',
+        status: 'queued',
+      })
 
-  if (notifError) {
-    console.error('[book-appointment] notification insert error:', notifError)
-    return new Response('Booking saved but notification failed', { status: 500, headers: CORS_HEADERS })
+    if (notifError) {
+      console.error('[book-appointment] notification insert error:', notifError)
+      return new Response('Booking saved but notification failed', { status: 500, headers: CORS_HEADERS })
+    }
   }
 
   return new Response(
