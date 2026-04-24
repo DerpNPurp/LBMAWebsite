@@ -54,3 +54,22 @@ Deno.test('bookingConfirmationHtml — multi: contains all programs, dates, time
   assertEquals(html.includes('https://lbmaa.com/book/abc123'), true)
   assertEquals(html.includes('https://lbmaa.com/book/def456'), true)
 })
+
+Deno.test('reminderEmailHtml — contains all appointments, confirm button, reschedule links', () => {
+  const html = reminderEmailHtml(
+    'Eduardo Guerra',
+    multi,
+    'https://lbmaa.com/confirm/abc123'
+  )
+  assertEquals(html.includes('Eduardo Guerra'), true)
+  assertEquals(html.includes('Little Dragons'), true)
+  assertEquals(html.includes('Youth Program'), true)
+  assertEquals(html.includes('Monday, April 28, 2026'), true)
+  assertEquals(html.includes('Wednesday, April 30, 2026'), true)
+  assertEquals(html.includes('4:00 PM'), true)
+  assertEquals(html.includes('5:30 PM'), true)
+  assertEquals(html.includes('https://lbmaa.com/confirm/abc123'), true)
+  assertEquals(html.includes('Confirm My Attendance'), true)
+  assertEquals(html.includes('https://lbmaa.com/book/abc123'), true)
+  assertEquals(html.includes('https://lbmaa.com/book/def456'), true)
+})

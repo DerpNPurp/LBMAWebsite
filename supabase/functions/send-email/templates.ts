@@ -140,25 +140,32 @@ export function bookingConfirmationHtml(parentName: string, appointments: Appoin
 }
 
 // Reminder email — sent 2 days before appointment
-export function reminderEmailHtml(lead: EnrollmentLead, confirmUrl: string, rebookingUrl: string): string {
-  const dateStr = lead.appointment_date
-    ? new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-    : 'your appointment'
-  const timeStr = lead.appointment_time
-    ? new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : ''
+export function reminderEmailHtml(parentName: string, appointments: AppointmentInfo[], confirmUrl: string): string {
+  const cards = appointments.map(a => `
+    <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#c8102e;margin-bottom:6px;">
+        ${a.programLabel}${a.childNames ? ` — ${a.childNames}` : ''}
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
+      <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
+      <p style="margin:10px 0 0;font-size:12px;color:#888;">
+        Need to reschedule? <a href="${a.rebookingUrl}" style="color:#c8102e;text-decoration:none;">Click here</a>
+      </p>
+    </div>
+  `).join('')
+
+  const heading = appointments.length > 1
+    ? 'Reminder: your LBMAA appointments are in 2 days'
+    : 'Reminder: your LBMAA appointment is in 2 days'
+  const intro = appointments.length > 1
+    ? 'just a reminder — your intro appointments are coming up:'
+    : 'just a reminder — your intro appointment is coming up:'
 
   return wrap(`
-    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Reminder: your LBMAA appointment is in 2 days</p>
-    <p style="margin:0 0 6px;color:#555;font-size:13px;">Hi ${lead.parent_name}, just a reminder:</p>
-    <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 20px;">
-      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${dateStr}</div>
-      ${timeStr ? `<div style="font-size:13px;color:#555;margin-top:4px;">${timeStr}</div>` : ''}
-    </div>
+    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${heading}</p>
+    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
+    ${cards}
     ${ctaButton(confirmUrl, 'Confirm My Attendance')}
-    <p style="margin:0 0 18px;font-size:12px;color:#888;text-align:center;">
-      Need to reschedule? <a href="${rebookingUrl}" style="color:#c8102e;text-decoration:none;">Click here</a>
-    </p>
   `)
 }
 
