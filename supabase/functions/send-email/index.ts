@@ -1,7 +1,7 @@
 // supabase/functions/send-email/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead, PortalEmailQueueRecord } from './types.ts'
+import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead, PortalEmailQueueRecord, AppointmentInfo } from './types.ts'
 import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, multiProgramApprovalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml, announcementNotificationHtml, blogPostNotificationHtml, commentReplyHtml, postCommentHtml } from './templates.ts'
 
 const PROGRAM_LABELS: Record<string, string> = {
@@ -32,6 +32,53 @@ function adminClient() {
     Deno.env.get('SUPABASE_URL')!,
     Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
     { auth: { persistSession: false } }
+  )
+}
+
+async function getLeadAppointments(
+  supabase: ReturnType<typeof adminClient>,
+  leadId: string,
+  appUrl: string
+): Promise<AppointmentInfo[]> {
+  const { data: bookings } = await supabase
+    .from('enrollment_lead_program_bookings')
+    .select('program_type, booking_token, appointment_date, appointment_time')
+    .eq('lead_id', leadId)
+    .not('appointment_date', 'is', null)
+    .order('appointment_date', { ascending: true })
+
+  if (!bookings || bookings.length === 0) return []
+
+  return Promise.all(
+    bookings.map(async (b: {
+      program_type: string
+      booking_token: string | null
+      appointment_date: string
+      appointment_time: string
+    }) => {
+      const { data: children } = await supabase
+        .from('enrollment_lead_children')
+        .select('name')
+        .eq('lead_id', leadId)
+        .eq('program_type', b.program_type)
+
+      const childNames = children?.map((c: { name: string }) => c.name).join(' & ') ?? ''
+      const date = new Date(b.appointment_date + 'T12:00:00').toLocaleDateString('en-US', {
+        weekday: 'long', month: 'long', day: 'numeric', year: 'numeric',
+      })
+      const time = new Date('1970-01-01T' + b.appointment_time).toLocaleTimeString('en-US', {
+        hour: 'numeric', minute: '2-digit',
+      })
+
+      return {
+        programLabel: PROGRAM_LABELS[b.program_type] ?? b.program_type,
+        childNames,
+        date,
+        time,
+        rebookingUrl: b.booking_token ? `${appUrl}/book/${b.booking_token}` : appUrl,
+        bookingToken: b.booking_token,
+      }
+    })
   )
 }
 
