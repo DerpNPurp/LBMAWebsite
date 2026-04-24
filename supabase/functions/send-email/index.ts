@@ -112,10 +112,24 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
       subject = 'Your enrollment inquiry at LBMAA'
       html = denialEmailHtml(lead)
       break
-    case 'booking_confirmation':
+    case 'booking_confirmation': {
       subject = `Appointment confirmed — LBMAA`
-      html = bookingConfirmationHtml(lead, bookingUrl)
+      const dateStr = lead.appointment_date
+        ? new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+        : 'your scheduled date'
+      const timeStr = lead.appointment_time
+        ? new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
+        : ''
+      html = bookingConfirmationHtml(lead.parent_name, [{
+        programLabel: 'Intro Appointment',
+        childNames: lead.student_name ?? '',
+        date: dateStr,
+        time: timeStr,
+        rebookingUrl: bookingUrl,
+        bookingToken: lead.booking_token,
+      }])
       break
+    }
     case 'reminder':
       subject = `Reminder: your LBMAA appointment in 2 days`
       html = reminderEmailHtml(lead, confirmUrl, bookingUrl)

@@ -1,6 +1,6 @@
 // supabase/functions/send-email/templates.ts
 
-import type { EnrollmentLead } from './types.ts'
+import type { EnrollmentLead, AppointmentInfo } from './types.ts'
 
 const STRIPE = `<div style="height:5px;background:linear-gradient(to right,#c8102e,#1a1a2e);"></div>`
 
@@ -115,24 +115,27 @@ export function denialEmailHtml(lead: EnrollmentLead): string {
 }
 
 // Booking confirmation email — sent after an appointment is booked
-export function bookingConfirmationHtml(lead: EnrollmentLead, rebookingUrl: string): string {
-  const dateStr = lead.appointment_date
-    ? new Date(lead.appointment_date + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
-    : 'your scheduled date'
-  const timeStr = lead.appointment_time
-    ? new Date('1970-01-01T' + lead.appointment_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
-    : ''
+export function bookingConfirmationHtml(parentName: string, appointments: AppointmentInfo[]): string {
+  const cards = appointments.map(a => `
+    <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#c8102e;margin-bottom:6px;">
+        ${a.programLabel}${a.childNames ? ` — ${a.childNames}` : ''}
+      </div>
+      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
+      <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
+      <p style="margin:10px 0 0;font-size:12px;color:#888;">
+        Need to reschedule? <a href="${a.rebookingUrl}" style="color:#c8102e;text-decoration:none;">Click here</a>
+      </p>
+    </div>
+  `).join('')
+
+  const heading = appointments.length > 1 ? 'Appointments confirmed!' : 'Appointment confirmed!'
+  const intro = appointments.length > 1 ? 'your enrollment appointments are set:' : 'your enrollment appointment is set:'
 
   return wrap(`
-    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Appointment confirmed!</p>
-    <p style="margin:0 0 6px;color:#555;font-size:13px;">Hi ${lead.parent_name}, your enrollment appointment is set:</p>
-    <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 20px;">
-      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${dateStr}</div>
-      ${timeStr ? `<div style="font-size:13px;color:#555;margin-top:4px;">${timeStr}</div>` : ''}
-    </div>
-    <p style="margin:0 0 18px;font-size:12px;color:#888;text-align:center;">
-      Need to reschedule? <a href="${rebookingUrl}" style="color:#c8102e;text-decoration:none;">Click here</a> to pick a new date.
-    </p>
+    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${heading}</p>
+    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
+    ${cards}
   `)
 }
 
