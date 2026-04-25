@@ -1,6 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
-import { FirstLoginOnboarding } from './components/FirstLoginOnboarding';
+import { FamilyOnboarding } from './components/onboarding/FamilyOnboarding';
 import { DashboardV2 } from './components/DashboardV2';
 import { AdminDashboardV2 } from './components/AdminDashboardV2';
 import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
@@ -120,7 +120,7 @@ function AppRoutes() {
           element={
             <ProtectedRoute user={user} loading={loading} accessState={accessState}>
               {user?.role === 'family' ? (
-                <FirstLoginOnboarding user={user} onComplete={async () => {
+                <FamilyOnboarding user={user} onComplete={async () => {
                   await refreshUser();
                   navigate('/dashboard');
                 }} onLogout={handleLogout} />
