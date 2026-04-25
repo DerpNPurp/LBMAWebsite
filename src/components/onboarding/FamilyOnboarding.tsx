@@ -3,6 +3,7 @@ import { useState } from 'react'
 import type { Relationship } from '../../lib/types'
 import { GuardianStep } from './GuardianStep'
 import { ChildrenStep } from './ChildrenStep'
+import { AddressStep } from './AddressStep'
 
 export type GuardianForm = {
   firstName: string
@@ -121,7 +122,17 @@ export function FamilyOnboarding({ user, onComplete, onLogout }: FamilyOnboardin
               onBack={() => setStep(1)}
             />
           )}
-          {step === 3 && <div className="text-muted-foreground text-sm">Step 3 placeholder</div>}
+          {step === 3 && (
+            <AddressStep
+              values={address}
+              onChange={updates => setAddress(a => ({ ...a, ...updates }))}
+              onFinish={() => { /* wired in Task 5 */ }}
+              onSkip={() => { /* wired in Task 5 */ }}
+              onBack={() => setStep(2)}
+              submitting={submitting}
+              error={error}
+            />
+          )}
           {step === 'done' && <div className="text-muted-foreground text-sm">Done placeholder</div>}
         </div>
       </div>
