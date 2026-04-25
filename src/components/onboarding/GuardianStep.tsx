@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { Button } from '../ui/button'
 import { Input } from '../ui/input'
 import { Label } from '../ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select'
 import { ArrowRight } from 'lucide-react'
 import type { GuardianForm } from './FamilyOnboarding'
 
@@ -13,13 +14,6 @@ interface GuardianStepProps {
   onNext: () => void
 }
 
-const RELATIONSHIP_OPTIONS = [
-  { value: 'mother', label: 'Mother' },
-  { value: 'father', label: 'Father' },
-  { value: 'guardian', label: 'Guardian' },
-  { value: 'grandparent', label: 'Grandparent' },
-  { value: 'other', label: 'Other' },
-]
 
 export function GuardianStep({ email, values, onChange, onNext }: GuardianStepProps) {
   const [touched, setTouched] = useState<Record<string, boolean>>({})
@@ -106,22 +100,26 @@ export function GuardianStep({ email, values, onChange, onNext }: GuardianStepPr
             You are the child&apos;s{' '}
             <span className="text-muted-foreground font-normal text-xs">(optional)</span>
           </Label>
-          <select
-            id="ob-relationship"
+          <Select
             value={values.relationship}
-            onChange={e => onChange({ relationship: e.target.value as GuardianForm['relationship'] })}
-            className="flex h-10 w-full rounded-md border border-input bg-input-background px-3 py-2 text-sm text-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            onValueChange={val => onChange({ relationship: val as GuardianForm['relationship'] })}
           >
-            <option value="">Select relationship…</option>
-            {RELATIONSHIP_OPTIONS.map(opt => (
-              <option key={opt.value} value={opt.value}>{opt.label}</option>
-            ))}
-          </select>
+            <SelectTrigger id="ob-relationship">
+              <SelectValue placeholder="Select relationship…" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="mother">Mother</SelectItem>
+              <SelectItem value="father">Father</SelectItem>
+              <SelectItem value="guardian">Guardian</SelectItem>
+              <SelectItem value="grandparent">Grandparent</SelectItem>
+              <SelectItem value="other">Other</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
       <div className="mt-8">
-        <Button onClick={handleNext} className="w-full">
+        <Button type="button" onClick={handleNext} className="w-full">
           Next: Your Children
           <ArrowRight className="w-4 h-4 ml-1" />
         </Button>
