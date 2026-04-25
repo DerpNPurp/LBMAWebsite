@@ -2,6 +2,7 @@
 import { useState } from 'react'
 import type { Relationship } from '../../lib/types'
 import { GuardianStep } from './GuardianStep'
+import { ChildrenStep } from './ChildrenStep'
 
 export type GuardianForm = {
   firstName: string
@@ -112,7 +113,14 @@ export function FamilyOnboarding({ user, onComplete, onLogout }: FamilyOnboardin
               onNext={() => setStep(2)}
             />
           )}
-          {step === 2 && <div className="text-muted-foreground text-sm">Step 2 placeholder</div>}
+          {step === 2 && (
+            <ChildrenStep
+              values={children}
+              onChange={setChildren}
+              onNext={() => setStep(3)}
+              onBack={() => setStep(1)}
+            />
+          )}
           {step === 3 && <div className="text-muted-foreground text-sm">Step 3 placeholder</div>}
           {step === 'done' && <div className="text-muted-foreground text-sm">Done placeholder</div>}
         </div>
