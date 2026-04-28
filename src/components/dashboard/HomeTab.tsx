@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Bell, BookOpen, Loader2, MessageCircle, MessageSquare, Trophy, Award, Star } from 'lucide-react';
+import { Bell, BookOpen, Loader2, MessageCircle, MessageSquare, Trophy, Award } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
 import {
   getSectionUnreadCounts,
@@ -36,7 +36,6 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
   const {
     family,
     students: profileStudents,
-    review,
     loading: profileLoading,
     error: profileError,
     reload: reloadProfile,
@@ -307,24 +306,6 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
           )}
         </CardContent>
       </Card>
-
-      {/* Review nudge — only shown when family has no review yet */}
-      {!review && (
-        <Card className="border-amber-200 bg-amber-50/50 dark:bg-amber-950/20">
-          <CardContent className="flex items-center justify-between gap-4 pt-5 pb-5">
-            <div className="flex items-center gap-3">
-              <Star className="w-5 h-5 text-amber-500 flex-shrink-0" />
-              <p className="text-sm">
-                <span className="font-medium">Enjoying LBMAA?</span>{' '}
-                Leave a quick review — it helps other families find us.
-              </p>
-            </div>
-            <Button size="sm" variant="outline" onClick={() => onNavigate('reviews')} className="flex-shrink-0">
-              Write a Review
-            </Button>
-          </CardContent>
-        </Card>
-      )}
 
     </div>
   );
