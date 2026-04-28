@@ -50,6 +50,18 @@ export async function updateProfile(userId: string, updates: ProfileUpdates): Pr
   return data;
 }
 
+export async function updateProfileAvatar(userId: string, avatarUrl: string | null): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('user_id', userId)
+    .select(PROFILE_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // ============================================
 // FAMILIES
 // ============================================
@@ -161,6 +173,18 @@ export async function updateStudent(studentId: string, updates: Partial<Student>
   const { data, error } = await supabase
     .from('students')
     .update(updates)
+    .eq('student_id', studentId)
+    .select(STUDENT_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
+export async function updateStudentPhoto(studentId: string, photoUrl: string | null): Promise<Student> {
+  const { data, error } = await supabase
+    .from('students')
+    .update({ photo_url: photoUrl })
     .eq('student_id', studentId)
     .select(STUDENT_COLUMNS)
     .single();
