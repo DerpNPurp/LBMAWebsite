@@ -20,6 +20,7 @@ export type User = {
   email: string;
   role: UserRole;
   displayName: string;
+  avatarUrl: string | null;
 } | null;
 
 export type Profile = {
@@ -30,6 +31,7 @@ export type Profile = {
   deactivated_at: string | null;
   created_at: string;
   updated_at: string;
+  avatar_url: string | null;
 };
 
 export type Family = {
@@ -68,6 +70,7 @@ export type Student = {
   belt_level: BeltLevel | null;
   status: 'active' | 'inactive';
   notes: string | null;
+  photo_url: string | null;
   created_at: string;
   updated_at: string;
 };
