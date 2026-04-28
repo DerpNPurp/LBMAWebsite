@@ -20,9 +20,7 @@ const WEEK_OPTIONS: { value: number | null; label: string }[] = [
 ]
 
 function slotScheduleLabel(slot: AppointmentSlot): string {
-  const day = DAY_NAMES[slot.day_of_week]
-  const freq = WEEK_OPTIONS.find(o => o.value === slot.week_of_month)?.label ?? 'Every'
-  return `${freq} ${day}  ${slot.start_time.slice(0, 5)}–${slot.end_time.slice(0, 5)}`
+  return new Date('1970-01-01T' + slot.start_time).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' })
 }
 
 export function AdminAvailabilitySettings() {
@@ -37,8 +35,6 @@ export function AdminAvailabilitySettings() {
   const [slotDay, setSlotDay] = useState('1')
   const [slotWeekOfMonth, setSlotWeekOfMonth] = useState<number | null>(null)
   const [slotStart, setSlotStart] = useState('')
-  const [slotEnd, setSlotEnd] = useState('')
-  const [slotLabel, setSlotLabel] = useState('')
   const [slotProgramType, setSlotProgramType] = useState<'little_dragons' | 'youth' | 'all'>('all')
   const [slotSaving, setSlotSaving] = useState(false)
 
@@ -82,8 +78,6 @@ export function AdminAvailabilitySettings() {
     setSlotDay(String(slot.day_of_week))
     setSlotWeekOfMonth(slot.week_of_month ?? null)
     setSlotStart(slot.start_time.slice(0, 5))
-    setSlotEnd(slot.end_time.slice(0, 5))
-    setSlotLabel(slot.label)
     setSlotProgramType((slot.program_type ?? 'all') as 'little_dragons' | 'youth' | 'all')
     setShowSlotForm(true)
   }
@@ -93,28 +87,30 @@ export function AdminAvailabilitySettings() {
     setSlotDay('1')
     setSlotWeekOfMonth(null)
     setSlotStart('')
-    setSlotEnd('')
-    setSlotLabel('')
     setSlotProgramType('all')
     setShowSlotForm(false)
   }
 
   async function saveSlot() {
+    const freq = WEEK_OPTIONS.find(o => o.value === slotWeekOfMonth)?.label ?? 'Every'
+    const autoLabel = `${freq} ${DAY_NAMES[parseInt(slotDay)]}`
+    const [h, m] = slotStart.split(':').map(Number)
+    const autoEnd = `${String((h + 1) % 24).padStart(2, '0')}:${String(m).padStart(2, '0')}`
     setSlotSaving(true)
     try {
       const { data } = await supabase.rpc('upsert_appointment_slot', {
         p_slot_id: editSlotId ?? null,
         p_day_of_week: parseInt(slotDay),
         p_start_time: slotStart,
-        p_end_time: slotEnd,
-        p_label: slotLabel,
+        p_end_time: autoEnd,
+        p_label: autoLabel,
         p_week_of_month: slotWeekOfMonth,
       })
       const savedSlotId = editSlotId ?? (data as string)
       await supabase.from('appointment_slots').update({ program_type: slotProgramType }).eq('slot_id', savedSlotId)
       if (editSlotId) {
         setSlots(prev => prev.map(s => s.slot_id === editSlotId
-          ? { ...s, day_of_week: parseInt(slotDay), week_of_month: slotWeekOfMonth, start_time: slotStart, end_time: slotEnd, label: slotLabel, program_type: slotProgramType }
+          ? { ...s, day_of_week: parseInt(slotDay), week_of_month: slotWeekOfMonth, start_time: slotStart, end_time: autoEnd, label: autoLabel, program_type: slotProgramType }
           : s))
       } else {
         const newSlot: AppointmentSlot = {
@@ -122,8 +118,8 @@ export function AdminAvailabilitySettings() {
           day_of_week: parseInt(slotDay),
           week_of_month: slotWeekOfMonth,
           start_time: slotStart,
-          end_time: slotEnd,
-          label: slotLabel,
+          end_time: autoEnd,
+          label: autoLabel,
           program_type: slotProgramType,
           is_active: true,
           created_at: new Date().toISOString(),
@@ -233,17 +229,11 @@ export function AdminAvailabilitySettings() {
         {showSlotForm && (
           <div className="mt-4 p-4 rounded border bg-muted/30 space-y-3">
             <h4 className="text-sm font-medium">{editSlotId ? 'Edit slot' : 'Add slot'}</h4>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Day of week</Label>
-                <select value={slotDay} onChange={e => setSlotDay(e.target.value)} className="mt-1 w-full rounded border px-3 py-2 text-sm bg-background">
-                  {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
-                </select>
-              </div>
-              <div>
-                <Label>Label</Label>
-                <Input value={slotLabel} onChange={e => setSlotLabel(e.target.value)} className="mt-1" placeholder="e.g. 1st Monday 4–6pm" />
-              </div>
+            <div>
+              <Label>Day of week</Label>
+              <select value={slotDay} onChange={e => setSlotDay(e.target.value)} className="mt-1 w-full rounded border px-3 py-2 text-sm bg-background">
+                {DAY_NAMES.map((d, i) => <option key={i} value={i}>{d}</option>)}
+              </select>
             </div>
             <div>
               <Label>Frequency</Label>
@@ -276,19 +266,13 @@ export function AdminAvailabilitySettings() {
                 <option value="youth">Youth Program</option>
               </select>
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label>Start time</Label>
-                <Input type="time" value={slotStart} onChange={e => setSlotStart(e.target.value)} className="mt-1" />
-              </div>
-              <div>
-                <Label>End time</Label>
-                <Input type="time" value={slotEnd} onChange={e => setSlotEnd(e.target.value)} className="mt-1" />
-              </div>
+            <div>
+              <Label>Start time</Label>
+              <Input type="time" value={slotStart} onChange={e => setSlotStart(e.target.value)} className="mt-1" />
             </div>
             <div className="flex gap-2 justify-end">
               <Button size="sm" variant="ghost" onClick={resetSlotForm}>Cancel</Button>
-              <Button size="sm" onClick={saveSlot} disabled={slotSaving || !slotLabel || !slotStart || !slotEnd}>
+              <Button size="sm" onClick={saveSlot} disabled={slotSaving || !slotStart}>
                 {slotSaving ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Save'}
               </Button>
             </div>
