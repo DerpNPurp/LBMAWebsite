@@ -48,10 +48,11 @@ export function BookingCalendar({
   confirmLabel = 'Confirm Booking',
   showAutoConfirmBadge = false,
 }: BookingCalendarProps) {
-  const [availableMap, setAvailableMap] = useState<Map<string, DateOption>>(new Map())
+  const [availableMap, setAvailableMap] = useState<Map<string, DateOption[]>>(new Map())
   const [fetching, setFetching] = useState(slots.length === 0 ? false : true)
   const [fetchError, setFetchError] = useState<string | null>(null)
   const [selected, setSelected] = useState<Date | undefined>()
+  const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const slotIds = slots.map(s => s.slot_id).join(',')
 
   useEffect(() => {
@@ -64,13 +65,17 @@ export function BookingCalendar({
     )
       .then(results => {
         if (cancelled) return
-        const map = new Map<string, DateOption>()
+        const map = new Map<string, DateOption[]>()
         for (const { slot, dates } of results) {
           for (const date of dates) {
-            if (!map.has(date)) {
-              map.set(date, { slotId: slot.slot_id, startTime: slot.start_time, label: slot.label })
-            }
+            const existing = map.get(date) ?? []
+            existing.push({ slotId: slot.slot_id, startTime: slot.start_time, label: slot.label })
+            map.set(date, existing)
           }
+        }
+        // Sort each day's options by start time
+        for (const [key, opts] of map) {
+          map.set(key, opts.sort((a, b) => a.startTime.localeCompare(b.startTime)))
         }
         setAvailableMap(map)
       })
@@ -82,7 +87,13 @@ export function BookingCalendar({
 
   const availableDates = Array.from(availableMap.keys()).map(d => new Date(d + 'T12:00:00'))
   const selectedKey = selected ? toDateKey(selected) : null
-  const selectedOption = selectedKey ? availableMap.get(selectedKey) : null
+  const dayOptions = selectedKey ? (availableMap.get(selectedKey) ?? []) : []
+  const selectedOption = dayOptions.find(o => o.slotId === selectedSlotId) ?? (dayOptions.length === 1 ? dayOptions[0] : null)
+
+  function handleDaySelect(date: Date | undefined) {
+    setSelected(date)
+    setSelectedSlotId(null)
+  }
 
   async function handleConfirm() {
     if (!selectedKey || !selectedOption) return
@@ -114,37 +125,55 @@ export function BookingCalendar({
       <DayPicker
         mode="single"
         selected={selected}
-        onSelect={setSelected}
+        onSelect={handleDaySelect}
         disabled={(date) => !availableMap.has(toDateKey(date))}
         modifiers={{ available: availableDates }}
         modifiersClassNames={{ available: 'rdp-day_available' }}
         showOutsideDays={false}
       />
 
-      {selected && selectedOption && (
-        <div className="mt-3 p-3 rounded-lg border-2 border-primary bg-primary/5">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="font-bold text-sm text-foreground">
-                {selected.toLocaleDateString('en-US', {
-                  weekday: 'long',
-                  month: 'long',
-                  day: 'numeric',
-                })}
-              </div>
-              <div className="text-xs text-muted-foreground mt-0.5">
-                {selectedOption.label} · {formatTime(selectedOption.startTime)}
-              </div>
-            </div>
-            <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-xs leading-none">✓</span>
-            </div>
+      {selected && dayOptions.length > 0 && (
+        <div className="mt-3 space-y-2">
+          <div className="text-xs font-medium text-muted-foreground">
+            {selected.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+            {dayOptions.length > 1 && ' — pick a time'}
           </div>
-          {showAutoConfirmBadge && isWithin2Days(selected) && (
-            <span className="inline-block mt-1.5 px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-800 border border-amber-200">
-              Will be auto-confirmed
-            </span>
-          )}
+          {dayOptions.map(option => {
+            const isChosen = selectedOption?.slotId === option.slotId
+            return (
+              <button
+                key={option.slotId}
+                type="button"
+                onClick={() => setSelectedSlotId(option.slotId)}
+                className={`w-full text-left p-3 rounded-lg border-2 transition-colors ${
+                  isChosen
+                    ? 'border-primary bg-primary/5'
+                    : 'border-border hover:border-primary/50 hover:bg-muted/50'
+                }`}
+              >
+                <div className="flex items-center justify-between gap-3">
+                  <div>
+                    <div className="font-semibold text-sm text-foreground">
+                      {formatTime(option.startTime)}
+                    </div>
+                    {option.label && (
+                      <div className="text-xs text-muted-foreground mt-0.5">{option.label}</div>
+                    )}
+                  </div>
+                  {isChosen && (
+                    <div className="w-5 h-5 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+                      <span className="text-white text-xs leading-none">✓</span>
+                    </div>
+                  )}
+                </div>
+                {showAutoConfirmBadge && isChosen && isWithin2Days(selected) && (
+                  <span className="inline-block mt-1.5 px-2 py-0.5 text-xs rounded bg-amber-100 text-amber-800 border border-amber-200">
+                    Will be auto-confirmed
+                  </span>
+                )}
+              </button>
+            )
+          })}
         </div>
       )}
 

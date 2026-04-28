@@ -12,13 +12,13 @@ const PROGRAM_LABELS: Record<string, string> = {
 }
 
 const PROGRAM_SECTION_STYLES: Record<string, string> = {
-  little_dragons: 'border-purple-200 bg-purple-50/40',
-  youth: 'border-blue-200 bg-blue-50/40',
+  little_dragons: 'border-amber-200 bg-amber-50/40',
+  youth: 'border-teal-200 bg-teal-50/40',
 }
 
 const PROGRAM_BADGE_STYLES: Record<string, string> = {
-  little_dragons: 'bg-purple-100 text-purple-700',
-  youth: 'bg-blue-100 text-blue-700',
+  little_dragons: 'bg-amber-50 text-amber-700 border border-amber-200',
+  youth: 'bg-teal-50 text-teal-700 border border-teal-200',
 }
 
 type ProgramSlotMap = Record<string, AppointmentSlot[]>

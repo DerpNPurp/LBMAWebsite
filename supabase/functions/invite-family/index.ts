@@ -57,7 +57,7 @@ Deno.serve(async (req) => {
 
   const appUrl = Deno.env.get('APP_URL')
   const inviteOptions = appUrl ? { redirectTo: `${appUrl}/dashboard` } : {}
-  const { error: inviteError } = await supabase.auth.admin.inviteUserByEmail(normalizedEmail, inviteOptions)
+  const { data: inviteData, error: inviteError } = await supabase.auth.admin.inviteUserByEmail(normalizedEmail, inviteOptions)
 
   if (inviteError) {
     console.error('[invite-family] inviteUserByEmail error:', JSON.stringify(inviteError))
@@ -65,6 +65,20 @@ Deno.serve(async (req) => {
       status: 500,
       headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
     })
+  }
+
+  // inviteUserByEmail leaves email_confirmed_at = null. Supabase's OTP endpoint returns 422
+  // "Signups not allowed" for unconfirmed users when email signups are disabled project-wide.
+  // Pre-confirming the email lets the family use OTP login without first clicking the invite link.
+  if (inviteData?.user?.id) {
+    const { error: confirmError } = await supabase.auth.admin.updateUserById(inviteData.user.id, { email_confirm: true })
+    if (confirmError) {
+      console.error('[invite-family] email confirm error:', JSON.stringify(confirmError))
+      return new Response(JSON.stringify({ error: confirmError.message }), {
+        status: 500,
+        headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+      })
+    }
   }
 
   return new Response(JSON.stringify({ ok: true }), {
