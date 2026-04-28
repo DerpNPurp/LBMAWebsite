@@ -464,7 +464,7 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Family Profile</h2>
+        <h2 className="text-2xl font-bold">Family Profile</h2>
         <p className="text-muted-foreground mt-1">
           Manage your family and student information
         </p>

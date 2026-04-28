@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Badge } from '../ui/badge';
 import { MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -196,13 +195,12 @@ export function AnnouncementsTab({ user }: { user: User }) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const toggleComments = (announcementId: string) => {
@@ -224,7 +222,7 @@ export function AnnouncementsTab({ user }: { user: User }) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Announcements</h2>
+          <h2 className="text-2xl font-bold">Announcements</h2>
           <p className="text-muted-foreground mt-1">
             Important updates from the LBMAA team
           </p>
@@ -259,15 +257,12 @@ export function AnnouncementsTab({ user }: { user: User }) {
                   </div>
                   <CardTitle>{announcement.title}</CardTitle>
                 </div>
-                <div className="flex gap-2">
-                  {announcement.isPinned && (
-                    <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
-                      <Pin className="w-3 h-3" />
-                      Pinned
-                    </span>
-                  )}
-                  <Badge variant="secondary">Official</Badge>
-                </div>
+                {announcement.isPinned && (
+                  <span className="inline-flex items-center gap-1 px-2 py-1 rounded-full bg-primary text-primary-foreground text-xs font-medium">
+                    <Pin className="w-3 h-3" />
+                    Pinned
+                  </span>
+                )}
               </div>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -383,12 +378,14 @@ export function AnnouncementsTab({ user }: { user: User }) {
                         onClick={() => handleAddComment(announcement.id)}
                         disabled={!commentTexts[announcement.id]?.trim() || savingComment === announcement.id}
                         size="sm"
+                        className="gap-1.5"
                       >
                         {savingComment === announcement.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Send className="w-4 h-4" />
                         )}
+                        Post
                       </Button>
                     </div>
                   </div>

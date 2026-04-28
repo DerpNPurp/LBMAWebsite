@@ -6,6 +6,7 @@ import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Send, Paperclip, Users as UsersIcon, Loader2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import {
   getGlobalConversation,
@@ -439,31 +440,34 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-3xl font-bold">Messages</h2>
+        <h2 className="text-2xl font-bold">Messages</h2>
         <p className="text-muted-foreground mt-1">
           Connect with instructors and the LBMAA community
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 h-[600px]">
+      <div className="grid md:grid-cols-3 gap-6 h-[600px] max-h-[calc(100dvh-13rem)]">
         {/* Conversations List */}
-        <Card className="md:col-span-1">
-          <CardHeader>
+        <Card className="md:col-span-1 flex flex-col overflow-hidden">
+          <CardHeader className="shrink-0">
             <CardTitle>Conversations</CardTitle>
             <div className="space-y-2">
-              <select
+              <Select
                 value={selectedDirectTargetId}
-                onChange={(event) => setSelectedDirectTargetId(event.target.value)}
-                className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                onValueChange={setSelectedDirectTargetId}
                 disabled={creatingDirectConversation || directMessageTargets.length === 0}
               >
-                <option value="">Start a direct message...</option>
-                {directMessageTargets.map((target) => (
-                  <option key={target.userId} value={target.userId}>
-                    {target.displayName} ({target.role === 'admin' ? 'Instructor/Admin' : 'Family'})
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Start a direct message..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {directMessageTargets.map((target) => (
+                    <SelectItem key={target.userId} value={target.userId}>
+                      {target.displayName} ({target.role === 'admin' ? 'Instructor/Admin' : 'Family'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
               <Button
                 type="button"
                 variant="outline"
@@ -482,8 +486,8 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
               </Button>
             </div>
           </CardHeader>
-          <CardContent className="p-0">
-            <ScrollArea className="h-[500px]">
+          <CardContent className="p-0 flex-1 overflow-hidden">
+            <ScrollArea className="h-full">
               <div className="space-y-1 p-4 pt-0">
                 {conversations.length === 0 ? (
                   <p className="text-sm text-muted-foreground p-4">No conversations yet.</p>
@@ -519,7 +523,13 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                           </div>
                         </div>
                         {conversation.unreadCount > 0 && (
-                          <Badge className="ml-2 h-5 px-2 text-xs bg-primary flex-shrink-0">
+                          <Badge
+                            className={`ml-2 h-5 px-2 text-xs flex-shrink-0 ${
+                              selectedConversationId === conversation.id
+                                ? 'bg-primary-foreground text-primary'
+                                : 'bg-primary text-primary-foreground'
+                            }`}
+                          >
                             {conversation.unreadCount}
                           </Badge>
                         )}

@@ -55,6 +55,7 @@ const navItems: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'blog', label: 'Parent Blog', icon: BookOpen },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'feedback', label: 'Feedback', icon: Award },
+  { id: 'reviews', label: 'Write a Review', icon: Star },
 ];
 
 export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props) {
