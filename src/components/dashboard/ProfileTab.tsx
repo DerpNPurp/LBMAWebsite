@@ -228,14 +228,17 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     setSaving(true);
     try {
       if (editingStudent) {
-        await updateStudent(editingStudent.id, {
+        const studentUpdates: Parameters<typeof updateStudent>[1] = {
           first_name: editingStudent.firstName,
           last_name: editingStudent.lastName,
           date_of_birth: editingStudent.dateOfBirth || null,
-          belt_level: editingStudent.beltLevel || null,
-          status: editingStudent.status,
           notes: editingStudent.notes || null,
-        });
+        };
+        if (user.role !== 'family') {
+          studentUpdates.belt_level = editingStudent.beltLevel || null;
+          studentUpdates.status = editingStudent.status;
+        }
+        await updateStudent(editingStudent.id, studentUpdates);
         setEditingStudent(null);
       } else {
         // Add new student
@@ -244,8 +247,8 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
             first_name: newStudent.firstName,
             last_name: newStudent.lastName,
             date_of_birth: newStudent.dateOfBirth || null,
-            belt_level: newStudent.beltLevel || null,
-            status: (newStudent.status || 'active') as 'active' | 'inactive',
+            belt_level: user.role !== 'family' ? (newStudent.beltLevel || null) : null,
+            status: user.role !== 'family' ? ((newStudent.status || 'active') as 'active' | 'inactive') : 'active',
             notes: newStudent.notes || null,
           });
           setNewStudent({
@@ -690,24 +693,26 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
                       onChange={(e) => setNewStudent({ ...newStudent, dateOfBirth: e.target.value })}
                     />
                   </div>
-                  <div className="space-y-2">
-                    <Label>Belt Level</Label>
-                    <Select
-                      value={newStudent.beltLevel}
-                      onValueChange={(value) => setNewStudent({ ...newStudent, beltLevel: value })}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {beltLevels.map((level) => (
-                          <SelectItem key={level} value={level}>
-                            {level}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
+                  {user.role !== 'family' && (
+                    <div className="space-y-2">
+                      <Label>Belt Level</Label>
+                      <Select
+                        value={newStudent.beltLevel}
+                        onValueChange={(value) => setNewStudent({ ...newStudent, beltLevel: value })}
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {beltLevels.map((level) => (
+                            <SelectItem key={level} value={level}>
+                              {level}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
                   <div className="space-y-2">
                     <Label>Notes</Label>
                     <Textarea
@@ -818,41 +823,45 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
                   onChange={(e) => setEditingStudent({ ...editingStudent, dateOfBirth: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>Belt Level</Label>
-                <Select
-                  value={editingStudent.beltLevel}
-                  onValueChange={(value) => setEditingStudent({ ...editingStudent, beltLevel: value })}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {beltLevels.map((level) => (
-                      <SelectItem key={level} value={level}>
-                        {level}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Status</Label>
-                <Select
-                  value={editingStudent.status}
-                  onValueChange={(value: 'active' | 'inactive') => 
-                    setEditingStudent({ ...editingStudent, status: value })
-                  }
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="active">Active</SelectItem>
-                    <SelectItem value="inactive">Inactive</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              {user.role !== 'family' && (
+                <>
+                  <div className="space-y-2">
+                    <Label>Belt Level</Label>
+                    <Select
+                      value={editingStudent.beltLevel}
+                      onValueChange={(value) => setEditingStudent({ ...editingStudent, beltLevel: value })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {beltLevels.map((level) => (
+                          <SelectItem key={level} value={level}>
+                            {level}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <div className="space-y-2">
+                    <Label>Status</Label>
+                    <Select
+                      value={editingStudent.status}
+                      onValueChange={(value: 'active' | 'inactive') =>
+                        setEditingStudent({ ...editingStudent, status: value })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="active">Active</SelectItem>
+                        <SelectItem value="inactive">Inactive</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                </>
+              )}
               <div className="space-y-2">
                 <Label>Notes</Label>
                 <Textarea
