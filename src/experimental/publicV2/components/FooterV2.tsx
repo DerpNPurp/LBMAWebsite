@@ -1,5 +1,4 @@
 import { useNavigate } from 'react-router-dom';
-import { Shield } from 'lucide-react';
 import { QuickAnswerStrip } from './QuickAnswerStrip';
 
 const BASE = '/experimental/public';
@@ -34,8 +33,7 @@ export function FooterV2({ onLogin }: FooterV2Props) {
                 onClick={() => navigate(BASE)}
                 className="flex items-center gap-2 mb-4 hover:opacity-75 transition-opacity"
               >
-                <Shield className="w-5 h-5 text-primary" />
-                <span className="font-bold text-white text-sm">LBMAA</span>
+                <img src="/logo.png" alt="LBMAA Logo" className="h-5 w-auto" />
               </button>
               <p className="text-sm leading-relaxed opacity-70 max-w-xs">
                 A family-run martial arts school in Los Banos, CA. Teaching children
