@@ -3,7 +3,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
-import { X, Mail, Lock, Shield, AlertCircle } from 'lucide-react';
+import { X, Mail, Lock, AlertCircle } from 'lucide-react';
 import { supabase, checkEmailHasAccountWithTimeout } from '../lib/supabase/client';
 import { Alert, AlertDescription } from './ui/alert';
 
@@ -88,9 +88,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         </Button>
 
         <CardHeader className="text-center">
-          <div className="mx-auto mb-4 w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
-            <Shield className="w-8 h-8 text-primary" />
-          </div>
+          <img src="/logo.png" alt="LBMAA Logo" className="mx-auto mb-4 h-16 w-auto" />
           <CardTitle className="text-2xl">Member Portal Login</CardTitle>
           <CardDescription>
             Enter your email to receive a secure login link. Only enrolled families and staff can sign in.

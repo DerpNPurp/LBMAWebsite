@@ -36,7 +36,6 @@ import {
   Home,
   LogOut,
   MessageSquare,
-  Shield,
   UserCircle,
 } from 'lucide-react';
 
@@ -85,9 +84,7 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
         {/* ── Brand header ── */}
         <SidebarHeader className="px-3 py-4">
           <div className="flex items-center gap-3">
-            <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-sidebar-primary">
-              <Shield className="h-5 w-5 text-sidebar-primary-foreground" />
-            </div>
+            <img src="/logo.png" alt="LBMAA Logo" className="h-9 w-9 shrink-0 rounded-lg object-contain" />
             <div className="flex flex-col flex-1 group-data-[collapsible=icon]:hidden">
               <span className="text-sm font-semibold leading-none text-sidebar-foreground">LBMAA</span>
               <span className="mt-0.5 text-xs text-sidebar-foreground/60">Parent Portal</span>
