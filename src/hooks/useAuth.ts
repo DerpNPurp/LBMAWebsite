@@ -161,6 +161,7 @@ export function useAuth() {
         email: supabaseUser.email || '',
         role,
         displayName: resolvedProfile.display_name,
+        avatarUrl: resolvedProfile.avatar_url ?? null,
       };
 
       if (!isActive) {
