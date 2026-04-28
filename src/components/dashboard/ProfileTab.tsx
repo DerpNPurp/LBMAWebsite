@@ -13,7 +13,9 @@ import { Switch } from '../ui/switch';
 import { Skeleton } from '../ui/skeleton';
 import { Plus, Edit2, User as UserIcon, Users, Home, Trash2, Star, Check, Loader2 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
-import { createReview, updateProfile, updateReview, upsertUserNotificationPreferences } from '../../lib/supabase/mutations';
+import { createReview, updateProfile, updateReview, upsertUserNotificationPreferences, updateProfileAvatar } from '../../lib/supabase/mutations';
+import { PhotoUploader } from './PhotoUploader';
+import { uploadProfileImage, deleteProfileImage } from '../../lib/supabase/storage';
 import { getUserNotificationPreferences } from '../../lib/supabase/queries';
 import type { User, Review } from '../../lib/types';
 import { toast } from 'sonner';
@@ -472,6 +474,39 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
           Manage your family and student information
         </p>
       </div>
+
+      {/* Profile Photo */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <UserIcon className="w-5 h-5" />
+            <CardTitle>Profile Photo</CardTitle>
+          </div>
+          <CardDescription>
+            This photo appears on your account and in messages
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PhotoUploader
+            currentUrl={user.avatarUrl}
+            fallback={user.displayName?.[0] ?? '?'}
+            onUpload={async (file) => {
+              const path = `profiles/${user.id}/avatar`;
+              const url = await uploadProfileImage(path, file);
+              await updateProfileAvatar(user.id, url);
+              await onRefreshUser();
+              toast.success('Profile photo updated');
+            }}
+            onRemove={async () => {
+              const path = `profiles/${user.id}/avatar`;
+              await deleteProfileImage(path);
+              await updateProfileAvatar(user.id, null);
+              await onRefreshUser();
+              toast.success('Profile photo removed');
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {/* Family Information */}
       <Card>
