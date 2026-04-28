@@ -23,7 +23,6 @@ import { AnnouncementsTab } from './dashboard/AnnouncementsTab';
 import { BlogTab } from './dashboard/BlogTab';
 import { MessagesTab } from './dashboard/MessagesTab';
 import { FeedbackTab } from './dashboard/FeedbackTab';
-import { ReviewTab } from './dashboard/ReviewTab';
 import { ProfileTab } from './dashboard/ProfileTab';
 import { getUnreadMessageCount, getSectionUnreadCounts } from '../lib/supabase/queries';
 import { markSectionSeen } from '../lib/supabase/mutations';
@@ -38,7 +37,6 @@ import {
   LogOut,
   MessageSquare,
   Shield,
-  Star,
   UserCircle,
 } from 'lucide-react';
 
@@ -48,7 +46,7 @@ type DashboardV2Props = {
   onRefreshUser: () => Promise<void>;
 };
 
-type TabId = 'home' | 'announcements' | 'blog' | 'messages' | 'feedback' | 'reviews' | 'profile';
+type TabId = 'home' | 'announcements' | 'blog' | 'messages' | 'feedback' | 'profile';
 
 const navItems: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'home', label: 'Home', icon: Home },
@@ -56,7 +54,6 @@ const navItems: { id: TabId; label: string; icon: React.ElementType }[] = [
   { id: 'blog', label: 'Parent Blog', icon: BookOpen },
   { id: 'messages', label: 'Messages', icon: MessageSquare },
   { id: 'feedback', label: 'Feedback', icon: Award },
-  { id: 'reviews', label: 'Write a Review', icon: Star },
 ];
 
 export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props) {
@@ -245,7 +242,6 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
             <MessagesTab user={user} onUnreadCountChange={setUnreadMessages} />
           )}
           {activeTab === 'feedback' && <FeedbackTab user={user} />}
-          {activeTab === 'reviews' && <ReviewTab user={user} />}
           {activeTab === 'profile' && <ProfileTab user={user} onRefreshUser={onRefreshUser} />}
         </main>
       </SidebarInset>
