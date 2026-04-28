@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { Button } from '../../../components/ui/button';
-import { Shield, Menu, X, Lock } from 'lucide-react';
+import { Menu, X, Lock } from 'lucide-react';
 
 const BASE = '/experimental/public';
 
@@ -63,7 +63,7 @@ export function NavbarV2({ onLogin }: NavbarV2Props) {
             className="flex items-center gap-2.5 hover:opacity-75 transition-opacity min-w-0"
             aria-label="Los Banos Martial Arts Academy — home"
           >
-            <Shield className="w-7 h-7 text-primary flex-shrink-0" />
+            <img src="/logo.png" alt="LBMAA Logo" className="h-7 w-auto flex-shrink-0" />
             <span className="font-bold text-foreground leading-tight text-sm md:text-base truncate">
               Los Banos Martial Arts Academy
             </span>
