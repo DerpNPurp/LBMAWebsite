@@ -71,6 +71,7 @@ export function BlogTab({ user }: { user: User }) {
         body: p.body,
         authorName: p.profiles?.display_name || 'Unknown',
         createdAt: p.created_at,
+        isPinned: p.is_pinned || false,
       }));
 
       setPosts(formattedPosts);
@@ -217,13 +218,12 @@ export function BlogTab({ user }: { user: User }) {
 
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
-      year: 'numeric',
-      hour: 'numeric',
-      minute: '2-digit'
-    });
+    const now = new Date();
+    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
   };
 
   const toggleComments = (postId: string) => {
@@ -245,7 +245,7 @@ export function BlogTab({ user }: { user: User }) {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold">Parent Blog</h2>
+          <h2 className="text-2xl font-bold">Parent Blog</h2>
           <p className="text-muted-foreground mt-1">
             Share experiences and connect with other families
           </p>
@@ -437,12 +437,14 @@ export function BlogTab({ user }: { user: User }) {
                         onClick={() => handleAddComment(post.id)}
                         disabled={!commentTexts[post.id]?.trim() || savingComment === post.id}
                         size="sm"
+                        className="gap-1.5"
                       >
                         {savingComment === post.id ? (
                           <Loader2 className="w-4 h-4 animate-spin" />
                         ) : (
                           <Send className="w-4 h-4" />
                         )}
+                        Post
                       </Button>
                     </div>
                   </div>

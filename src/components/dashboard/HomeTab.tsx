@@ -40,6 +40,7 @@ type Announcement = {
 type BlogPost = {
   id: string;
   title: string;
+  body: string;
   authorName: string;
   createdAt: string;
   isPinned: boolean;
@@ -57,6 +58,7 @@ type AnnouncementRecord = {
 type BlogPostRecord = {
   post_id: string;
   title: string;
+  body: string;
   created_at: string;
   is_pinned?: boolean;
   profiles?: { display_name?: string | null } | null;
@@ -171,6 +173,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
         (blogPostsData as BlogPostRecord[]).slice(0, 3).map((post) => ({
           id: post.post_id,
           title: post.title,
+          body: post.body,
           authorName: post.profiles?.display_name || 'Unknown',
           createdAt: post.created_at,
           isPinned: Boolean(post.is_pinned),
@@ -203,11 +206,11 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
   const newFeedbackCount = feedbackCount;
   const newAnnouncementsCount = announcementCount;
 
-  const notifications = [
+  const allNotifications = [
     {
       type: 'feedback',
       count: newFeedbackCount,
-      label: 'New Feedback',
+      label: 'Instructor Feedback',
       icon: Award,
       action: () => onNavigate('feedback')
     },
@@ -241,6 +244,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
     },
   ];
 
+  const notifications = allNotifications.filter((n) => n.count > 0);
   const totalNotifications = newFeedbackCount + unreadMessages + newAnnouncementsCount + blogCount + commentNotifCount;
 
   const isLoading = loading || profileLoading;
@@ -279,8 +283,8 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
     <div className="space-y-6">
       {/* Welcome Section */}
       <div className="space-y-2">
-        <h2 className="text-4xl font-bold">Welcome back, {user.displayName.split(' ')[0]}! 👋</h2>
-        <p className="text-muted-foreground text-lg">
+        <h2 className="text-2xl font-bold">Welcome back, {user.displayName.split(' ')[0]}</h2>
+        <p className="text-muted-foreground">
           Here's what's happening with your family at LBMAA
         </p>
       </div>
@@ -290,37 +294,41 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
         <CardHeader>
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle>New Notifications</CardTitle>
+              <CardTitle>Notifications</CardTitle>
               <CardDescription>
-                {totalNotifications} {totalNotifications === 1 ? 'update' : 'updates'} waiting for you
+                {totalNotifications === 0
+                  ? 'Nothing new right now'
+                  : `${totalNotifications} ${totalNotifications === 1 ? 'update' : 'updates'} waiting for you`}
               </CardDescription>
             </div>
             <Bell className="h-5 w-5 text-muted-foreground" />
           </div>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
-            {notifications.map((notification) => {
-              const Icon = notification.icon;
-              return (
-                <button
-                  key={notification.type}
-                  onClick={notification.action}
-                  className={`flex items-center gap-3 p-4 rounded-lg border bg-card hover:bg-accent transition-colors text-left ${
-                    notification.count > 0 ? 'ring-2 ring-primary/40 bg-primary/5' : ''
-                  }`}
-                >
-                  <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
-                    <Icon className="h-5 w-5 text-primary" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-2xl font-bold">{notification.count}</div>
-                    <div className="text-sm text-muted-foreground">{notification.label}</div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
+          {notifications.length === 0 ? (
+            <p className="text-sm text-muted-foreground py-2">You're all caught up — nothing new right now.</p>
+          ) : (
+            <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+              {notifications.map((notification) => {
+                const Icon = notification.icon;
+                return (
+                  <button
+                    key={notification.type}
+                    onClick={notification.action}
+                    className="flex items-center gap-3 p-4 rounded-lg border bg-primary/5 ring-2 ring-primary/30 hover:bg-primary/10 transition-colors text-left"
+                  >
+                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10">
+                      <Icon className="h-5 w-5 text-primary" />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-2xl font-bold">{notification.count}</div>
+                      <div className="text-sm text-muted-foreground">{notification.label}</div>
+                    </div>
+                  </button>
+                );
+              })}
+            </div>
+          )}
         </CardContent>
       </Card>
 
@@ -456,6 +464,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
                     {post.isPinned && <Pin className="w-3.5 h-3.5 text-primary" />}
                     <p className="font-medium">{post.title}</p>
                   </div>
+                  <p className="text-sm text-muted-foreground line-clamp-2">{post.body}</p>
                   <p className="text-xs text-muted-foreground">
                     {post.authorName} • {formatDate(post.createdAt)}
                   </p>

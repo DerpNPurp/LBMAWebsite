@@ -26,6 +26,25 @@ export function FeedbackTab({ user }: FeedbackTabProps) {
   // per-student selected test ID
   const [selectedTestByStudent, setSelectedTestByStudent] = useState<Map<string, string>>(new Map());
 
+  // Auto-select the most recent test for each student once data loads
+  useEffect(() => {
+    if (students.length === 0 || tests.length === 0) return;
+    setSelectedTestByStudent((prev) => {
+      if (prev.size > 0) return prev;
+      const initial = new Map<string, string>();
+      for (const student of students) {
+        const studentTestIds = new Set(
+          feedback.filter((f) => f.student_id === student.student_id).map((f) => f.test_id)
+        );
+        const sorted = tests
+          .filter((t) => studentTestIds.has(t.test_id))
+          .sort((a, b) => b.test_date.localeCompare(a.test_date));
+        if (sorted.length > 0) initial.set(student.student_id, sorted[0].test_id);
+      }
+      return initial;
+    });
+  }, [students, tests, feedback]);
+
   useEffect(() => {
     async function load() {
       try {
@@ -90,8 +109,8 @@ export function FeedbackTab({ user }: FeedbackTabProps) {
   return (
     <div className="space-y-6">
       <div>
-        <h2 className="text-4xl font-bold">Instructor Feedback</h2>
-        <p className="text-muted-foreground text-lg">
+        <h2 className="text-2xl font-bold">Instructor Feedback</h2>
+        <p className="text-muted-foreground">
           Review feedback and progress notes from your instructors
         </p>
       </div>
