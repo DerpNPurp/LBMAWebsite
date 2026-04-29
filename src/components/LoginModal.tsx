@@ -57,8 +57,7 @@ export function LoginModal({ onClose }: LoginModalProps) {
         email: normalizedEmail,
         options: {
           shouldCreateUser: false,
-          // Redirect users directly to the dashboard after clicking the magic link
-          emailRedirectTo: `${window.location.origin}/dashboard`,
+          emailRedirectTo: `${window.location.origin}/auth/callback`,
         },
       });
 
