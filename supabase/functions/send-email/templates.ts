@@ -53,7 +53,7 @@ function ctaButton(href: string, label: string): string {
   </div>`
 }
 
-export function enrollmentNotificationHtml(lead: EnrollmentLead, adminUrl: string, logoUrl?: string): string {
+export function enrollmentNotificationHtml(lead: EnrollmentLead, adminUrl: string, logoUrl?: string, subtitle = 'Admin Portal'): string {
   const rows = [
     `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Parent</td><td style="padding:4px 0;color:#555;">${lead.parent_name}</td></tr>`,
     `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Email</td><td style="padding:4px 0;color:#555;">${lead.parent_email}</td></tr>`,
@@ -67,10 +67,10 @@ export function enrollmentNotificationHtml(lead: EnrollmentLead, adminUrl: strin
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">A family submitted an enrollment inquiry through the website.</p>
     <table style="width:100%;border-collapse:collapse;margin-bottom:20px;">${rows}</table>
     ${ctaButton(adminUrl, 'View in Admin Dashboard')}
-  `, logoUrl, 'Admin Portal')
+  `, logoUrl, subtitle)
 }
 
-export function messagingNotificationHtml(senderName: string, portalUrl: string, logoUrl?: string): string {
+export function messagingNotificationHtml(senderName: string, portalUrl: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">You have a new message</p>
     <p style="margin:0 0 22px;color:#555;font-size:13px;line-height:1.65;">
@@ -78,14 +78,15 @@ export function messagingNotificationHtml(senderName: string, portalUrl: string,
     </p>
     ${ctaButton(portalUrl, 'Read Message')}
     <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">Reply directly in the portal — do not reply to this email.</p>
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
 // Multi-program approval email — sent when admin approves a lead with program bookings
 export function multiProgramApprovalEmailHtml(
   parentName: string,
   programs: Array<{ programLabel: string; childNames: string; bookingUrl: string }>,
-  logoUrl?: string
+  logoUrl?: string,
+  subtitle?: string
 ): string {
   const sections = programs.map(p => `
     <div style="margin-bottom:20px;">
@@ -104,11 +105,11 @@ export function multiProgramApprovalEmailHtml(
     <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">
       Each booking link is unique to your inquiry. Do not share them.
     </p>
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
 // Booking approval email — sent when admin approves a lead
-export function approvalEmailHtml(lead: EnrollmentLead, bookingUrl: string, logoUrl?: string): string {
+export function approvalEmailHtml(lead: EnrollmentLead, bookingUrl: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Your enrollment request has been approved!</p>
     <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">
@@ -119,21 +120,21 @@ export function approvalEmailHtml(lead: EnrollmentLead, bookingUrl: string, logo
     <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">
       This booking link is unique to your inquiry. Do not share it.
     </p>
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
 // Denial email — sent when admin denies a lead
-export function denialEmailHtml(lead: EnrollmentLead, logoUrl?: string): string {
+export function denialEmailHtml(lead: EnrollmentLead, logoUrl?: string, subtitle?: string): string {
   const message = lead.denial_message ?? 'Thank you for your interest in LBMAA. Unfortunately, we are unable to accommodate your enrollment request at this time.'
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Your enrollment inquiry — LBMAA</p>
     <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">Hi ${lead.parent_name},</p>
     <p style="margin:0 0 22px;color:#555;font-size:13px;line-height:1.65;">${message}</p>
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
 // Booking confirmation email — sent after an appointment is booked
-export function bookingConfirmationHtml(parentName: string, appointments: AppointmentInfo[], logoUrl?: string): string {
+export function bookingConfirmationHtml(parentName: string, appointments: AppointmentInfo[], logoUrl?: string, subtitle?: string): string {
   const cards = appointments.map(a => `
     <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A01F23;margin-bottom:6px;">
@@ -154,11 +155,11 @@ export function bookingConfirmationHtml(parentName: string, appointments: Appoin
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${heading}</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
     ${cards}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
 // Reminder email — sent 2 days before appointment
-export function reminderEmailHtml(parentName: string, appointments: AppointmentInfo[], confirmUrl: string, logoUrl?: string): string {
+export function reminderEmailHtml(parentName: string, appointments: AppointmentInfo[], confirmUrl: string, logoUrl?: string, subtitle?: string): string {
   const cards = appointments.map(a => `
     <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A01F23;margin-bottom:6px;">
@@ -184,10 +185,10 @@ export function reminderEmailHtml(parentName: string, appointments: AppointmentI
     <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
     ${cards}
     ${ctaButton(confirmUrl, 'Confirm My Attendance')}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
-export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: string): string {
+export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Thank you for your interest in LBMAA!</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
@@ -206,10 +207,10 @@ export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: strin
       <a href="mailto:info@lbmaa.com" style="color:#A01F23;text-decoration:none;">info@lbmaa.com</a>.
     </p>
     <p style="margin:0;font-size:13px;color:#555;">— The LBMAA Team</p>
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
-export function announcementNotificationHtml(title: string, body: string, url: string, logoUrl?: string): string {
+export function announcementNotificationHtml(title: string, body: string, url: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New announcement from LBMAA</p>
     <div style="background:#fdf5f5;border:1px solid #e8d0d0;border-radius:4px;padding:14px 16px;margin-bottom:20px;">
@@ -217,10 +218,10 @@ export function announcementNotificationHtml(title: string, body: string, url: s
       <p style="font-size:13px;color:#555;margin:0;line-height:1.5;">${body.substring(0, 200)}${body.length > 200 ? '…' : ''}</p>
     </div>
     ${ctaButton(url, 'Read Announcement')}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
-export function blogPostNotificationHtml(title: string, authorName: string, url: string, logoUrl?: string): string {
+export function blogPostNotificationHtml(title: string, authorName: string, url: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New post in the Parent Blog</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
@@ -230,10 +231,10 @@ export function blogPostNotificationHtml(title: string, authorName: string, url:
       <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin:0;">${title}</p>
     </div>
     ${ctaButton(url, 'Read Post')}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
-export function commentReplyHtml(replierName: string, originalSnippet: string, url: string, logoUrl?: string): string {
+export function commentReplyHtml(replierName: string, originalSnippet: string, url: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${replierName} replied to your comment</p>
     <p style="margin:0 0 12px;color:#555;font-size:13px;line-height:1.65;">Your comment:</p>
@@ -241,10 +242,10 @@ export function commentReplyHtml(replierName: string, originalSnippet: string, u
       <p style="font-size:13px;color:#595959;margin:0;font-style:italic;">"${originalSnippet}${originalSnippet.length >= 100 ? '…' : ''}"</p>
     </div>
     ${ctaButton(url, 'View Reply')}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
 
-export function postCommentHtml(commenterName: string, postTitle: string, url: string, logoUrl?: string): string {
+export function postCommentHtml(commenterName: string, postTitle: string, url: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New comment on your post</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
@@ -254,5 +255,5 @@ export function postCommentHtml(commenterName: string, postTitle: string, url: s
       <p style="font-size:15px;font-weight:600;color:#1a1a2e;margin:0;">${postTitle}</p>
     </div>
     ${ctaButton(url, 'View Comment')}
-  `, logoUrl)
+  `, logoUrl, subtitle)
 }
