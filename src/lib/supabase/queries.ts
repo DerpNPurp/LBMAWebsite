@@ -458,7 +458,7 @@ export async function getUnreadMessageCount(): Promise<number> {
   return (data as number) || 0;
 }
 
-export async function getCommunicationCounts(userId: string): Promise<{
+export async function getCommunicationCounts(): Promise<{
   announcements: number;
   blogPosts: number;
   unreadMessages: number;
@@ -471,10 +471,6 @@ export async function getCommunicationCounts(userId: string): Promise<{
 
   if (announcementResult.error) throw announcementResult.error;
   if (blogResult.error) throw blogResult.error;
-
-  // userId is kept in the signature for API compatibility but is no longer
-  // needed since getUnreadMessageCount uses auth.uid() server-side.
-  void userId;
 
   return {
     announcements: announcementResult.count || 0,

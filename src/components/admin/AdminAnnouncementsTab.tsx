@@ -38,22 +38,6 @@ type Announcement = {
   isPinned?: boolean;
 };
 
-const mockAnnouncements: Announcement[] = [
-  {
-    id: '1',
-    title: 'Belt Testing Scheduled for March 15th',
-    body: 'We are excited to announce that our next belt testing will take place on Saturday, March 15th at 10:00 AM. Students who have been recommended by their instructors will receive a formal invitation via email. Please ensure your child is prepared and arrives 15 minutes early. Good luck to all testing students!',
-    authorName: 'Master Reyes',
-    createdAt: '2026-02-01T10:00:00Z'
-  },
-  {
-    id: '2',
-    title: 'Facility Closed for Maintenance - Feb 10th',
-    body: 'Our facility will be closed on Monday, February 10th for scheduled maintenance and deep cleaning. All classes are cancelled for that day. Regular schedule resumes Tuesday, February 11th. Thank you for your understanding!',
-    authorName: 'Admin Team',
-    createdAt: '2026-01-28T09:00:00Z'
-  }
-];
 
 export function AdminAnnouncementsTab({ user }: { user: User }) {
   const [announcements, setAnnouncements] = useState<Announcement[]>([]);

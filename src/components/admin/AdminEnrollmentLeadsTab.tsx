@@ -8,7 +8,7 @@ import { getEnrollmentLeads } from '../../lib/supabase/queries';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
 import { updateLeadStatus, updateLeadAdminNotes, dismissLeadSilently, deleteEnrollmentLead } from '../../lib/supabase/mutations';
-import type { EnrollmentLead, EnrollmentLeadProgramBooking } from '../../lib/types';
+import type { EnrollmentLead } from '../../lib/types';
 import { DenyModal } from './DenyModal';
 import { PickDateModal } from './PickDateModal';
 import { NewLeadModal } from './NewLeadModal';
@@ -39,13 +39,6 @@ function formatProgramBookingStatus(booking: { status: string; appointment_date:
   return booking.status
 }
 
-function computeLeadStatus(programBookings: EnrollmentLeadProgramBooking[]): EnrollmentLead['status'] {
-  if (!programBookings?.length) return 'new'
-  const statuses = programBookings.map(b => b.status)
-  if (statuses.every(s => s === 'confirmed')) return 'appointment_confirmed'
-  if (statuses.some(s => s === 'scheduled' || s === 'confirmed')) return 'appointment_scheduled'
-  return 'approved'
-}
 
 function ChildrenSection({ lead }: { lead: EnrollmentLead }) {
   const hasChildren = lead.children && lead.children.length > 0

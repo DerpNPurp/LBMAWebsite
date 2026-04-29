@@ -206,7 +206,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
 
         // Get global conversation if available. Do not create here.
         // Global creation can be blocked by RLS depending on account setup.
-        let globalConv = await getGlobalConversation();
+        const globalConv = await getGlobalConversation();
 
         // Ensure current user is a member of the global conversation.
         if (globalConv) {

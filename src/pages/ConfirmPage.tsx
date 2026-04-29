@@ -12,13 +12,15 @@ interface ConfirmResult {
 
 export function ConfirmPage() {
   const { token } = useParams<{ token: string }>()
-  const [state, setState] = useState<'loading' | 'confirmed' | 'already' | 'invalid'>('loading')
+  const [state, setState] = useState<'loading' | 'confirmed' | 'already' | 'invalid'>(
+    token ? 'loading' : 'invalid'
+  )
   const [apptDate, setApptDate] = useState<string | null>(null)
   const [apptTime, setApptTime] = useState<string | null>(null)
   const hasFired = useRef(false)
 
   useEffect(() => {
-    if (!token || hasFired.current) { setState('invalid'); return }
+    if (!token || hasFired.current) return
     hasFired.current = true
     supabase.functions.invoke('confirm-appointment', { body: { token } }).then(({ data, error }) => {
       if (error || !data?.ok) { setState('invalid'); return }
