@@ -378,7 +378,7 @@ export async function getConversationMembers(conversationId: string): Promise<Co
 }
 
 export type MessageWithMeta = Message & {
-  profiles: { display_name: string | null; role: string | null } | null;
+  profiles: { display_name: string | null; role: string | null; avatar_url: string | null } | null;
   message_attachments: MessageAttachment[];
 };
 
@@ -389,7 +389,8 @@ export async function getMessages(conversationId: string): Promise<MessageWithMe
       ${MESSAGE_COLUMNS},
       profiles!messages_author_user_id_fkey (
         display_name,
-        role
+        role,
+        avatar_url
       ),
       message_attachments (${MESSAGE_ATTACHMENT_COLUMNS})
     `)
