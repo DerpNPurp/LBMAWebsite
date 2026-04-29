@@ -10,7 +10,7 @@ function makeHeader(logoUrl?: string, subtitle?: string): string {
     : ''
   const nameBlock = `
     <div>
-      <div style="font-size:13px;font-weight:700;color:#1a1a1a;line-height:1.3;">Los Banos Martial Arts Academy</div>
+      <div style="font-size:17px;font-weight:700;color:#1a1a1a;line-height:1.2;">Los Banos Martial Arts Academy</div>
       ${subtitleHtml}
     </div>`
   if (logoUrl) {
@@ -27,11 +27,10 @@ function makeHeader(logoUrl?: string, subtitle?: string): string {
 }
 
 const FOOTER = `
-  <hr style="border:none;border-top:1px solid #e2dbd5;margin:0 0 16px;" />
-  <p style="margin:0 0 6px;font-size:12px;color:#595959;line-height:1.6;text-align:center;">
-    <strong style="color:#3d3d3d;">Need help?</strong> Reach us at
-    <a href="mailto:info@lbmaa.com" style="color:#A01F23;text-decoration:underline;">info@lbmaa.com</a>
-    or call <a href="tel:+14086200252" style="color:#A01F23;text-decoration:underline;">(408) 620-0252</a>
+  <hr style="border:none;border-top:1px solid #e2dbd5;margin:0 0 14px;" />
+  <p style="margin:0 0 2px;font-size:12px;color:#595959;line-height:1.6;text-align:center;">
+    Questions? <a href="mailto:info@lbmaa.com" style="color:#A01F23;text-decoration:underline;">info@lbmaa.com</a>
+    or <a href="tel:+14086200252" style="color:#A01F23;text-decoration:underline;">(408) 620-0252</a>
   </p>
   <p style="margin:0;font-size:12px;color:#595959;line-height:1.6;text-align:center;">1209 South 6th St Suite E, Los Banos, CA</p>
 `
