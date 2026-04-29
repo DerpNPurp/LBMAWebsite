@@ -13,7 +13,9 @@ import { Switch } from '../ui/switch';
 import { Skeleton } from '../ui/skeleton';
 import { Plus, Edit2, User as UserIcon, Users, Home, Trash2, Star, Check, Loader2 } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
-import { createReview, updateProfile, updateReview, upsertUserNotificationPreferences } from '../../lib/supabase/mutations';
+import { createReview, updateProfile, updateReview, upsertUserNotificationPreferences, updateProfileAvatar } from '../../lib/supabase/mutations';
+import { PhotoUploader } from './PhotoUploader';
+import { uploadProfileImage, deleteProfileImage } from '../../lib/supabase/storage';
 import { getUserNotificationPreferences } from '../../lib/supabase/queries';
 import type { User, Review } from '../../lib/types';
 import { toast } from 'sonner';
@@ -37,6 +39,7 @@ type Student = {
   beltLevel: string;
   status: 'active' | 'inactive';
   notes: string;
+  photoUrl: string | null;
 };
 
 const beltLevels = [
@@ -176,6 +179,7 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     beltLevel: s.belt_level || 'White Belt',
     status: s.status,
     notes: s.notes || '',
+    photoUrl: s.photo_url ?? null,
   }));
 
   if (profileLoading) {
@@ -317,6 +321,27 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUploadStudentPhoto = async (studentId: string, file: File) => {
+    const path = `students/${studentId}/photo`;
+    const url = await uploadProfileImage(path, file);
+    try {
+      await updateStudent(studentId, { photo_url: url });
+      toast.success('Photo updated');
+    } catch (err) {
+      await deleteProfileImage(path).catch(() => {});
+      throw err;
+    }
+  };
+
+  const handleRemoveStudentPhoto = async (studentId: string) => {
+    const path = `students/${studentId}/photo`;
+    await deleteProfileImage(path).catch((err) => {
+      console.warn('Storage delete failed, proceeding to clear DB URL', err);
+    });
+    await updateStudent(studentId, { photo_url: null });
+    toast.success('Photo removed');
   };
 
   const handleSetPrimaryGuardian = async (guardianId: string) => {
@@ -472,6 +497,44 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
           Manage your family and student information
         </p>
       </div>
+
+      {/* Profile Photo */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <UserIcon className="w-5 h-5" />
+            <CardTitle>Profile Photo</CardTitle>
+          </div>
+          <CardDescription>
+            This photo appears on your account and in messages
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PhotoUploader
+            currentUrl={user.avatarUrl}
+            fallback={user.displayName?.[0] ?? '?'}
+            onUpload={async (file) => {
+              const path = `profiles/${user.id}/avatar`;
+              const url = await uploadProfileImage(path, file);
+              try {
+                await updateProfileAvatar(user.id, url);
+              } catch (err) {
+                await deleteProfileImage(path).catch(() => {});
+                throw err;
+              }
+              await onRefreshUser();
+              toast.success('Profile photo updated');
+            }}
+            onRemove={async () => {
+              const path = `profiles/${user.id}/avatar`;
+              await deleteProfileImage(path);
+              await updateProfileAvatar(user.id, null);
+              await onRefreshUser();
+              toast.success('Profile photo removed');
+            }}
+          />
+        </CardContent>
+      </Card>
 
       {/* Family Information */}
       <Card>
@@ -743,11 +806,13 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
             <div key={student.id} className="p-4 border rounded-lg">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="text-lg">
-                      {student.firstName[0]}{student.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PhotoUploader
+                    currentUrl={student.photoUrl}
+                    fallback={`${student.firstName[0]}${student.lastName[0]}`}
+                    size="md"
+                    onUpload={(file) => handleUploadStudentPhoto(student.id, file)}
+                    onRemove={() => handleRemoveStudentPhoto(student.id)}
+                  />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-lg">
@@ -869,6 +934,16 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
                   value={editingStudent.notes}
                   onChange={(e) => setEditingStudent({ ...editingStudent, notes: e.target.value })}
                   className="min-h-[100px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Student Photo</Label>
+                <PhotoUploader
+                  currentUrl={students.find(s => s.id === editingStudent.id)?.photoUrl ?? null}
+                  fallback={`${editingStudent.firstName[0] ?? ''}${editingStudent.lastName[0] ?? ''}`}
+                  size="sm"
+                  onUpload={(file) => handleUploadStudentPhoto(editingStudent.id, file)}
+                  onRemove={() => handleRemoveStudentPhoto(editingStudent.id)}
                 />
               </div>
             </div>

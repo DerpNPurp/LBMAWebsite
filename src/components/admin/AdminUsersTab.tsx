@@ -1,10 +1,11 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getAllProfiles } from '../../lib/supabase/queries';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../ui/table';
 import { Badge } from '../ui/badge';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
 import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '../ui/tabs';
@@ -35,6 +36,7 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
   const [editingStudent, setEditingStudent] = useState<{ studentId: string; newBeltLevel: string; newStatus: StudentStatus } | null>(null);
   const [editingGuardian, setEditingGuardian] = useState<GuardianRow | null>(null);
   const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
+  const [profileAvatarMap, setProfileAvatarMap] = useState<Map<string, string | null>>(new Map());
   const {
     filteredFamilies,
     filteredStudents,
@@ -48,6 +50,14 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
     saveGuardian,
     setPrimaryGuardian,
   } = useAdminFamilies(searchTerm);
+
+  useEffect(() => {
+    getAllProfiles()
+      .then((profiles) => {
+        setProfileAvatarMap(new Map(profiles.map((p) => [p.user_id, p.avatar_url ?? null])));
+      })
+      .catch(console.error);
+  }, []);
 
   const handleViewDetails = async (familyId: string) => {
     try {
@@ -241,11 +251,16 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                       <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No families found.</TableCell>
                     </TableRow>
                   ) : (
-                    filteredFamilies.map(family => (
+                    filteredFamilies.map(family => {
+                      const familyAvatarUrl = profileAvatarMap.get(family.ownerUserId);
+                      return (
                       <TableRow key={family.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
+                              {familyAvatarUrl && (
+                                <AvatarImage src={familyAvatarUrl} alt={family.primaryContact} />
+                              )}
                               <AvatarFallback>{family.primaryContact.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{family.primaryContact}</span>
@@ -304,7 +319,8 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
@@ -340,6 +356,9 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
+                              {student.photoUrl && (
+                                <AvatarImage src={student.photoUrl} alt={student.studentName} />
+                              )}
                               <AvatarFallback>{student.studentName.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
                             <span className="font-medium">{student.studentName}</span>
@@ -500,7 +519,17 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                   {selectedFamily.students.map(student => (
                     <div key={student.studentId} className="p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">{student.studentName}</p>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            {student.photoUrl && (
+                              <AvatarImage src={student.photoUrl} alt={student.studentName} />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {student.firstName[0]}{student.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="font-medium">{student.studentName}</p>
+                        </div>
                         <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>{student.status}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">Age {student.age}</p>

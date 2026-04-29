@@ -85,3 +85,32 @@ export function getFileSizeMB(fileSizeBytes: number): number {
 }
 
 export const MAX_FILE_SIZE_MB = 10;
+
+// ============================================
+// PROFILE PICTURES
+// ============================================
+
+const PROFILE_PICTURES_BUCKET = 'profile-pictures';
+
+export const MAX_PROFILE_IMAGE_SIZE_MB = 5;
+export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+export function getProfilePublicUrl(path: string): string {
+  const { data } = supabase.storage.from(PROFILE_PICTURES_BUCKET).getPublicUrl(path);
+  return data.publicUrl;
+}
+
+export async function uploadProfileImage(path: string, file: File): Promise<string> {
+  const { error } = await supabase.storage
+    .from(PROFILE_PICTURES_BUCKET)
+    .upload(path, file, { cacheControl: '3600', upsert: true });
+  if (error) throw error;
+  return getProfilePublicUrl(path);
+}
+
+export async function deleteProfileImage(path: string): Promise<void> {
+  const { error } = await supabase.storage
+    .from(PROFILE_PICTURES_BUCKET)
+    .remove([path]);
+  if (error) throw error;
+}

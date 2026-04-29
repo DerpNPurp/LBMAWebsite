@@ -3,7 +3,7 @@ export type MessageRecord = {
   author_user_id: string;
   body: string;
   created_at: string;
-  profiles?: { display_name?: string | null } | null;
+  profiles?: { display_name?: string | null; avatar_url?: string | null } | null;
   message_attachments?: Array<{
     file_name?: string | null;
     storage_path?: string | null;
@@ -14,6 +14,7 @@ export type MessageListItem = {
   id: string;
   authorId: string;
   authorName: string;
+  authorAvatarUrl: string | null;
   body: string;
   createdAt: string;
   attachmentName?: string;
@@ -47,6 +48,7 @@ export function formatMessages(messagesData: MessageRecord[]): MessageListItem[]
     id: message.message_id,
     authorId: message.author_user_id,
     authorName: message.profiles?.display_name || 'Unknown',
+    authorAvatarUrl: message.profiles?.avatar_url ?? null,
     body: message.body,
     createdAt: message.created_at,
     attachmentName: message.message_attachments?.[0]?.file_name || undefined,

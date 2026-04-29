@@ -50,6 +50,18 @@ export async function updateProfile(userId: string, updates: ProfileUpdates): Pr
   return data;
 }
 
+export async function updateProfileAvatar(userId: string, avatarUrl: string | null): Promise<Profile> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .update({ avatar_url: avatarUrl })
+    .eq('user_id', userId)
+    .select(PROFILE_COLUMNS)
+    .single();
+
+  if (error) throw error;
+  return data;
+}
+
 // ============================================
 // FAMILIES
 // ============================================

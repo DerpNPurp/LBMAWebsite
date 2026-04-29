@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Send, Paperclip, Users as UsersIcon, Loader2 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
@@ -34,6 +34,7 @@ import {
   isDirectConversationAllowed,
   type MessageListItem,
 } from './messages/helpers';
+import type { Profile } from '../../lib/types';
 
 type User = {
   id: string;
@@ -49,6 +50,7 @@ type Conversation = {
   unreadCount: number;
   lastMessage?: string;
   lastMessageTime?: string;
+  avatarUrl?: string | null;
 };
 
 type MessagesTabProps = {
@@ -77,6 +79,8 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const [creatingDirectConversation, setCreatingDirectConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // Populated during initial load; used to resolve avatar URLs when creating DM conversations.
+  const profilesRef = useRef<Profile[]>([]);
 
   useEffect(() => {
     if (!onUnreadCountChange) return;
@@ -169,6 +173,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
         unreadCount: calculateUnreadCount(directMessages, user.id, selfMembership?.last_read_at),
         lastMessage: lastMessage?.body?.substring(0, 50),
         lastMessageTime: lastMessage?.created_at,
+        avatarUrl: profilesRef.current.find(p => p.user_id === target.userId)?.avatar_url ?? null,
       });
 
       setSelectedConversationId(directConversation.conversation_id);
@@ -188,6 +193,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
         
         // Load all profiles for DM names
         const profiles = await getAllProfiles();
+        profilesRef.current = profiles;
         const allowedTargets = profiles
           .filter((profile) => profile.user_id !== user.id && isDirectConversationAllowed(user.role, profile.role))
           .map((profile) => ({
@@ -263,6 +269,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
             unreadCount,
             lastMessage: lastMsg?.body?.substring(0, 50),
             lastMessageTime: lastMsg?.created_at,
+            avatarUrl: otherProfile?.avatar_url ?? null,
           });
 
           setMessages((prev) => ({
@@ -505,6 +512,9 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                       <div className="flex items-start justify-between">
                         <div className="flex items-center gap-2 flex-1 min-w-0">
                           <Avatar className="h-10 w-10 flex-shrink-0">
+                            {conversation.avatarUrl && conversation.type === 'direct' && (
+                              <AvatarImage src={conversation.avatarUrl} alt={conversation.name} />
+                            )}
                             <AvatarFallback>
                               {conversation.type === 'group' ? (
                                 <UsersIcon className="w-5 h-5" />
@@ -552,6 +562,9 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
           <CardHeader className="border-b">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
+                {selectedConversation?.avatarUrl && selectedConversation.type === 'direct' && (
+                  <AvatarImage src={selectedConversation.avatarUrl} alt={selectedConversation.name} />
+                )}
                 <AvatarFallback>
                   {selectedConversation?.type === 'group' ? (
                     <UsersIcon className="w-5 h-5" />
@@ -586,8 +599,18 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                     return (
                       <div
                         key={message.id}
-                        className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                        className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                       >
+                        {!isOwnMessage && (
+                          <Avatar className="h-7 w-7 flex-shrink-0">
+                            {message.authorAvatarUrl && (
+                              <AvatarImage src={message.authorAvatarUrl} alt={message.authorName} />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {message.authorName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                        )}
                         <div
                           className={`max-w-[70%] ${
                             isOwnMessage
