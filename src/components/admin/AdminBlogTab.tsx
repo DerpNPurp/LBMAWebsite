@@ -7,7 +7,6 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Label } from '../ui/label';
 import { Avatar, AvatarFallback } from '../ui/avatar';
-import { Badge } from '../ui/badge';
 import { toast } from 'sonner';
 import { Edit2, Trash2, MessageCircle, Send, Search, Loader2 } from 'lucide-react';
 import { getBlogPosts, getBlogCommentsForPosts } from '../../lib/supabase/queries';

@@ -68,7 +68,6 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     removeGuardian,
     addStudent,
     updateStudent,
-    removeStudent,
   } = useProfile(user);
 
   const [isEditingFamily, setIsEditingFamily] = useState(false);
@@ -114,7 +113,7 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
-  const [reviewLoading, setReviewLoading] = useState(false);
+  const [, setReviewLoading] = useState(false);
   const [editingFamilyData, setEditingFamilyData] = useState({
     address: '',
     city: '',

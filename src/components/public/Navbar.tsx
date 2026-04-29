@@ -27,8 +27,9 @@ export function Navbar({ onLogin }: { onLogin: () => void }) {
   }, []);
 
   useEffect(() => {
-    setMobileOpen(false);
     window.scrollTo({ top: 0, behavior: 'instant' });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: close mobile menu on navigation
+    setMobileOpen(false);
   }, [location.pathname]);
 
   const isActive = (path: string) => {

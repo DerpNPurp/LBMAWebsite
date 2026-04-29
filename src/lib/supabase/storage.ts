@@ -28,10 +28,6 @@ export async function uploadFile(
 // FILE DOWNLOAD
 // ============================================
 
-export async function getFileUrl(path: string): Promise<string> {
-  return getSignedUrl(path);
-}
-
 export async function getSignedUrl(path: string, expiresIn: number = 3600): Promise<string> {
   const { data, error } = await supabase.storage
     .from(BUCKET_NAME)

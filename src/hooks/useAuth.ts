@@ -119,7 +119,6 @@ export function useAuth() {
       isMounted = false;
       subscription.unsubscribe();
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const loadUserProfile = async (supabaseUser: SupabaseUser, seq: number) => {
