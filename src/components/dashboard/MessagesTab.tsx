@@ -34,6 +34,7 @@ import {
   isDirectConversationAllowed,
   type MessageListItem,
 } from './messages/helpers';
+import type { Profile } from '../../lib/types';
 
 type User = {
   id: string;
@@ -78,7 +79,8 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const [creatingDirectConversation, setCreatingDirectConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const profilesRef = useRef<any[]>([]);
+  // Populated during initial load; used to resolve avatar URLs when creating DM conversations.
+  const profilesRef = useRef<Profile[]>([]);
 
   useEffect(() => {
     if (!onUnreadCountChange) return;
