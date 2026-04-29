@@ -52,6 +52,8 @@ export function PhotoUploader({
     setUploading(true);
     try {
       await onUpload(file);
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to upload photo.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -63,6 +65,8 @@ export function PhotoUploader({
     setRemoving(true);
     try {
       await onRemove();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to remove photo.');
     } finally {
       setRemoving(false);
     }
