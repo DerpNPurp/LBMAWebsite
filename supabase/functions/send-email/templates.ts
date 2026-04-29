@@ -238,7 +238,7 @@ export function commentReplyHtml(replierName: string, originalSnippet: string, u
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${replierName} replied to your comment</p>
     <p style="margin:0 0 12px;color:#555;font-size:13px;line-height:1.65;">Your comment:</p>
     <div style="background:#f8f9fa;border:1px solid #e2e8f0;padding:12px 16px;margin-bottom:20px;border-radius:4px;">
-      <p style="font-size:13px;color:#666;margin:0;font-style:italic;">"${originalSnippet}${originalSnippet.length >= 100 ? '…' : ''}"</p>
+      <p style="font-size:13px;color:#595959;margin:0;font-style:italic;">"${originalSnippet}${originalSnippet.length >= 100 ? '…' : ''}"</p>
     </div>
     ${ctaButton(url, 'View Reply')}
   `, logoUrl)
