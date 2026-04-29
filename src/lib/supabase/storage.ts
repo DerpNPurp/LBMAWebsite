@@ -88,7 +88,7 @@ export const MAX_FILE_SIZE_MB = 10;
 
 const PROFILE_PICTURES_BUCKET = 'profile-pictures';
 
-export const MAX_PROFILE_IMAGE_SIZE_MB = 5;
+export const MAX_PROFILE_IMAGE_SIZE_MB = 10;
 export const ACCEPTED_IMAGE_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
 export function getProfilePublicUrl(path: string): string {
