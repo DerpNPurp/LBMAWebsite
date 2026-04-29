@@ -35,6 +35,12 @@ function adminClient() {
   )
 }
 
+function getAppUrl(): string {
+  const url = Deno.env.get('APP_URL')
+  if (!url) throw new Error('APP_URL environment variable is not set')
+  return url
+}
+
 async function getLeadAppointments(
   supabase: ReturnType<typeof adminClient>,
   leadId: string,
@@ -93,10 +99,11 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
 
   if (error || !lead) throw new Error(`Enrollment lead not found: ${record.lead_id}`)
 
-  const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173'
+  const appUrl = getAppUrl()
+  const logoUrl = `${appUrl}/logo.png`
   const adminUrl = `${appUrl}/admin`
   const bookingUrl = lead.booking_token ? `${appUrl}/book/${lead.booking_token}` : appUrl
-  const confirmUrl = lead.booking_token ? `${appUrl}/confirm/${lead.booking_token}` : appUrl
+  const _confirmUrl = lead.booking_token ? `${appUrl}/confirm/${lead.booking_token}` : appUrl
 
   let subject: string
   let html: string
@@ -113,7 +120,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
         ? admins.map((a: { email: string }) => a.email)
         : [record.recipient_email]
       subject = `New enrollment inquiry — ${lead.parent_name}`
-      html = enrollmentNotificationHtml(lead, adminUrl)
+      html = enrollmentNotificationHtml(lead, adminUrl, logoUrl)
       await Promise.all(recipients.map((to: string) => sendEmail(to, subject, html)))
       await supabase
         .from('enrollment_lead_notifications')
@@ -123,7 +130,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
     }
     case 'submission':
       subject = 'Thank you for your interest in LBMAA'
-      html = submissionConfirmationHtml(lead)
+      html = submissionConfirmationHtml(lead, logoUrl)
       break
     case 'approval': {
       const { data: programBookings } = await supabase
@@ -149,15 +156,15 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
             }
           })
         )
-        html = multiProgramApprovalEmailHtml(lead.parent_name, programs)
+        html = multiProgramApprovalEmailHtml(lead.parent_name, programs, logoUrl)
       } else {
-        html = approvalEmailHtml(lead, bookingUrl)
+        html = approvalEmailHtml(lead, bookingUrl, logoUrl)
       }
       break
     }
     case 'denial':
       subject = 'Your enrollment inquiry at LBMAA'
-      html = denialEmailHtml(lead)
+      html = denialEmailHtml(lead, logoUrl)
       break
     case 'booking_confirmation': {
       const appointments = await getLeadAppointments(supabase, record.lead_id, appUrl)
@@ -166,7 +173,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
         return
       }
       subject = appointments.length > 1 ? 'Appointments confirmed — LBMAA' : 'Appointment confirmed — LBMAA'
-      html = bookingConfirmationHtml(lead.parent_name, appointments)
+      html = bookingConfirmationHtml(lead.parent_name, appointments, logoUrl)
       break
     }
     case 'reminder': {
@@ -180,7 +187,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
       subject = appointments.length > 1
         ? 'Reminder: your LBMAA appointments are in 2 days'
         : 'Reminder: your LBMAA appointment is in 2 days'
-      html = reminderEmailHtml(lead.parent_name, appointments, reminderConfirmUrl)
+      html = reminderEmailHtml(lead.parent_name, appointments, reminderConfirmUrl, logoUrl)
       break
     }
     default:
@@ -221,7 +228,9 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
     .single()
 
   const senderName = senderProfile?.display_name ?? 'Someone'
-  const portalUrl = `${Deno.env.get('APP_URL') ?? 'http://localhost:5173'}/dashboard?tab=messages`
+  const appUrl = getAppUrl()
+  const portalUrl = `${appUrl}/dashboard?tab=messages`
+  const logoUrl = `${appUrl}/logo.png`
 
   // Check if the recipient has opted out of message emails
   const { data: prefRow } = await supabase
@@ -248,13 +257,14 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
   await sendEmail(
     user.email,
     `New message from ${senderName} — LBMAA Portal`,
-    messagingNotificationHtml(senderName, portalUrl)
+    messagingNotificationHtml(senderName, portalUrl, logoUrl)
   )
 }
 
 async function handlePortalNotification(record: PortalEmailQueueRecord): Promise<void> {
   const supabase = adminClient()
-  const appUrl = Deno.env.get('APP_URL') ?? 'http://localhost:5173'
+  const appUrl = getAppUrl()
+  const logoUrl = `${appUrl}/logo.png`
   const tab = record.payload.tab ?? 'announcements'
   const tabUrl = `${appUrl}/dashboard?tab=${tab}`
 
@@ -267,7 +277,8 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
       html = announcementNotificationHtml(
         record.payload.title ?? '',
         record.payload.body ?? '',
-        tabUrl
+        tabUrl,
+        logoUrl
       )
       break
     case 'blog_post':
@@ -275,7 +286,8 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
       html = blogPostNotificationHtml(
         record.payload.title ?? '',
         record.payload.author_name ?? 'A member',
-        tabUrl
+        tabUrl,
+        logoUrl
       )
       break
     case 'comment_reply':
@@ -283,7 +295,8 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
       html = commentReplyHtml(
         record.payload.replier_name ?? 'Someone',
         record.payload.original_snippet ?? '',
-        tabUrl
+        tabUrl,
+        logoUrl
       )
       break
     case 'post_comment':
@@ -291,7 +304,8 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
       html = postCommentHtml(
         record.payload.commenter_name ?? 'Someone',
         record.payload.post_title ?? 'your post',
-        tabUrl
+        tabUrl,
+        logoUrl
       )
       break
     default:
