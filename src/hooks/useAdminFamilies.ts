@@ -38,7 +38,6 @@ export type StudentRow = {
 export type Family = {
   id: string;
   ownerUserId: string;
-  avatarUrl: string | null;
   primaryEmail: string;
   primaryContact: string;
   phoneNumber: string | null;
@@ -96,7 +95,6 @@ function mapFamilyRecord(details: FamilyWithRelations): Family {
   return {
     id: details.family_id,
     ownerUserId: details.owner_user_id,
-    avatarUrl: null, // populated separately via getAllProfiles in AdminUsersTab
     primaryEmail: details.primary_email,
     primaryContact: primaryGuardian?.name ?? 'Unknown',
     phoneNumber: primaryGuardian?.phone ?? null,

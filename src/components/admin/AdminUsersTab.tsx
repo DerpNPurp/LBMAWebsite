@@ -251,16 +251,15 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                       <TableCell colSpan={7} className="py-10 text-center text-muted-foreground">No families found.</TableCell>
                     </TableRow>
                   ) : (
-                    filteredFamilies.map(family => (
+                    filteredFamilies.map(family => {
+                      const familyAvatarUrl = profileAvatarMap.get(family.ownerUserId);
+                      return (
                       <TableRow key={family.id}>
                         <TableCell>
                           <div className="flex items-center gap-2">
                             <Avatar className="h-8 w-8">
-                              {profileAvatarMap.get(family.ownerUserId) && (
-                                <AvatarImage
-                                  src={profileAvatarMap.get(family.ownerUserId)!}
-                                  alt={family.primaryContact}
-                                />
+                              {familyAvatarUrl && (
+                                <AvatarImage src={familyAvatarUrl} alt={family.primaryContact} />
                               )}
                               <AvatarFallback>{family.primaryContact.split(' ').map(n => n[0]).join('')}</AvatarFallback>
                             </Avatar>
@@ -320,7 +319,8 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                           </div>
                         </TableCell>
                       </TableRow>
-                    ))
+                      );
+                    })
                   )}
                 </TableBody>
               </Table>
