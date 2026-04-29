@@ -519,7 +519,17 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                   {selectedFamily.students.map(student => (
                     <div key={student.studentId} className="p-3 border rounded-lg">
                       <div className="flex items-center justify-between mb-2">
-                        <p className="font-medium">{student.studentName}</p>
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-10 w-10">
+                            {student.photoUrl && (
+                              <AvatarImage src={student.photoUrl} alt={student.studentName} />
+                            )}
+                            <AvatarFallback className="text-xs">
+                              {student.firstName[0]}{student.lastName[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="font-medium">{student.studentName}</p>
+                        </div>
                         <Badge variant={student.status === 'active' ? 'default' : 'secondary'}>{student.status}</Badge>
                       </div>
                       <p className="text-sm text-muted-foreground">Age {student.age}</p>
