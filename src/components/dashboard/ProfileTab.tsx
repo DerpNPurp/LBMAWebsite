@@ -493,7 +493,12 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
             onUpload={async (file) => {
               const path = `profiles/${user.id}/avatar`;
               const url = await uploadProfileImage(path, file);
-              await updateProfileAvatar(user.id, url);
+              try {
+                await updateProfileAvatar(user.id, url);
+              } catch (err) {
+                await deleteProfileImage(path).catch(() => {});
+                throw err;
+              }
               await onRefreshUser();
               toast.success('Profile photo updated');
             }}
