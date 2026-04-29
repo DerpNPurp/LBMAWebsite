@@ -101,7 +101,7 @@ export function multiProgramApprovalEmailHtml(
       Use the buttons below to choose an appointment date for each program.
     </p>
     ${sections}
-    <p style="margin:0 0 18px;font-size:12px;color:#aaa;text-align:center;">
+    <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">
       Each booking link is unique to your inquiry. Do not share them.
     </p>
   `, logoUrl)
@@ -116,7 +116,7 @@ export function approvalEmailHtml(lead: EnrollmentLead, bookingUrl: string, logo
       Use the button below to choose an appointment date that works for you.
     </p>
     ${ctaButton(bookingUrl, 'Book Your Appointment')}
-    <p style="margin:0 0 18px;font-size:12px;color:#aaa;text-align:center;">
+    <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">
       This booking link is unique to your inquiry. Do not share it.
     </p>
   `, logoUrl)
@@ -141,7 +141,7 @@ export function bookingConfirmationHtml(parentName: string, appointments: Appoin
       </div>
       <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
       <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
-      <p style="margin:10px 0 0;font-size:12px;color:#888;">
+      <p style="margin:10px 0 0;font-size:12px;color:#595959;">
         Need to reschedule? <a href="${a.rebookingUrl}" style="color:#A01F23;text-decoration:none;">Click here</a>
       </p>
     </div>
@@ -166,7 +166,7 @@ export function reminderEmailHtml(parentName: string, appointments: AppointmentI
       </div>
       <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
       <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
-      <p style="margin:10px 0 0;font-size:12px;color:#888;">
+      <p style="margin:10px 0 0;font-size:12px;color:#595959;">
         Need to reschedule? <a href="${a.rebookingUrl}" style="color:#A01F23;text-decoration:none;">Click here</a>
       </p>
     </div>
@@ -195,7 +195,7 @@ export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: strin
       You can expect to hear back from us within 1–2 business days.
     </p>
     <div style="background:#f9f9f9;border:1px solid #e8e8e8;border-radius:6px;padding:14px 18px;margin:0 0 20px;">
-      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#999;margin-bottom:8px;">Your inquiry details</div>
+      <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#595959;margin-bottom:8px;">Your inquiry details</div>
       <table style="width:100%;border-collapse:collapse;">
         ${lead.student_name ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Student</td><td style="padding:4px 0;color:#555;">${lead.student_name}${lead.student_age ? ` (age ${lead.student_age})` : ''}</td></tr>` : ''}
         <tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Contact</td><td style="padding:4px 0;color:#555;">${lead.parent_email}</td></tr>
