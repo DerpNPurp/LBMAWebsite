@@ -181,18 +181,6 @@ export async function updateStudent(studentId: string, updates: Partial<Student>
   return data;
 }
 
-export async function updateStudentPhoto(studentId: string, photoUrl: string | null): Promise<Student> {
-  const { data, error } = await supabase
-    .from('students')
-    .update({ photo_url: photoUrl })
-    .eq('student_id', studentId)
-    .select(STUDENT_COLUMNS)
-    .single();
-
-  if (error) throw error;
-  return data;
-}
-
 export async function updateStudentsByFamily(
   familyId: string,
   updates: Partial<Student>
