@@ -337,8 +337,10 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
 
   const handleRemoveStudentPhoto = async (studentId: string) => {
     const path = `students/${studentId}/photo`;
+    await deleteProfileImage(path).catch((err) => {
+      console.warn('Storage delete failed, proceeding to clear DB URL', err);
+    });
     await updateStudent(studentId, { photo_url: null });
-    await deleteProfileImage(path).catch(() => {});
     toast.success('Photo removed');
   };
 
