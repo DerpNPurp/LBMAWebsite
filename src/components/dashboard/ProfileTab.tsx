@@ -328,17 +328,17 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     const url = await uploadProfileImage(path, file);
     try {
       await updateStudent(studentId, { photo_url: url });
+      toast.success('Photo updated');
     } catch (err) {
       await deleteProfileImage(path).catch(() => {});
       throw err;
     }
-    toast.success('Photo updated');
   };
 
   const handleRemoveStudentPhoto = async (studentId: string) => {
     const path = `students/${studentId}/photo`;
-    await deleteProfileImage(path);
     await updateStudent(studentId, { photo_url: null });
+    await deleteProfileImage(path).catch(() => {});
     toast.success('Photo removed');
   };
 
