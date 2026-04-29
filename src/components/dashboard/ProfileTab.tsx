@@ -39,6 +39,7 @@ type Student = {
   beltLevel: string;
   status: 'active' | 'inactive';
   notes: string;
+  photoUrl: string | null;
 };
 
 const beltLevels = [
@@ -178,6 +179,7 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     beltLevel: s.belt_level || 'White Belt',
     status: s.status,
     notes: s.notes || '',
+    photoUrl: s.photo_url ?? null,
   }));
 
   if (profileLoading) {
@@ -319,6 +321,25 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
     } finally {
       setSaving(false);
     }
+  };
+
+  const handleUploadStudentPhoto = async (studentId: string, file: File) => {
+    const path = `students/${studentId}/photo`;
+    const url = await uploadProfileImage(path, file);
+    try {
+      await updateStudent(studentId, { photo_url: url });
+    } catch (err) {
+      await deleteProfileImage(path).catch(() => {});
+      throw err;
+    }
+    toast.success('Photo updated');
+  };
+
+  const handleRemoveStudentPhoto = async (studentId: string) => {
+    const path = `students/${studentId}/photo`;
+    await deleteProfileImage(path);
+    await updateStudent(studentId, { photo_url: null });
+    toast.success('Photo removed');
   };
 
   const handleSetPrimaryGuardian = async (guardianId: string) => {
@@ -783,11 +804,13 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
             <div key={student.id} className="p-4 border rounded-lg">
               <div className="flex items-start justify-between mb-3">
                 <div className="flex items-start gap-4">
-                  <Avatar className="h-16 w-16">
-                    <AvatarFallback className="text-lg">
-                      {student.firstName[0]}{student.lastName[0]}
-                    </AvatarFallback>
-                  </Avatar>
+                  <PhotoUploader
+                    currentUrl={student.photoUrl}
+                    fallback={`${student.firstName[0]}${student.lastName[0]}`}
+                    size="md"
+                    onUpload={(file) => handleUploadStudentPhoto(student.id, file)}
+                    onRemove={() => handleRemoveStudentPhoto(student.id)}
+                  />
                   <div>
                     <div className="flex items-center gap-2 mb-1">
                       <h3 className="font-semibold text-lg">
@@ -909,6 +932,16 @@ export function ProfileTab({ user, onRefreshUser }: { user: NonNullable<User>; o
                   value={editingStudent.notes}
                   onChange={(e) => setEditingStudent({ ...editingStudent, notes: e.target.value })}
                   className="min-h-[100px]"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>Student Photo</Label>
+                <PhotoUploader
+                  currentUrl={students.find(s => s.id === editingStudent.id)?.photoUrl ?? null}
+                  fallback={`${editingStudent.firstName[0] ?? ''}${editingStudent.lastName[0] ?? ''}`}
+                  size="sm"
+                  onUpload={(file) => handleUploadStudentPhoto(editingStudent.id, file)}
+                  onRemove={() => handleRemoveStudentPhoto(editingStudent.id)}
                 />
               </div>
             </div>
