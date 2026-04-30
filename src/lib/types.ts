@@ -117,6 +117,7 @@ export type Conversation = {
   conversation_id: string;
   type: 'global' | 'dm';
   created_by: string;
+  hidden: boolean;
   created_at: string;
   updated_at: string;
 };

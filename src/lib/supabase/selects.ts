@@ -9,7 +9,7 @@ export const GUARDIAN_COLUMNS =
 export const STUDENT_COLUMNS =
   'student_id, family_id, first_name, last_name, date_of_birth, belt_level, status, notes, photo_url, created_at, updated_at';
 
-export const CONVERSATION_COLUMNS = 'conversation_id, type, created_by, created_at, updated_at';
+export const CONVERSATION_COLUMNS = 'conversation_id, type, created_by, hidden, created_at, updated_at';
 
 export const CONVERSATION_MEMBER_COLUMNS = 'conversation_id, user_id, last_read_at, created_at';
 

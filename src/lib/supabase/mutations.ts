@@ -363,6 +363,15 @@ export async function createConversation(conversation: Omit<Conversation, 'conve
   return data;
 }
 
+export async function updateConversationHidden(conversationId: string, hidden: boolean): Promise<void> {
+  const { error } = await supabase
+    .from('conversations')
+    .update({ hidden })
+    .eq('conversation_id', conversationId);
+
+  if (error) throw error;
+}
+
 export async function createOrGetDirectConversation(otherUserId: string): Promise<string> {
   const { data, error } = await supabase.rpc('create_or_get_dm_conversation', {
     other_user_id: otherUserId,

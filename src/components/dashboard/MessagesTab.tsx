@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Send, Paperclip, Users as UsersIcon, Loader2, ChevronLeft } from 'lucide-react';
+import { Send, Paperclip, Users as UsersIcon, Loader2, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import {
@@ -26,6 +26,7 @@ import {
   createMessageAttachment,
   createOrGetDirectConversation,
   markConversationAsRead,
+  updateConversationHidden,
 } from '../../lib/supabase/mutations';
 import { subscribeToMessages, unsubscribe } from '../../lib/supabase/realtime';
 import { uploadFile, generateFilePath, isValidFileType, MAX_FILE_SIZE_MB, getFileSizeMB, getSignedUrl } from '../../lib/supabase/storage';
@@ -100,6 +101,8 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [participantFamilyData, setParticipantFamilyData] = useState<FamilyWithRelations | null>(null);
   const [loadingParticipantFamily, setLoadingParticipantFamily] = useState(false);
+  const [globalConvId, setGlobalConvId] = useState<string | null>(null);
+  const [globalConvHidden, setGlobalConvHidden] = useState(false);
 
   useEffect(() => {
     if (!onUnreadCountChange) return;
@@ -148,6 +151,36 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
       if (error?.code !== '23505') {
         throw error;
       }
+    }
+  };
+
+  const handleToggleGlobalChat = async () => {
+    if (!globalConvId) return;
+    const newHidden = !globalConvHidden;
+    try {
+      await updateConversationHidden(globalConvId, newHidden);
+      setGlobalConvHidden(newHidden);
+      if (newHidden) {
+        setConversations((prev) => prev.filter((c) => c.id !== globalConvId));
+        if (selectedConversationId === globalConvId) setSelectedConversationId(null);
+      } else {
+        const convMessages = await getMessages(globalConvId);
+        const lastMsg = convMessages[convMessages.length - 1];
+        setMessages((prev) => ({ ...prev, [globalConvId]: formatMessages(convMessages) }));
+        setConversations((prev) => [
+          {
+            id: globalConvId,
+            name: 'Everyone - Group Chat',
+            type: 'group',
+            unreadCount: 0,
+            lastMessage: lastMsg?.body?.substring(0, 50),
+            lastMessageTime: lastMsg?.created_at,
+          },
+          ...prev.filter((c) => c.id !== globalConvId),
+        ]);
+      }
+    } catch (error) {
+      toast.error('Failed to update group chat: ' + getErrorMessage(error));
     }
   };
 
@@ -223,12 +256,12 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
           .sort((a, b) => a.displayName.localeCompare(b.displayName));
         setDirectMessageTargets(allowedTargets);
 
-        // Get global conversation if available. Do not create here.
-        // Global creation can be blocked by RLS depending on account setup.
         const globalConv = await getGlobalConversation();
 
-        // Ensure current user is a member of the global conversation.
         if (globalConv) {
+          setGlobalConvId(globalConv.conversation_id);
+          setGlobalConvHidden(globalConv.hidden);
+
           try {
             await safeAddConversationMember(globalConv.conversation_id, user.id);
           } catch (memberError: any) {
@@ -254,19 +287,21 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
           const unreadCount = calculateUnreadCount(convMessages, user.id, selfMembership?.last_read_at);
 
           if (conv.type === 'global') {
-            formattedConvs.push({
-              id: conv.conversation_id,
-              name: 'Everyone - Group Chat',
-              type: 'group',
-              unreadCount,
-              lastMessage: lastMsg?.body?.substring(0, 50),
-              lastMessageTime: lastMsg?.created_at,
-            });
+            if (!conv.hidden || user.role === 'admin') {
+              formattedConvs.push({
+                id: conv.conversation_id,
+                name: 'Everyone - Group Chat',
+                type: 'group',
+                unreadCount,
+                lastMessage: lastMsg?.body?.substring(0, 50),
+                lastMessageTime: lastMsg?.created_at,
+              });
 
-            setMessages((prev) => ({
-              ...prev,
-              [conv.conversation_id]: formatMessages(convMessages),
-            }));
+              setMessages((prev) => ({
+                ...prev,
+                [conv.conversation_id]: formatMessages(convMessages),
+              }));
+            }
             continue;
           }
 
@@ -555,6 +590,24 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                   'Open Direct Message'
                 )}
               </Button>
+              {user.role === 'admin' && globalConvId && (
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-xs text-muted-foreground">Group Chat</span>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 px-2 text-xs gap-1"
+                    onClick={handleToggleGlobalChat}
+                  >
+                    {globalConvHidden ? (
+                      <><Eye className="w-3.5 h-3.5" /> Show</>
+                    ) : (
+                      <><EyeOff className="w-3.5 h-3.5" /> Hide</>
+                    )}
+                  </Button>
+                </div>
+              )}
             </div>
           </CardHeader>
           <CardContent className="p-0 flex-1 overflow-hidden">
