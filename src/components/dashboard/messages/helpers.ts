@@ -91,19 +91,7 @@ export function formatMessageDate(dateString: string): string {
 }
 
 export function formatMessageTimestamp(dateString: string): string {
-  const date = new Date(dateString);
-  const now = new Date();
-  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
-  if (date.toDateString() === now.toDateString()) return time;
-  const yesterday = new Date(now);
-  yesterday.setDate(yesterday.getDate() - 1);
-  if (date.toDateString() === yesterday.toDateString()) return `Yesterday at ${time}`;
-  const sixDaysAgo = new Date(now);
-  sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
-  if (date >= sixDaysAgo) {
-    return `${date.toLocaleDateString('en-US', { weekday: 'short' })} at ${time}`;
-  }
-  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${time}`;
+  return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
 
 export type MessageRenderItem = {
