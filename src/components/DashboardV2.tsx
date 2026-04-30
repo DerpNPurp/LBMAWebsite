@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Sidebar,
@@ -24,7 +23,8 @@ import { BlogTab } from './dashboard/BlogTab';
 import { MessagesTab } from './dashboard/MessagesTab';
 import { FeedbackTab } from './dashboard/FeedbackTab';
 import { ProfileTab } from './dashboard/ProfileTab';
-import { getUnreadMessageCount, getSectionUnreadCounts } from '../lib/supabase/queries';
+import { useSidebarCounts } from '../lib/hooks/notifications';
+import { useRealtimeInvalidation } from '../lib/hooks/useRealtimeInvalidation';
 import { markSectionSeen } from '../lib/supabase/mutations';
 import { getInitials } from '../lib/format';
 import type { User } from '../lib/types';
@@ -62,21 +62,12 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
     setSearchParams({ tab }, { replace: true });
     if (tab === 'feedback') markSectionSeen('feedback').catch(console.error);
   }
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
-  const [unreadBlog, setUnreadBlog] = useState(0);
+  const { data: counts } = useSidebarCounts(user.id);
+  const unreadMessages = counts?.unreadMessages ?? 0;
+  const unreadAnnouncements = counts?.unreadAnnouncements ?? 0;
+  const unreadBlog = counts?.unreadBlog ?? 0;
 
-  useEffect(() => {
-    getUnreadMessageCount()
-      .then(setUnreadMessages)
-      .catch(console.error);
-    getSectionUnreadCounts(user.id)
-      .then(({ announcements, blog }) => {
-        setUnreadAnnouncements(announcements);
-        setUnreadBlog(blog);
-      })
-      .catch(console.error);
-  }, [user.id]);
+  useRealtimeInvalidation(user.id);
 
   return (
     <SidebarProvider>
@@ -111,8 +102,8 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
                       isActive={activeTab === id}
                       onClick={() => {
                         setActiveTab(id);
-                        if (id === 'announcements') { setUnreadAnnouncements(0); markSectionSeen('announcements').catch(console.error); }
-                        if (id === 'blog') { setUnreadBlog(0); markSectionSeen('blog').catch(console.error); }
+                        if (id === 'announcements') markSectionSeen('announcements').catch(console.error);
+                        if (id === 'blog') markSectionSeen('blog').catch(console.error);
                         if (id === 'feedback') markSectionSeen('feedback').catch(console.error);
                       }}
                       tooltip={label}
@@ -238,7 +229,7 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
           {activeTab === 'announcements' && <AnnouncementsTab user={user} />}
           {activeTab === 'blog' && <BlogTab user={user} />}
           {activeTab === 'messages' && (
-            <MessagesTab user={user} onUnreadCountChange={setUnreadMessages} />
+            <MessagesTab user={user} />
           )}
           {activeTab === 'feedback' && <FeedbackTab user={user} />}
           {activeTab === 'profile' && <ProfileTab user={user} onRefreshUser={onRefreshUser} />}
