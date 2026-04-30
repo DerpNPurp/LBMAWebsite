@@ -7,9 +7,11 @@ import { Switch } from '../ui/switch';
 import { Skeleton } from '../ui/skeleton';
 import { Edit2, User } from 'lucide-react';
 import { toast } from 'sonner';
-import { updateProfile, upsertAdminNotificationPreferences } from '../../lib/supabase/mutations';
+import { updateProfile, upsertAdminNotificationPreferences, updateProfileAvatar } from '../../lib/supabase/mutations';
 import { getAdminNotificationPreferences } from '../../lib/supabase/queries';
 import { supabase } from '../../lib/supabase/client';
+import { PhotoUploader } from '../dashboard/PhotoUploader';
+import { uploadProfileImage, deleteProfileImage } from '../../lib/supabase/storage';
 import type { User as UserType } from '../../lib/types';
 
 type AdminProfileTabProps = {
@@ -119,6 +121,41 @@ export function AdminProfileTab({ user, onClose, onRefreshUser }: AdminProfileTa
           Close
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <User className="w-5 h-5" />
+            <CardTitle>Profile Photo</CardTitle>
+          </div>
+          <CardDescription>This photo appears on your account and in messages</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PhotoUploader
+            currentUrl={user.avatarUrl}
+            fallback={user.displayName?.[0] ?? '?'}
+            onUpload={async (file) => {
+              const path = `profiles/${user.id}/avatar`;
+              const url = await uploadProfileImage(path, file);
+              try {
+                await updateProfileAvatar(user.id, url);
+              } catch (err) {
+                await deleteProfileImage(path).catch(() => {});
+                throw err;
+              }
+              await onRefreshUser();
+              toast.success('Profile photo updated');
+            }}
+            onRemove={async () => {
+              const path = `profiles/${user.id}/avatar`;
+              await deleteProfileImage(path);
+              await updateProfileAvatar(user.id, null);
+              await onRefreshUser();
+              toast.success('Profile photo removed');
+            }}
+          />
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader>
