@@ -33,7 +33,8 @@ import {
   calculateUnreadCount,
   formatConversationTime,
   formatMessages,
-  formatMessageTime,
+  formatMessageTimestamp,
+  computeMessageRenderList,
   getErrorMessage,
   isDirectConversationAllowed,
   type MessageListItem,
@@ -670,64 +671,82 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
-              <div className="space-y-4">
+              <div>
                 {currentMessages.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
                     No messages yet. Start the conversation!
                   </p>
-                ) : (
-                  currentMessages.map((message) => {
-                    const isOwnMessage = message.authorId === user.id;
-                    
-                    return (
-                      <div
-                        key={message.id}
-                        className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
-                      >
-                        {!isOwnMessage && (
-                          <Avatar className="h-7 w-7 flex-shrink-0">
-                            {message.authorAvatarUrl && (
-                              <AvatarImage src={message.authorAvatarUrl} alt={message.authorName} />
-                            )}
-                            <AvatarFallback className="text-xs">
-                              {message.authorName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                        )}
-                        <div
-                          className={`max-w-[70%] ${
-                            isOwnMessage
-                              ? 'bg-primary text-primary-foreground'
-                              : 'bg-secondary'
-                          } rounded-lg p-3`}
-                        >
-                          {!isOwnMessage && (
-                            <p className="text-xs font-medium mb-1 opacity-70">
-                              {message.authorName}
-                            </p>
-                          )}
-                          <p className="text-sm">{message.body}</p>
-                          {message.attachmentName && (
-                            <div className="flex items-center gap-1 mt-2 text-xs opacity-70">
-                              <Paperclip className="w-3 h-3" />
-                              <button
-                                type="button"
-                                className="underline text-left disabled:no-underline disabled:opacity-70"
-                                onClick={() => handleOpenAttachment(message)}
-                                disabled={openingAttachmentId === message.id}
-                              >
-                                {openingAttachmentId === message.id ? 'Opening...' : message.attachmentName}
-                              </button>
+                ) : (() => {
+                  const isGroupConversation = selectedConversation?.type === 'group';
+                  return computeMessageRenderList(currentMessages).map(
+                    ({ message, isFirstInGroup, isLastInGroup, showDateSeparator, dateLabel }) => {
+                      const isOwnMessage = message.authorId === user.id;
+                      return (
+                        <div key={message.id}>
+                          {showDateSeparator && (
+                            <div className="flex items-center gap-3 my-5">
+                              <div className="flex-1 h-px bg-border" />
+                              <span className="text-xs font-medium text-muted-foreground px-1">{dateLabel}</span>
+                              <div className="flex-1 h-px bg-border" />
                             </div>
                           )}
-                          <p className="text-xs opacity-70 mt-1">
-                            {formatMessageTime(message.createdAt)}
-                          </p>
+                          <div
+                            className={`flex items-end gap-2 ${isOwnMessage ? 'justify-end' : 'justify-start'} ${isLastInGroup ? 'mb-5' : 'mb-0.5'}`}
+                          >
+                            {!isOwnMessage && (
+                              <div className="w-7 flex-shrink-0 self-end">
+                                {isLastInGroup ? (
+                                  <Avatar className="h-7 w-7">
+                                    {message.authorAvatarUrl && (
+                                      <AvatarImage src={message.authorAvatarUrl} alt={message.authorName} />
+                                    )}
+                                    <AvatarFallback className="text-xs">
+                                      {message.authorName[0]}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                ) : null}
+                              </div>
+                            )}
+                            <div className={`flex flex-col max-w-[70%] ${isOwnMessage ? 'items-end' : 'items-start'}`}>
+                              {!isOwnMessage && isFirstInGroup && isGroupConversation && (
+                                <p className="text-xs font-semibold text-muted-foreground px-3 mb-1">
+                                  {message.authorName}
+                                </p>
+                              )}
+                              <div
+                                className={`px-4 py-2.5 rounded-2xl ${
+                                  isOwnMessage
+                                    ? 'bg-primary text-primary-foreground'
+                                    : 'bg-secondary text-secondary-foreground'
+                                }`}
+                              >
+                                <p className="text-sm leading-relaxed">{message.body}</p>
+                                {message.attachmentName && (
+                                  <div className="flex items-center gap-1 mt-2 text-xs opacity-70">
+                                    <Paperclip className="w-3 h-3" />
+                                    <button
+                                      type="button"
+                                      className="underline text-left disabled:no-underline disabled:opacity-70"
+                                      onClick={() => handleOpenAttachment(message)}
+                                      disabled={openingAttachmentId === message.id}
+                                    >
+                                      {openingAttachmentId === message.id ? 'Opening...' : message.attachmentName}
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                              {isLastInGroup && (
+                                <p className={`text-xs text-muted-foreground px-3 mt-1 ${isOwnMessage ? 'text-right' : 'text-left'}`}>
+                                  {formatMessageTimestamp(message.createdAt)}
+                                </p>
+                              )}
+                            </div>
+                          </div>
                         </div>
-                      </div>
-                    );
-                  })
-                )}
+                      );
+                    }
+                  );
+                })()}
                 <div ref={messagesEndRef} />
               </div>
             </ScrollArea>

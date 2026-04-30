@@ -76,3 +76,77 @@ export function formatConversationTime(dateString: string) {
 export function formatMessageTime(dateString: string) {
   return new Date(dateString).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
 }
+
+export function formatMessageDate(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  if (date.toDateString() === now.toDateString()) return 'Today';
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  if (date.getFullYear() === now.getFullYear()) {
+    return date.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+  }
+  return date.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+}
+
+export function formatMessageTimestamp(dateString: string): string {
+  const date = new Date(dateString);
+  const now = new Date();
+  const time = date.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+  if (date.toDateString() === now.toDateString()) return time;
+  const yesterday = new Date(now);
+  yesterday.setDate(yesterday.getDate() - 1);
+  if (date.toDateString() === yesterday.toDateString()) return `Yesterday at ${time}`;
+  const sixDaysAgo = new Date(now);
+  sixDaysAgo.setDate(sixDaysAgo.getDate() - 6);
+  if (date >= sixDaysAgo) {
+    return `${date.toLocaleDateString('en-US', { weekday: 'short' })} at ${time}`;
+  }
+  return `${date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} at ${time}`;
+}
+
+export type MessageRenderItem = {
+  message: MessageListItem;
+  isFirstInGroup: boolean;
+  isLastInGroup: boolean;
+  showDateSeparator: boolean;
+  dateLabel: string;
+};
+
+function isSameDay(a: string, b: string): boolean {
+  return new Date(a).toDateString() === new Date(b).toDateString();
+}
+
+function isWithin5Minutes(a: string, b: string): boolean {
+  return Math.abs(new Date(a).getTime() - new Date(b).getTime()) < 5 * 60 * 1000;
+}
+
+export function computeMessageRenderList(messages: MessageListItem[]): MessageRenderItem[] {
+  return messages.map((msg, i) => {
+    const prev = messages[i - 1];
+    const next = messages[i + 1];
+
+    const groupedWithPrev =
+      !!prev &&
+      prev.authorId === msg.authorId &&
+      isSameDay(prev.createdAt, msg.createdAt) &&
+      isWithin5Minutes(prev.createdAt, msg.createdAt);
+
+    const groupedWithNext =
+      !!next &&
+      next.authorId === msg.authorId &&
+      isSameDay(next.createdAt, msg.createdAt) &&
+      isWithin5Minutes(next.createdAt, msg.createdAt);
+
+    const showDateSeparator = !prev || !isSameDay(prev.createdAt, msg.createdAt);
+
+    return {
+      message: msg,
+      isFirstInGroup: !groupedWithPrev,
+      isLastInGroup: !groupedWithNext,
+      showDateSeparator,
+      dateLabel: showDateSeparator ? formatMessageDate(msg.createdAt) : '',
+    };
+  });
+}
