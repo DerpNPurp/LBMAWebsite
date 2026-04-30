@@ -1,8 +1,15 @@
 /* Scope all overrides to our wrapper class to avoid polluting global styles */
 .booking-calendar {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   --rdp-accent-color: #c8102e;
   --rdp-accent-background-color: #fef2f2;
   --rdp-today-color: #c8102e;
+}
+
+.booking-calendar > *:not(.rdp) {
+  width: 100%;
 }
 
 /* Available dates — light red highlight */
