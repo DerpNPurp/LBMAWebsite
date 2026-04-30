@@ -534,6 +534,12 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
                       </div>
                       <p className="text-sm text-muted-foreground">Age {student.age}</p>
                       <p className="text-sm">{student.beltLevel}</p>
+                      {student.notes && (
+                        <div className="mt-2 bg-accent rounded-md px-2.5 py-2">
+                          <p className="text-xs font-bold uppercase tracking-wider text-accent-foreground mb-1">Parent Note</p>
+                          <p className="text-sm italic text-foreground leading-relaxed">{student.notes}</p>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>

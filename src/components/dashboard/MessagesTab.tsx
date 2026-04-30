@@ -5,7 +5,7 @@ import { Input } from '../ui/input';
 import { ScrollArea } from '../ui/scroll-area';
 import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Send, Paperclip, Users as UsersIcon, Loader2 } from 'lucide-react';
+import { Send, Paperclip, Users as UsersIcon, Loader2, ChevronLeft } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
 import {
@@ -15,7 +15,11 @@ import {
   getMessages,
   getAllProfiles,
   getDirectMessageConversation,
+  getFamilyByOwner,
+  getFamilyWithRelations,
+  type FamilyWithRelations,
 } from '../../lib/supabase/queries';
+import { calculateAge } from '../../lib/format';
 import {
   addConversationMember,
   createMessage,
@@ -64,6 +68,13 @@ type DirectMessageTarget = {
   role: 'admin' | 'family';
 };
 
+type ParticipantMember = {
+  userId: string;
+  displayName: string;
+  role: 'admin' | 'family';
+  avatarUrl: string | null;
+};
+
 export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
@@ -81,6 +92,13 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
   // Populated during initial load; used to resolve avatar URLs when creating DM conversations.
   const profilesRef = useRef<Profile[]>([]);
+
+  const [showParticipants, setShowParticipants] = useState(false);
+  const [participantMembers, setParticipantMembers] = useState<ParticipantMember[]>([]);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
+  const [participantFamilyData, setParticipantFamilyData] = useState<FamilyWithRelations | null>(null);
+  const [loadingParticipantFamily, setLoadingParticipantFamily] = useState(false);
 
   useEffect(() => {
     if (!onUnreadCountChange) return;
@@ -325,6 +343,51 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
     };
   }, [selectedConversationId]);
 
+  useEffect(() => {
+    if (!showParticipants || !selectedConversationId) return;
+    setSelectedParticipantId(null);
+    setParticipantFamilyData(null);
+    setLoadingParticipants(true);
+    getConversationMembers(selectedConversationId)
+      .then((members) => {
+        const profiles: ParticipantMember[] = members
+          .map((m: any) => {
+            const profile = profilesRef.current.find((p) => p.user_id === m.user_id);
+            if (!profile) return null;
+            return {
+              userId: profile.user_id,
+              displayName: profile.display_name || 'Unknown',
+              role: profile.role,
+              avatarUrl: profile.avatar_url ?? null,
+            };
+          })
+          .filter(Boolean) as ParticipantMember[];
+        setParticipantMembers(profiles);
+      })
+      .catch(() => setParticipantMembers([]))
+      .finally(() => setLoadingParticipants(false));
+  }, [showParticipants, selectedConversationId]);
+
+  const handleSelectParticipant = async (userId: string) => {
+    if (user.role !== 'admin') return;
+    const profile = profilesRef.current.find((p) => p.user_id === userId);
+    if (!profile || profile.role !== 'family') return;
+    setSelectedParticipantId(userId);
+    setParticipantFamilyData(null);
+    setLoadingParticipantFamily(true);
+    try {
+      const family = await getFamilyByOwner(userId);
+      if (family) {
+        const withRelations = await getFamilyWithRelations(family.family_id);
+        setParticipantFamilyData(withRelations);
+      }
+    } catch {
+      // ignore — profile view just won't show students
+    } finally {
+      setLoadingParticipantFamily(false);
+    }
+  };
+
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
   const currentMessages = selectedConversationId ? (messages[selectedConversationId] || []) : [];
   const canSendInSelectedConversation = Boolean(
@@ -453,7 +516,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 h-[600px] max-h-[calc(100dvh-13rem)]">
+      <div className={`grid gap-6 h-[600px] max-h-[calc(100dvh-13rem)] ${showParticipants ? 'grid-cols-4' : 'md:grid-cols-3'}`}>
         {/* Conversations List */}
         <Card className="md:col-span-1 flex flex-col overflow-hidden">
           <CardHeader className="shrink-0">
@@ -573,7 +636,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                   )}
                 </AvatarFallback>
               </Avatar>
-              <div>
+              <div className="flex-1 min-w-0">
                 <CardTitle>{selectedConversation?.name || 'Select a conversation'}</CardTitle>
                 {selectedConversation?.type === 'group' && (
                   <p className="text-sm text-muted-foreground">
@@ -581,6 +644,26 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                   </p>
                 )}
               </div>
+              {selectedConversationId && (
+                <Button
+                  variant={showParticipants ? 'secondary' : 'outline'}
+                  size="sm"
+                  onClick={() => {
+                    setShowParticipants((prev) => !prev);
+                    setSelectedParticipantId(null);
+                    setParticipantFamilyData(null);
+                  }}
+                  className="flex-shrink-0"
+                >
+                  <UsersIcon className="w-4 h-4 mr-1.5" />
+                  People
+                  {showParticipants && participantMembers.length > 0 && (
+                    <span className="ml-1.5 bg-primary text-primary-foreground text-xs font-bold rounded-full px-1.5 py-0.5 leading-none">
+                      {participantMembers.length}
+                    </span>
+                  )}
+                </Button>
+              )}
             </div>
           </CardHeader>
           
@@ -704,6 +787,161 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
             )}
           </CardContent>
         </Card>
+        {/* Participants panel */}
+        {showParticipants && (
+          <Card className="col-span-1 flex flex-col overflow-hidden">
+            <CardHeader className="shrink-0 border-b py-3">
+              <div className="flex items-center justify-between gap-2">
+                {selectedParticipantId ? (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="gap-1 px-1 text-sm font-semibold"
+                    onClick={() => { setSelectedParticipantId(null); setParticipantFamilyData(null); }}
+                  >
+                    <ChevronLeft className="w-4 h-4" />
+                    All members
+                  </Button>
+                ) : (
+                  <CardTitle className="text-base">
+                    People
+                    {participantMembers.length > 0 && (
+                      <span className="ml-2 text-sm font-normal text-muted-foreground">
+                        {participantMembers.length}
+                      </span>
+                    )}
+                  </CardTitle>
+                )}
+              </div>
+            </CardHeader>
+
+            <CardContent className="p-0 flex-1 overflow-hidden">
+              <ScrollArea className="h-full">
+                {loadingParticipants ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                  </div>
+                ) : selectedParticipantId ? (
+                  /* Family profile view */
+                  (() => {
+                    const profile = profilesRef.current.find((p) => p.user_id === selectedParticipantId);
+                    return (
+                      <div className="p-4 space-y-4">
+                        <div className="flex items-start gap-3">
+                          <Avatar className="h-10 w-10 flex-shrink-0">
+                            {profile?.avatar_url && <AvatarImage src={profile.avatar_url} />}
+                            <AvatarFallback className="text-sm font-bold bg-secondary text-primary">
+                              {(profile?.display_name || '?')[0]}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="min-w-0">
+                            <p className="font-semibold leading-tight truncate">{profile?.display_name || 'Unknown'}</p>
+                            <span className="inline-block mt-1 text-xs font-semibold bg-muted text-muted-foreground px-2 py-0.5 rounded-full">
+                              Family
+                            </span>
+                          </div>
+                        </div>
+
+                        {loadingParticipantFamily ? (
+                          <div className="flex items-center justify-center py-4">
+                            <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
+                          </div>
+                        ) : participantFamilyData?.students && participantFamilyData.students.length > 0 ? (
+                          <div className="space-y-3">
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Students</p>
+                            {participantFamilyData.students
+                              .filter((s) => s.status === 'active')
+                              .map((student) => (
+                                <div
+                                  key={student.student_id}
+                                  className="bg-card border rounded-lg p-3 space-y-2"
+                                >
+                                  <div className="flex items-center gap-2">
+                                    <Avatar className="h-7 w-7 flex-shrink-0">
+                                      {student.photo_url && <AvatarImage src={student.photo_url} />}
+                                      <AvatarFallback className="text-xs">
+                                        {student.first_name[0]}{student.last_name[0]}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <div className="flex-1 min-w-0">
+                                      <p className="font-semibold text-sm leading-tight truncate">
+                                        {student.first_name} {student.last_name}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        Age {calculateAge(student.date_of_birth)}
+                                      </p>
+                                    </div>
+                                    <span className="text-xs font-semibold bg-muted px-2 py-0.5 rounded-full whitespace-nowrap flex-shrink-0">
+                                      {student.belt_level ?? 'No Belt'}
+                                    </span>
+                                  </div>
+                                  {student.notes && (
+                                    <div className="bg-accent rounded-md px-2.5 py-2">
+                                      <p className="text-xs font-bold uppercase tracking-wider text-accent-foreground mb-1">
+                                        Parent note
+                                      </p>
+                                      <p className="text-xs italic text-foreground leading-relaxed">
+                                        {student.notes}
+                                      </p>
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })()
+                ) : (
+                  /* Members list */
+                  <div className="p-2 space-y-1">
+                    {(['admin', 'family'] as const).map((role) => {
+                      const members = participantMembers.filter((m) => m.role === role);
+                      if (members.length === 0) return null;
+                      return (
+                        <div key={role}>
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground px-2 py-2">
+                            {role === 'admin' ? 'Instructors' : 'Families'}
+                          </p>
+                          {members.map((member) => {
+                            const isClickable = user.role === 'admin' && member.role === 'family';
+                            return (
+                              <button
+                                key={member.userId}
+                                type="button"
+                                disabled={!isClickable}
+                                onClick={() => isClickable && handleSelectParticipant(member.userId)}
+                                className={`w-full flex items-center gap-2.5 px-2 py-2 rounded-lg text-left transition-colors ${
+                                  isClickable ? 'hover:bg-secondary cursor-pointer' : 'cursor-default'
+                                }`}
+                              >
+                                <Avatar className="h-8 w-8 flex-shrink-0">
+                                  {member.avatarUrl && <AvatarImage src={member.avatarUrl} />}
+                                  <AvatarFallback className={`text-xs font-bold ${member.role === 'admin' ? 'bg-secondary text-primary' : 'bg-muted'}`}>
+                                    {member.displayName[0]}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 min-w-0">
+                                  <p className="font-semibold text-sm truncate">{member.displayName}</p>
+                                  <p className="text-xs text-muted-foreground">
+                                    {member.role === 'admin' ? 'Instructor' : 'Family'}
+                                  </p>
+                                </div>
+                                {isClickable && (
+                                  <ChevronLeft className="w-3.5 h-3.5 text-muted-foreground rotate-180 flex-shrink-0" />
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </ScrollArea>
+            </CardContent>
+          </Card>
+        )}
       </div>
 
     </div>
