@@ -60,6 +60,18 @@ export function subscribeToAnnouncementComments(
   return channel;
 }
 
+export function subscribeToAllAnnouncementComments(
+  callback: RealtimeCallback<{ eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new?: any; old?: any }>
+): RealtimeChannel {
+  const channel = supabase
+    .channel('all-announcement-comments-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'announcement_comments' },
+      (payload) => callback({ eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE', new: payload.new, old: payload.old })
+    )
+    .subscribe();
+  return channel;
+}
+
 // ============================================
 // BLOG POSTS
 // ============================================
@@ -113,6 +125,18 @@ export function subscribeToBlogComments(
     )
     .subscribe();
 
+  return channel;
+}
+
+export function subscribeToAllBlogComments(
+  callback: RealtimeCallback<{ eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new?: any; old?: any }>
+): RealtimeChannel {
+  const channel = supabase
+    .channel('all-blog-comments-changes')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'blog_comments' },
+      (payload) => callback({ eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE', new: payload.new, old: payload.old })
+    )
+    .subscribe();
   return channel;
 }
 
@@ -172,6 +196,31 @@ export function subscribeToConversations(
   return channel;
 }
 
+export function subscribeToAllMessages(
+  callback: RealtimeCallback<{ eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new?: any; old?: any }>
+): RealtimeChannel {
+  const channel = supabase
+    .channel('all-messages-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'messages',
+      },
+      (payload) => {
+        callback({
+          eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
+          new: payload.new,
+          old: payload.old,
+        });
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
 // ============================================
 // REVIEWS
 // ============================================
@@ -187,6 +236,35 @@ export function subscribeToReviews(
         event: '*',
         schema: 'public',
         table: 'reviews',
+      },
+      (payload) => {
+        callback({
+          eventType: payload.eventType as 'INSERT' | 'UPDATE' | 'DELETE',
+          new: payload.new,
+          old: payload.old,
+        });
+      }
+    )
+    .subscribe();
+
+  return channel;
+}
+
+// ============================================
+// ENROLLMENT LEADS
+// ============================================
+
+export function subscribeToEnrollmentLeads(
+  callback: RealtimeCallback<{ eventType: 'INSERT' | 'UPDATE' | 'DELETE'; new?: any; old?: any }>
+): RealtimeChannel {
+  const channel = supabase
+    .channel('enrollment-leads-changes')
+    .on(
+      'postgres_changes',
+      {
+        event: '*',
+        schema: 'public',
+        table: 'enrollment_leads',
       },
       (payload) => {
         callback({
