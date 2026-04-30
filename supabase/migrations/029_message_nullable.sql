@@ -40,8 +40,13 @@ BEGIN
   VALUES (v_parent_name, v_parent_email, v_phone, v_message, v_source_page, 'queued', NOW())
   RETURNING lead_id INTO v_lead_id;
 
-  INSERT INTO public.enrollment_lead_notifications (lead_id, recipient_email, channel, status)
-  VALUES (v_lead_id, v_notif_email, 'email', 'queued');
+  -- Admin notification
+  INSERT INTO public.enrollment_lead_notifications (lead_id, recipient_email, channel, type, status)
+  VALUES (v_lead_id, v_notif_email, 'email', 'new_lead', 'queued');
+
+  -- Prospect thank-you email
+  INSERT INTO public.enrollment_lead_notifications (lead_id, recipient_email, channel, type, status)
+  VALUES (v_lead_id, v_parent_email, 'email', 'submission', 'queued');
 
   IF p_children IS NOT NULL AND jsonb_array_length(p_children) > 0 THEN
     FOR v_child IN SELECT * FROM jsonb_array_elements(p_children) LOOP
