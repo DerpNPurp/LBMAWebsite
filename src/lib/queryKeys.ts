@@ -1,0 +1,15 @@
+export const queryKeys = {
+  conversations: (userId: string) => ['conversations', userId] as const,
+  messages: (conversationId: string) => ['messages', conversationId] as const,
+  enrollmentLeads: () => ['enrollment-leads'] as const,
+  announcements: () => ['announcements'] as const,
+  announcementComments: (announcementId: string) => ['announcement-comments', announcementId] as const,
+  blogPosts: () => ['blog-posts'] as const,
+  blogComments: (postId: string) => ['blog-comments', postId] as const,
+  notificationSummary: (userId: string) => ['notification-summary', userId] as const,
+  sidebarCounts: (userId: string) => ['sidebar-counts', userId] as const,
+  homeCounts: (userId: string) => ['home-counts', userId] as const,
+  profile: (userId: string) => ['profile', userId] as const,
+  users: () => ['users'] as const,
+  reviews: () => ['reviews'] as const,
+} as const;

@@ -1,5 +1,6 @@
 import React from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { QueryProvider } from './providers/QueryProvider';
 import { FamilyOnboarding } from './components/onboarding/FamilyOnboarding';
 import { DashboardV2 } from './components/DashboardV2';
 import { AdminDashboardV2 } from './components/AdminDashboardV2';
@@ -142,9 +143,11 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
-      <AppRoutes />
-      <Toaster richColors position="top-right" />
-    </BrowserRouter>
+    <QueryProvider>
+      <BrowserRouter>
+        <AppRoutes />
+        <Toaster richColors position="top-right" />
+      </BrowserRouter>
+    </QueryProvider>
   );
 }
