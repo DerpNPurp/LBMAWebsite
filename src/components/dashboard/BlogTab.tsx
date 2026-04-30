@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '../ui/dialog';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Plus, MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { getBlogPosts, getBlogComments } from '../../lib/supabase/queries';
@@ -21,6 +21,7 @@ type User = {
 type Comment = {
   id: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   body: string;
   createdAt: string;
   parentCommentId?: string | null;
@@ -31,6 +32,7 @@ type BlogPost = {
   title: string;
   body: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   comments: Comment[];
   isPinned?: boolean;
@@ -70,6 +72,7 @@ export function BlogTab({ user }: { user: User }) {
         title: p.title,
         body: p.body,
         authorName: p.profiles?.display_name || 'Unknown',
+        authorAvatarUrl: p.profiles?.avatar_url ?? null,
         createdAt: p.created_at,
         isPinned: p.is_pinned || false,
       }));
@@ -83,6 +86,7 @@ export function BlogTab({ user }: { user: User }) {
         commentsMap[post.id] = commentsData.map((c: any) => ({
           id: c.comment_id,
           authorName: c.profiles?.display_name || 'Unknown',
+          authorAvatarUrl: c.profiles?.avatar_url ?? null,
           body: c.body,
           createdAt: c.created_at,
           parentCommentId: c.parent_comment_id ?? null,
@@ -313,6 +317,7 @@ export function BlogTab({ user }: { user: User }) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar className="h-8 w-8">
+                      {post.authorAvatarUrl && <AvatarImage src={post.authorAvatarUrl} alt={post.authorName} />}
                       <AvatarFallback>{post.authorName[0]}</AvatarFallback>
                     </Avatar>
                     <div>
@@ -360,6 +365,7 @@ export function BlogTab({ user }: { user: User }) {
                         )}
                         <div className="flex items-center gap-2">
                           <Avatar className="h-6 w-6">
+                            {comment.authorAvatarUrl && <AvatarImage src={comment.authorAvatarUrl} alt={comment.authorName} />}
                             <AvatarFallback className="text-xs">
                               {comment.authorName[0]}
                             </AvatarFallback>

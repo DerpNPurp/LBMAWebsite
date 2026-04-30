@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Bell, BookOpen, Loader2, MessageCircle, MessageSquare, Trophy, Award } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
@@ -24,6 +24,7 @@ type Student = {
   name: string;
   age: number | null;
   beltLevel: string;
+  photoUrl: string | null;
 };
 
 
@@ -75,6 +76,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
     name: `${student.first_name} ${student.last_name}`.trim(),
     age: getAgeFromDob(student.date_of_birth),
     beltLevel: student.belt_level || 'No belt assigned',
+    photoUrl: student.photo_url ?? null,
   }));
 
   const loadHomeData = useCallback(async () => {
@@ -273,6 +275,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
                 <CardHeader>
                   <div className="flex items-start gap-4">
                     <Avatar className="h-12 w-12">
+                      {student.photoUrl && <AvatarImage src={student.photoUrl} alt={student.name} />}
                       <AvatarFallback className="text-lg">
                         {getInitials(student.name)}
                       </AvatarFallback>
