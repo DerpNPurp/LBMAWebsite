@@ -149,7 +149,7 @@ export function useSendMessage(user: SendMessageUser) {
         conversation_id: conversationId,
         author_user_id: user.id,
         body,
-      } as any),
+      }),
 
     onMutate: async ({ conversationId, body }) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.messages(conversationId) });
@@ -194,6 +194,8 @@ export function useMarkConversationRead(userId: string) {
   return useMutation({
     mutationFn: (conversationId: string) => markConversationAsRead(conversationId, userId),
     onMutate: async (conversationId) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.conversations(userId) });
+      const snapshot = queryClient.getQueryData<ConversationsData>(queryKeys.conversations(userId));
       queryClient.setQueryData<ConversationsData>(
         queryKeys.conversations(userId),
         (old) => {
@@ -206,6 +208,15 @@ export function useMarkConversationRead(userId: string) {
           };
         }
       );
+      return { snapshot };
+    },
+    onError: (_err, _vars, ctx) => {
+      if (ctx?.snapshot) {
+        queryClient.setQueryData(queryKeys.conversations(userId), ctx.snapshot);
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations(userId) });
     },
   });
 }
