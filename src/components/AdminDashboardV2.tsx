@@ -1,4 +1,3 @@
-import { useEffect, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
   Sidebar,
@@ -27,7 +26,8 @@ import { FeedbackTab as AdminFeedbackTab } from './admin/FeedbackTab';
 import { AdminEnrollmentLeadsTab } from './admin/AdminEnrollmentLeadsTab';
 import { AdminAvailabilitySettings } from './admin/AdminAvailabilitySettings';
 import { AdminProfileTab } from './admin/AdminProfileTab';
-import { getUnreadMessageCount, getSectionUnreadCounts } from '../lib/supabase/queries';
+import { useSidebarCounts } from '../lib/hooks/notifications';
+import { useRealtimeInvalidation } from '../lib/hooks/useRealtimeInvalidation';
 import { getInitials } from '../lib/format';
 import type { User } from '../lib/types';
 import { NotificationBell } from './NotificationBell';
@@ -99,21 +99,12 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = (searchParams.get('tab') as AdminTabId) ?? 'announcements';
   const setActiveTab = (tab: AdminTabId) => setSearchParams({ tab }, { replace: true });
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [unreadAnnouncements, setUnreadAnnouncements] = useState(0);
-  const [unreadBlog, setUnreadBlog] = useState(0);
+  const { data: counts } = useSidebarCounts(user.id);
+  const unreadMessages = counts?.unreadMessages ?? 0;
+  const unreadAnnouncements = counts?.unreadAnnouncements ?? 0;
+  const unreadBlog = counts?.unreadBlog ?? 0;
 
-  useEffect(() => {
-    getUnreadMessageCount()
-      .then(setUnreadMessages)
-      .catch(console.error);
-    getSectionUnreadCounts(user.id)
-      .then(({ announcements, blog }) => {
-        setUnreadAnnouncements(announcements);
-        setUnreadBlog(blog);
-      })
-      .catch(console.error);
-  }, [user.id]);
+  useRealtimeInvalidation(user.id);
 
   return (
     <SidebarProvider>
@@ -150,8 +141,6 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
                         isActive={activeTab === id}
                         onClick={() => {
                           setActiveTab(id);
-                          if (id === 'announcements') setUnreadAnnouncements(0);
-                          if (id === 'blog') setUnreadBlog(0);
                         }}
                         tooltip={label}
                         size="lg"
@@ -276,7 +265,7 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser }: AdminDashboa
           {activeTab === 'announcements' && <AdminAnnouncementsTab user={user} />}
           {activeTab === 'blog' && <AdminBlogTab user={user} />}
           {activeTab === 'messages' && (
-            <AdminMessagesTab user={user} onUnreadCountChange={setUnreadMessages} />
+            <AdminMessagesTab user={user} />
           )}
           {activeTab === 'families' && <AdminUsersTab user={user} />}
           {activeTab === 'feedback' && <AdminFeedbackTab />}
