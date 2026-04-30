@@ -3,6 +3,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { Button } from '../ui/button';
 import { Camera, Loader2, Trash2 } from 'lucide-react';
 import { ConfirmDialog } from '../ui/confirm-dialog';
+import { AvatarCropperDialog } from '../ui/avatar-cropper-dialog';
 import { toast } from 'sonner';
 import { ACCEPTED_IMAGE_TYPES, MAX_PROFILE_IMAGE_SIZE_MB } from '../../lib/supabase/storage';
 
@@ -30,11 +31,11 @@ export function PhotoUploader({
   disabled,
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [uploading, setUploading] = useState(false);
+  const [pendingCropFile, setPendingCropFile] = useState<File | null>(null);
   const [removing, setRemoving] = useState(false);
   const [confirmRemove, setConfirmRemove] = useState(false);
 
-  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
@@ -49,15 +50,8 @@ export function PhotoUploader({
       return;
     }
 
-    setUploading(true);
-    try {
-      await onUpload(file);
-    } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Failed to upload photo.');
-    } finally {
-      setUploading(false);
-      if (fileInputRef.current) fileInputRef.current.value = '';
-    }
+    setPendingCropFile(file);
+    if (fileInputRef.current) fileInputRef.current.value = '';
   };
 
   const handleRemoveConfirmed = async () => {
@@ -72,7 +66,7 @@ export function PhotoUploader({
     }
   };
 
-  const busy = uploading || removing;
+  const busy = removing;
 
   return (
     <div className="flex items-center gap-4">
@@ -89,11 +83,7 @@ export function PhotoUploader({
             className="absolute inset-0 flex items-center justify-center bg-black/40 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer disabled:cursor-not-allowed"
             aria-label="Change photo"
           >
-            {uploading ? (
-              <Loader2 className="w-5 h-5 text-white animate-spin" />
-            ) : (
-              <Camera className="w-5 h-5 text-white" />
-            )}
+            <Camera className="w-5 h-5 text-white" />
           </button>
         )}
       </div>
@@ -116,14 +106,7 @@ export function PhotoUploader({
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
           >
-            {uploading ? (
-              <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Uploading...
-              </>
-            ) : (
-              'Upload Photo'
-            )}
+            Upload Photo
           </Button>
         )}
         {currentUrl && !disabled && (
@@ -158,6 +141,15 @@ export function PhotoUploader({
         destructive
         onConfirm={handleRemoveConfirmed}
         onCancel={() => setConfirmRemove(false)}
+      />
+
+      <AvatarCropperDialog
+        file={pendingCropFile}
+        onConfirm={async (croppedFile) => {
+          await onUpload(croppedFile);
+          setPendingCropFile(null);
+        }}
+        onCancel={() => setPendingCropFile(null)}
       />
     </div>
   );
