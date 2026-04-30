@@ -21,7 +21,6 @@ import {
 } from '../../lib/supabase/queries';
 import { calculateAge } from '../../lib/format';
 import {
-  addConversationMember,
   createMessage,
   createMessageAttachment,
   createOrGetDirectConversation,
@@ -142,18 +141,6 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
     });
   };
 
-  const safeAddConversationMember = async (conversationId: string, memberUserId: string) => {
-    try {
-      await addConversationMember({
-        conversation_id: conversationId,
-        user_id: memberUserId,
-      });
-    } catch (error: any) {
-      if (error?.code !== '23505') {
-        throw error;
-      }
-    }
-  };
 
   const handleToggleGlobalChat = async () => {
     if (!globalConvId) return;
@@ -563,7 +550,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                 <SelectContent>
                   {directMessageTargets.map((target) => (
                     <SelectItem key={target.userId} value={target.userId}>
-                      {target.displayName} ({target.role === 'admin' ? 'Instructor/Admin' : 'Family'})
+                      {target.displayName}{target.role === 'admin' ? ' (Instructor)' : ''}
                     </SelectItem>
                   ))}
                 </SelectContent>

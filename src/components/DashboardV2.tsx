@@ -60,7 +60,6 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
   const activeTab = (searchParams.get('tab') as TabId) ?? 'home';
   function setActiveTab(tab: TabId) {
     setSearchParams({ tab }, { replace: true });
-    if (tab === 'feedback') markSectionSeen('feedback').catch(console.error);
   }
   const { data: counts } = useSidebarCounts(user.id);
   const unreadMessages = counts?.unreadMessages ?? 0;
