@@ -46,6 +46,28 @@
   margin: 0 auto;
 }
 
+/* Enforce table layout — guards against aggressive CSS resets from browser extensions */
+.booking-calendar .rdp-month_grid {
+  display: table;
+  table-layout: fixed;
+  border-spacing: 0;
+}
+
+.booking-calendar .rdp-weekdays,
+.booking-calendar .rdp-week {
+  display: table-row;
+}
+
+.booking-calendar .rdp-weekday,
+.booking-calendar .rdp-day {
+  display: table-cell;
+  vertical-align: middle;
+  text-align: center;
+  width: var(--rdp-day-width);
+  height: var(--rdp-day-height);
+  padding: 0;
+}
+
 /* Nav buttons — match shadcn ghost button style */
 .booking-calendar .rdp-nav button {
   border: 1px solid #e5e7eb;
