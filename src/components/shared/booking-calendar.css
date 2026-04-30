@@ -41,6 +41,11 @@
   background: transparent;
 }
 
+/* Center the DayPicker within its container */
+.booking-calendar .rdp {
+  margin: 0 auto;
+}
+
 /* Nav buttons — match shadcn ghost button style */
 .booking-calendar .rdp-nav button {
   border: 1px solid #e5e7eb;
