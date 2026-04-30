@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import {
   getFamilyByOwner,
   getGuardiansByFamily,
@@ -14,117 +15,91 @@ import {
   updateStudent,
   deleteStudent,
 } from '../lib/supabase/mutations';
-import type { Family, Guardian, Student, Review } from '../lib/types';
+import { queryKeys } from '../lib/queryKeys';
+import type { Family, Guardian, Student } from '../lib/types';
 
 type ProfileUser = {
   id: string;
   email: string;
 };
 
+async function fetchProfile(userId: string) {
+  const familyData = await getFamilyByOwner(userId);
+
+  if (!familyData) {
+    return { family: null, guardians: [], students: [], review: null };
+  }
+
+  const [guardians, students, review] = await Promise.all([
+    getGuardiansByFamily(familyData.family_id),
+    getStudentsByFamily(familyData.family_id),
+    getReviewByFamily(familyData.family_id).catch(() => null),
+  ]);
+
+  return { family: familyData, guardians, students, review };
+}
+
 export function useProfile(user: ProfileUser | null) {
-  const [family, setFamily] = useState<Family | null>(null);
-  const [guardians, setGuardians] = useState<Guardian[]>([]);
-  const [students, setStudents] = useState<Student[]>([]);
-  const [review, setReview] = useState<Review | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const queryClient = useQueryClient();
 
-  const loadProfile = useCallback(async () => {
-    if (!user) {
-      setLoading(false);
-      return;
-    }
+  const { data, isLoading, error, refetch } = useQuery({
+    queryKey: queryKeys.profile(user?.id ?? ''),
+    queryFn: () => fetchProfile(user!.id),
+    enabled: !!user,
+  });
 
-    try {
-      setLoading(true);
-      setError(null);
+  const family = data?.family ?? null;
+  const guardians = data?.guardians ?? [];
+  const students = data?.students ?? [];
+  const review = data?.review ?? null;
+  const loading = isLoading;
+  const errorMessage = error instanceof Error ? error.message : error ? 'Failed to load profile' : null;
 
-      const familyData = await getFamilyByOwner(user.id);
-
-      if (!familyData) {
-        setFamily(null);
-        setGuardians([]);
-        setStudents([]);
-        setReview(null);
-        setError('Family profile is not set up yet.');
-        return;
-      }
-
-      setFamily(familyData);
-
-      // Load guardians and students
-      const [guardiansData, studentsData, reviewData] = await Promise.all([
-        getGuardiansByFamily(familyData.family_id),
-        getStudentsByFamily(familyData.family_id),
-        getReviewByFamily(familyData.family_id).catch(() => null), // Review might not exist
-      ]);
-
-      setGuardians(guardiansData);
-      setStudents(studentsData);
-      setReview(reviewData);
-    } catch (err) {
-      console.error('Error loading profile:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load profile');
-    } finally {
-      setLoading(false);
-    }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user?.id]);
-
-  useEffect(() => {
-    loadProfile();
-  }, [loadProfile]);
+  const invalidate = useCallback(() => {
+    if (user) queryClient.invalidateQueries({ queryKey: queryKeys.profile(user.id) });
+  }, [queryClient, user]);
 
   const saveFamily = async (updates: Partial<Family>) => {
     if (!family) throw new Error('No family found');
-    
     const updated = await updateFamily(family.family_id, updates);
-    setFamily(updated);
+    invalidate();
     return updated;
   };
 
   const addGuardian = async (guardian: Omit<Guardian, 'guardian_id' | 'created_at' | 'updated_at'>) => {
     if (!family) throw new Error('No family found');
-    
-    const newGuardian = await createGuardian({
-      ...guardian,
-      family_id: family.family_id,
-    });
-    setGuardians([...guardians, newGuardian]);
+    const newGuardian = await createGuardian({ ...guardian, family_id: family.family_id });
+    invalidate();
     return newGuardian;
   };
 
   const updateGuardianData = async (guardianId: string, updates: Partial<Guardian>) => {
     const updated = await updateGuardian(guardianId, updates);
-    setGuardians(guardians.map(g => g.guardian_id === guardianId ? updated : g));
+    invalidate();
     return updated;
   };
 
   const removeGuardian = async (guardianId: string) => {
     await deleteGuardian(guardianId);
-    setGuardians(guardians.filter(g => g.guardian_id !== guardianId));
+    invalidate();
   };
 
   const addStudent = async (student: Omit<Student, 'student_id' | 'created_at' | 'updated_at'>) => {
     if (!family) throw new Error('No family found');
-    
-    const newStudent = await createStudent({
-      ...student,
-      family_id: family.family_id,
-    });
-    setStudents([...students, newStudent]);
+    const newStudent = await createStudent({ ...student, family_id: family.family_id });
+    invalidate();
     return newStudent;
   };
 
   const updateStudentData = async (studentId: string, updates: Partial<Student>) => {
     const updated = await updateStudent(studentId, updates);
-    setStudents(students.map(s => s.student_id === studentId ? updated : s));
+    invalidate();
     return updated;
   };
 
   const removeStudent = async (studentId: string) => {
     await deleteStudent(studentId);
-    setStudents(students.filter(s => s.student_id !== studentId));
+    invalidate();
   };
 
   return {
@@ -133,7 +108,7 @@ export function useProfile(user: ProfileUser | null) {
     students,
     review,
     loading,
-    error,
+    error: errorMessage,
     saveFamily,
     addGuardian,
     updateGuardian: updateGuardianData,
@@ -141,6 +116,6 @@ export function useProfile(user: ProfileUser | null) {
     addStudent,
     updateStudent: updateStudentData,
     removeStudent,
-    reload: loadProfile,
+    reload: refetch,
   };
 }
