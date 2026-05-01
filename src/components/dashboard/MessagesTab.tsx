@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useMemo } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -8,11 +8,18 @@ import { Badge } from '../ui/badge';
 import { Send, Paperclip, Users as UsersIcon, Loader2, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  useConversations,
+  useMessages,
+  useSendMessage,
+  useMarkConversationRead,
+  type FormattedConversation,
+} from '../../lib/hooks/conversations';
+import { queryKeys } from '../../lib/queryKeys';
 import {
   getGlobalConversation,
-  getUserConversations,
   getConversationMembers,
-  getMessages,
   getAllProfiles,
   getDirectMessageConversation,
   getFamilyByOwner,
@@ -25,13 +32,10 @@ import {
   createMessageAttachment,
   createOrGetDirectConversation,
   joinGlobalConversation,
-  markConversationAsRead,
   updateConversationHidden,
 } from '../../lib/supabase/mutations';
-import { subscribeToMessages, unsubscribe } from '../../lib/supabase/realtime';
 import { uploadFile, generateFilePath, isValidFileType, MAX_FILE_SIZE_MB, getFileSizeMB, getSignedUrl } from '../../lib/supabase/storage';
 import {
-  calculateUnreadCount,
   formatConversationTime,
   formatMessages,
   formatMessageTimestamp,
@@ -40,7 +44,6 @@ import {
   isDirectConversationAllowed,
   type MessageListItem,
 } from './messages/helpers';
-import type { Profile } from '../../lib/types';
 
 type User = {
   id: string;
@@ -49,19 +52,8 @@ type User = {
   displayName: string;
 };
 
-type Conversation = {
-  id: string;
-  name: string;
-  type: 'direct' | 'group';
-  unreadCount: number;
-  lastMessage?: string;
-  lastMessageTime?: string;
-  avatarUrl?: string | null;
-};
-
 type MessagesTabProps = {
   user: User;
-  onUnreadCountChange?: (count: number) => void;
 };
 
 type DirectMessageTarget = {
@@ -77,23 +69,30 @@ type ParticipantMember = {
   avatarUrl: string | null;
 };
 
-export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
+export function MessagesTab({ user }: MessagesTabProps) {
+  const queryClient = useQueryClient();
+
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
-  const [messages, setMessages] = useState<{ [conversationId: string]: MessageListItem[] }>({});
+
+  const { data: convData, isLoading: loading } = useConversations(user);
+  const conversations: FormattedConversation[] = useMemo(() => convData?.conversations ?? [], [convData]);
+  const allowedDirectConversationIds = useMemo(() => convData?.allowedDirectIds ?? [], [convData]);
+  const { data: rawMessages = [] } = useMessages(selectedConversationId);
+  const { mutate: sendMessage, isPending: sending } = useSendMessage(user);
+  const { mutate: markRead } = useMarkConversationRead(user.id);
+
+  const { data: allProfiles = [] } = useQuery({
+    queryKey: queryKeys.users(),
+    queryFn: getAllProfiles,
+  });
   const [messageText, setMessageText] = useState('');
-  const [loading, setLoading] = useState(true);
-  const [sending, setSending] = useState(false);
   const [uploadingFile, setUploadingFile] = useState(false);
   const [openingAttachmentId, setOpeningAttachmentId] = useState<string | null>(null);
-  const [allowedDirectConversationIds, setAllowedDirectConversationIds] = useState<string[]>([]);
   const [directMessageTargets, setDirectMessageTargets] = useState<DirectMessageTarget[]>([]);
   const [selectedDirectTargetId, setSelectedDirectTargetId] = useState('');
   const [creatingDirectConversation, setCreatingDirectConversation] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  // Populated during initial load; used to resolve avatar URLs when creating DM conversations.
-  const profilesRef = useRef<Profile[]>([]);
 
   const [showParticipants, setShowParticipants] = useState(false);
   const [participantMembers, setParticipantMembers] = useState<ParticipantMember[]>([]);
@@ -104,11 +103,40 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   const [globalConvId, setGlobalConvId] = useState<string | null>(null);
   const [globalConvHidden, setGlobalConvHidden] = useState(false);
 
+  // Populate direct message targets from allProfiles
   useEffect(() => {
-    if (!onUnreadCountChange) return;
-    const totalUnread = conversations.reduce((total, conversation) => total + conversation.unreadCount, 0);
-    onUnreadCountChange(totalUnread);
-  }, [conversations, onUnreadCountChange]);
+    if (allProfiles.length === 0) return;
+    const targets = allProfiles
+      .filter((profile) => profile.user_id !== user.id && isDirectConversationAllowed(user.role, profile.role))
+      .map((profile) => ({
+        userId: profile.user_id,
+        displayName: profile.display_name || 'Unknown',
+        role: profile.role,
+      }))
+      .sort((a, b) => a.displayName.localeCompare(b.displayName));
+    setDirectMessageTargets(targets);
+  }, [allProfiles, user.id, user.role]);
+
+  // Load global conversation metadata
+  useEffect(() => {
+    getGlobalConversation()
+      .then((globalConv) => {
+        if (globalConv) {
+          setGlobalConvId(globalConv.conversation_id);
+          setGlobalConvHidden(globalConv.hidden);
+          joinGlobalConversation().catch(() => {});
+        }
+      })
+      .catch(() => {});
+  }, [user.id]);
+
+  // Auto-select the first (or global) conversation once loaded
+  useEffect(() => {
+    if (!selectedConversationId && conversations.length > 0) {
+      const global = conversations.find((c) => c.type === 'group');
+      setSelectedConversationId(global?.id ?? conversations[0].id);
+    }
+  }, [conversations, selectedConversationId]);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -116,31 +144,15 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, selectedConversationId]);
+  }, [rawMessages, selectedConversationId]);
 
-  const updateConversationReadState = async (conversationId: string) => {
-    await markConversationAsRead(conversationId, user.id);
-    setConversations((previous) =>
-      previous.map((conversation) =>
-        conversation.id === conversationId
-          ? { ...conversation, unreadCount: 0 }
-          : conversation,
-      ),
-    );
-  };
+  // Mark conversation as read when selected
+  useEffect(() => {
+    if (!selectedConversationId || loading) return;
+    markRead(selectedConversationId);
+  }, [selectedConversationId, loading, markRead]);
 
-  const upsertConversation = (conversation: Conversation) => {
-    setConversations((previous) => {
-      const existingIndex = previous.findIndex((item) => item.id === conversation.id);
-      if (existingIndex >= 0) {
-        const updated = [...previous];
-        updated[existingIndex] = conversation;
-        return updated;
-      }
-      return [conversation, ...previous];
-    });
-  };
-
+  const currentMessages = useMemo(() => formatMessages(rawMessages), [rawMessages]);
 
   const handleToggleGlobalChat = async () => {
     if (!globalConvId) return;
@@ -148,25 +160,10 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
     try {
       await updateConversationHidden(globalConvId, newHidden);
       setGlobalConvHidden(newHidden);
-      if (newHidden) {
-        setConversations((prev) => prev.filter((c) => c.id !== globalConvId));
-        if (selectedConversationId === globalConvId) setSelectedConversationId(null);
-      } else {
-        const convMessages = await getMessages(globalConvId);
-        const lastMsg = convMessages[convMessages.length - 1];
-        setMessages((prev) => ({ ...prev, [globalConvId]: formatMessages(convMessages) }));
-        setConversations((prev) => [
-          {
-            id: globalConvId,
-            name: 'Everyone - Group Chat',
-            type: 'group',
-            unreadCount: 0,
-            lastMessage: lastMsg?.body?.substring(0, 50),
-            lastMessageTime: lastMsg?.created_at,
-          },
-          ...prev.filter((c) => c.id !== globalConvId),
-        ]);
+      if (newHidden && selectedConversationId === globalConvId) {
+        setSelectedConversationId(null);
       }
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations(user.id) });
     } catch (error) {
       toast.error('Failed to update group chat: ' + getErrorMessage(error));
     }
@@ -179,44 +176,22 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
 
     setCreatingDirectConversation(true);
     try {
-      let directConversation = await getDirectMessageConversation(user.id, selectedDirectTargetId);
-      if (!directConversation) {
-        const conversationId = await createOrGetDirectConversation(selectedDirectTargetId);
-        const refreshedConversations = await getUserConversations(user.id);
-        directConversation = refreshedConversations.find((conversation) => conversation.conversation_id === conversationId) || null;
-        if (!directConversation) {
-          throw new Error('Conversation was created but could not be loaded.');
+      const existingConversation = await getDirectMessageConversation(user.id, selectedDirectTargetId);
+      if (!existingConversation) {
+        await createOrGetDirectConversation(selectedDirectTargetId);
+        // Reload conversations so the new DM appears
+        await queryClient.invalidateQueries({ queryKey: queryKeys.conversations(user.id) });
+        // Re-fetch to find the new conversation
+        const refreshed = queryClient.getQueryData<typeof convData>(queryKeys.conversations(user.id));
+        const newConv = refreshed?.conversations.find(
+          (c) => c.type === 'direct' && c.name === target.displayName
+        );
+        if (newConv) {
+          setSelectedConversationId(newConv.id);
         }
+      } else {
+        setSelectedConversationId(existingConversation.conversation_id);
       }
-
-      const directMessages = await getMessages(directConversation.conversation_id);
-      const lastMessage = directMessages[directMessages.length - 1];
-      const selfMembership = Array.isArray((directConversation as any).conversation_members)
-        ? (directConversation as any).conversation_members.find((member: any) => member.user_id === user.id)
-        : null;
-
-      setMessages((previous) => ({
-        ...previous,
-        [directConversation!.conversation_id]: formatMessages(directMessages),
-      }));
-
-      setAllowedDirectConversationIds((previous) =>
-        previous.includes(directConversation!.conversation_id)
-          ? previous
-          : [...previous, directConversation!.conversation_id],
-      );
-
-      upsertConversation({
-        id: directConversation.conversation_id,
-        name: target.displayName,
-        type: 'direct',
-        unreadCount: calculateUnreadCount(directMessages, user.id, selfMembership?.last_read_at),
-        lastMessage: lastMessage?.body?.substring(0, 50),
-        lastMessageTime: lastMessage?.created_at,
-        avatarUrl: profilesRef.current.find(p => p.user_id === target.userId)?.avatar_url ?? null,
-      });
-
-      setSelectedConversationId(directConversation.conversation_id);
       setSelectedDirectTargetId('');
     } catch (error) {
       toast.error('Error creating direct conversation: ' + getErrorMessage(error));
@@ -225,141 +200,6 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
     }
   };
 
-  // Load conversations and ensure global conversation exists
-  useEffect(() => {
-    const loadConversations = async () => {
-      try {
-        setLoading(true);
-        
-        // Load all profiles for DM names
-        const profiles = await getAllProfiles();
-        profilesRef.current = profiles;
-        const allowedTargets = profiles
-          .filter((profile) => profile.user_id !== user.id && isDirectConversationAllowed(user.role, profile.role))
-          .map((profile) => ({
-            userId: profile.user_id,
-            displayName: profile.display_name || 'Unknown',
-            role: profile.role,
-          }))
-          .sort((a, b) => a.displayName.localeCompare(b.displayName));
-        setDirectMessageTargets(allowedTargets);
-
-        const globalConv = await getGlobalConversation();
-
-        if (globalConv) {
-          setGlobalConvId(globalConv.conversation_id);
-          setGlobalConvHidden(globalConv.hidden);
-          await joinGlobalConversation();
-        }
-
-        // Load user's conversations
-        const userConvs = await getUserConversations(user.id);
-        
-        // Format conversations
-        const formattedConvs: Conversation[] = [];
-        const validDirectConversationIds: string[] = [];
-        
-        // Add all available conversations
-        for (const conv of userConvs) {
-          const convMembers = Array.isArray((conv as any).conversation_members) ? (conv as any).conversation_members : [];
-          const selfMembership = convMembers.find((member: any) => member.user_id === user.id);
-          const convMessages = await getMessages(conv.conversation_id);
-          const lastMsg = convMessages[convMessages.length - 1];
-          const unreadCount = calculateUnreadCount(convMessages, user.id, selfMembership?.last_read_at);
-
-          if (conv.type === 'global') {
-            if (!conv.hidden || user.role === 'admin') {
-              formattedConvs.push({
-                id: conv.conversation_id,
-                name: 'Everyone - Group Chat',
-                type: 'group',
-                unreadCount,
-                lastMessage: lastMsg?.body?.substring(0, 50),
-                lastMessageTime: lastMsg?.created_at,
-              });
-
-              setMessages((prev) => ({
-                ...prev,
-                [conv.conversation_id]: formatMessages(convMessages),
-              }));
-            }
-            continue;
-          }
-
-          if (conv.type !== 'dm') continue;
-
-          const members = await getConversationMembers(conv.conversation_id);
-          const otherMember = members.find((m: any) => m.user_id !== user.id);
-          if (!otherMember) continue;
-
-          const otherProfile = profiles.find((p: any) => p.user_id === otherMember?.user_id);
-          if (!isDirectConversationAllowed(user.role, otherProfile?.role)) continue;
-
-          validDirectConversationIds.push(conv.conversation_id);
-
-          formattedConvs.push({
-            id: conv.conversation_id,
-            name: otherProfile?.display_name || 'Unknown',
-            type: 'direct',
-            unreadCount,
-            lastMessage: lastMsg?.body?.substring(0, 50),
-            lastMessageTime: lastMsg?.created_at,
-            avatarUrl: otherProfile?.avatar_url ?? null,
-          });
-
-          setMessages((prev) => ({
-            ...prev,
-            [conv.conversation_id]: formatMessages(convMessages),
-          }));
-        }
-
-        setAllowedDirectConversationIds(validDirectConversationIds);
-        setConversations(formattedConvs);
-        
-        // Select global conversation by default when available
-        if (formattedConvs.length > 0) {
-          const globalConversation = formattedConvs.find((conversation) => conversation.type === 'group');
-          setSelectedConversationId(globalConversation?.id ?? formattedConvs[0].id);
-        }
-      } catch (error) {
-        console.error('Error loading conversations:', error);
-        toast.error('Error loading conversations: ' + getErrorMessage(error));
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadConversations();
-  }, [user]);
-
-  useEffect(() => {
-    if (!selectedConversationId || loading) return;
-    updateConversationReadState(selectedConversationId).catch((error) => {
-      console.error('Failed to mark conversation as read:', error);
-    });
-  }, [selectedConversationId, loading]);
-
-  // Set up real-time subscriptions for selected conversation
-  useEffect(() => {
-    if (!selectedConversationId) return;
-
-    const channel = subscribeToMessages(selectedConversationId, (payload) => {
-      if (payload.eventType === 'INSERT' && payload.new) {
-        // Reload messages for this conversation
-        getMessages(selectedConversationId).then((messagesData) => {
-          setMessages((prev) => ({
-            ...prev,
-            [selectedConversationId]: formatMessages(messagesData),
-          }));
-        });
-      }
-    });
-
-    return () => {
-      unsubscribe(channel);
-    };
-  }, [selectedConversationId]);
-
   useEffect(() => {
     if (!showParticipants || !selectedConversationId) return;
     setSelectedParticipantId(null);
@@ -367,9 +207,9 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
     setLoadingParticipants(true);
     getConversationMembers(selectedConversationId)
       .then((members) => {
-        const profiles: ParticipantMember[] = members
-          .map((m: any) => {
-            const profile = profilesRef.current.find((p) => p.user_id === m.user_id);
+        const resolved: ParticipantMember[] = members
+          .map((m) => {
+            const profile = allProfiles.find((p) => p.user_id === m.user_id);
             if (!profile) return null;
             return {
               userId: profile.user_id,
@@ -379,15 +219,15 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
             };
           })
           .filter(Boolean) as ParticipantMember[];
-        setParticipantMembers(profiles);
+        setParticipantMembers(resolved);
       })
       .catch(() => setParticipantMembers([]))
       .finally(() => setLoadingParticipants(false));
-  }, [showParticipants, selectedConversationId]);
+  }, [showParticipants, selectedConversationId, allProfiles]);
 
   const handleSelectParticipant = async (userId: string) => {
     if (user.role !== 'admin') return;
-    const profile = profilesRef.current.find((p) => p.user_id === userId);
+    const profile = allProfiles.find((p) => p.user_id === userId);
     if (!profile || profile.role !== 'family') return;
     setSelectedParticipantId(userId);
     setParticipantFamilyData(null);
@@ -406,7 +246,6 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
   };
 
   const selectedConversation = conversations.find(c => c.id === selectedConversationId);
-  const currentMessages = selectedConversationId ? (messages[selectedConversationId] || []) : [];
   const canSendInSelectedConversation = Boolean(
     selectedConversation &&
     (
@@ -417,30 +256,9 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
 
   const handleSendMessage = async () => {
     if (!messageText.trim() || !selectedConversationId || !user || !canSendInSelectedConversation) return;
-
-    setSending(true);
-    try {
-      await createMessage({
-        conversation_id: selectedConversationId,
-        author_user_id: user.id,
-        body: messageText.trim(),
-      });
-
-      await updateConversationReadState(selectedConversationId);
-
-      // Reload messages
-      const messagesData = await getMessages(selectedConversationId);
-      setMessages((prev) => ({
-        ...prev,
-        [selectedConversationId]: formatMessages(messagesData),
-      }));
-
-      setMessageText('');
-    } catch (error) {
-      toast.error('Error sending message: ' + getErrorMessage(error));
-    } finally {
-      setSending(false);
-    }
+    const text = messageText.trim();
+    setMessageText('');
+    sendMessage({ conversationId: selectedConversationId, body: text });
   };
 
   const handleFileSelect = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -464,20 +282,17 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
 
     setUploadingFile(true);
     try {
-      // Upload file
       const filePath = generateFilePath(user.id, file.name);
       const { path } = await uploadFile(file, filePath);
 
-      // Send message with attachment
       const message = await createMessage({
         conversation_id: selectedConversationId,
         author_user_id: user.id,
         body: `[File: ${file.name}]`,
       });
 
-      await updateConversationReadState(selectedConversationId);
+      markRead(selectedConversationId);
 
-      // Create attachment record
       await createMessageAttachment({
         message_id: message.message_id,
         storage_path: path,
@@ -486,12 +301,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
         size_bytes: file.size,
       });
 
-      // Reload messages
-      const messagesData = await getMessages(selectedConversationId);
-      setMessages((prev) => ({
-        ...prev,
-        [selectedConversationId]: formatMessages(messagesData),
-      }));
+      queryClient.invalidateQueries({ queryKey: queryKeys.messages(selectedConversationId) });
     } catch (error) {
       toast.error('Error uploading file: ' + getErrorMessage(error));
     } finally {
@@ -701,7 +511,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
               )}
             </div>
           </CardHeader>
-          
+
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
             <ScrollArea className="flex-1 p-4">
@@ -877,7 +687,7 @@ export function MessagesTab({ user, onUnreadCountChange }: MessagesTabProps) {
                 ) : selectedParticipantId ? (
                   /* Family profile view */
                   (() => {
-                    const profile = profilesRef.current.find((p) => p.user_id === selectedParticipantId);
+                    const profile = allProfiles.find((p) => p.user_id === selectedParticipantId);
                     return (
                       <div className="p-4 space-y-4">
                         <div className="flex items-start gap-3">
