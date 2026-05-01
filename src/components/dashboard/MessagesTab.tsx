@@ -8,7 +8,7 @@ import { Badge } from '../ui/badge';
 import { Send, Paperclip, Users as UsersIcon, Loader2, ChevronLeft, Eye, EyeOff } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
 import { toast } from 'sonner';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import {
   useConversations,
   useMessages,
@@ -16,12 +16,11 @@ import {
   useMarkConversationRead,
   type FormattedConversation,
 } from '../../lib/hooks/conversations';
+import { useUsers } from '../../lib/hooks/users';
 import { queryKeys } from '../../lib/queryKeys';
 import {
   getGlobalConversation,
   getConversationMembers,
-  getAllProfiles,
-  getDirectMessageConversation,
   getFamilyByOwner,
   getFamilyWithRelations,
   type FamilyWithRelations,
@@ -81,10 +80,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
   const { mutate: sendMessage, isPending: sending } = useSendMessage(user);
   const { mutate: markRead } = useMarkConversationRead(user.id);
 
-  const { data: allProfiles = [] } = useQuery({
-    queryKey: queryKeys.users(),
-    queryFn: getAllProfiles,
-  });
+  const { data: allProfiles = [] } = useUsers();
   const [messageText, setMessageText] = useState('');
   const [uploadingFile, setUploadingFile] = useState(false);
   const [openingAttachmentId, setOpeningAttachmentId] = useState<string | null>(null);
@@ -100,7 +96,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
   const [selectedParticipantId, setSelectedParticipantId] = useState<string | null>(null);
   const [participantFamilyData, setParticipantFamilyData] = useState<FamilyWithRelations | null>(null);
   const [loadingParticipantFamily, setLoadingParticipantFamily] = useState(false);
-  const [globalConvId, setGlobalConvId] = useState<string | null>(null);
+  const globalConvId = conversations.find(c => c.type === 'group')?.id ?? null;
   const [globalConvHidden, setGlobalConvHidden] = useState(false);
 
   // Populate direct message targets from allProfiles
@@ -117,12 +113,11 @@ export function MessagesTab({ user }: MessagesTabProps) {
     setDirectMessageTargets(targets);
   }, [allProfiles, user.id, user.role]);
 
-  // Load global conversation metadata
+  // Load global conversation hidden state (hidden field is not in FormattedConversation)
   useEffect(() => {
     getGlobalConversation()
       .then((globalConv) => {
         if (globalConv) {
-          setGlobalConvId(globalConv.conversation_id);
           setGlobalConvHidden(globalConv.hidden);
           joinGlobalConversation().catch(() => {});
         }
@@ -150,7 +145,8 @@ export function MessagesTab({ user }: MessagesTabProps) {
   useEffect(() => {
     if (!selectedConversationId || loading) return;
     markRead(selectedConversationId);
-  }, [selectedConversationId, loading, markRead]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedConversationId, loading]);
 
   const currentMessages = useMemo(() => formatMessages(rawMessages), [rawMessages]);
 
@@ -176,23 +172,14 @@ export function MessagesTab({ user }: MessagesTabProps) {
 
     setCreatingDirectConversation(true);
     try {
-      const existingConversation = await getDirectMessageConversation(user.id, selectedDirectTargetId);
-      if (!existingConversation) {
-        await createOrGetDirectConversation(selectedDirectTargetId);
-        // Reload conversations so the new DM appears
-        await queryClient.invalidateQueries({ queryKey: queryKeys.conversations(user.id) });
-        // Re-fetch to find the new conversation
-        const refreshed = queryClient.getQueryData<typeof convData>(queryKeys.conversations(user.id));
-        const newConv = refreshed?.conversations.find(
-          (c) => c.type === 'direct' && c.name === target.displayName
-        );
-        if (newConv) {
-          setSelectedConversationId(newConv.id);
-        }
-      } else {
-        setSelectedConversationId(existingConversation.conversation_id);
-      }
+      const conversationId = await createOrGetDirectConversation(selectedDirectTargetId);
+      // Invalidate in background — don't await
+      queryClient.invalidateQueries({ queryKey: queryKeys.conversations(user.id) });
+      // Navigate immediately using the returned ID
+      setSelectedConversationId(conversationId);
+      setCreatingDirectConversation(false);
       setSelectedDirectTargetId('');
+      setShowParticipants(false);
     } catch (error) {
       toast.error('Error creating direct conversation: ' + getErrorMessage(error));
     } finally {
@@ -291,8 +278,6 @@ export function MessagesTab({ user }: MessagesTabProps) {
         body: `[File: ${file.name}]`,
       });
 
-      markRead(selectedConversationId);
-
       await createMessageAttachment({
         message_id: message.message_id,
         storage_path: path,
@@ -301,6 +286,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
         size_bytes: file.size,
       });
 
+      markRead(selectedConversationId);
       queryClient.invalidateQueries({ queryKey: queryKeys.messages(selectedConversationId) });
     } catch (error) {
       toast.error('Error uploading file: ' + getErrorMessage(error));
