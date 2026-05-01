@@ -4,11 +4,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Loader2, Mail, Phone, Calendar, Plus, Search, MoreVertical, Check, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
 import { toast } from 'sonner';
 import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client';
-import { getEnrollmentLeads } from '../../lib/supabase/queries';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import { updateLeadStatus, updateLeadAdminNotes, dismissLeadSilently, deleteEnrollmentLead } from '../../lib/supabase/mutations';
 import type { EnrollmentLead } from '../../lib/types';
+import { useEnrollmentLeads, useUpdateLeadStatus, useUpdateLeadNotes, useDismissLead, useDeleteLead } from '../../lib/hooks/leads';
+import { useQueryClient } from '@tanstack/react-query';
+import { queryKeys } from '../../lib/queryKeys';
 import { DenyModal } from './DenyModal';
 import { PickDateModal } from './PickDateModal';
 import { NewLeadModal } from './NewLeadModal';
@@ -312,14 +313,28 @@ function findNearestWeekOffset(appointmentDates: string[]): number | null {
 // ─── Component ─────────────────────────────────────────────────────────────
 
 export function AdminEnrollmentLeadsTab() {
-  const [leads, setLeads] = useState<EnrollmentLead[]>([]);
+  const queryClient = useQueryClient();
+  const { data: leads = [], isLoading: loading } = useEnrollmentLeads();
+  const updateStatus = useUpdateLeadStatus();
+  const updateNotes = useUpdateLeadNotes();
+  const dismissLead = useDismissLead();
+  const deleteLead = useDeleteLead();
   const [now] = useState(Date.now);
-  const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<TabId>('new');
   const [search, setSearch] = useState('');
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    setNotesDraft(d => {
+      const next = { ...d };
+      for (const l of leads) {
+        if (!(l.lead_id in next)) next[l.lead_id] = l.admin_notes ?? '';
+      }
+      return next;
+    });
+  }, [leads]);
   const [denyTarget, setDenyTarget] = useState<EnrollmentLead | null>(null);
   const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
@@ -331,22 +346,6 @@ export function AdminEnrollmentLeadsTab() {
   const [selectedWeekDate, setSelectedWeekDate] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
 
-  useEffect(() => { load(); }, []);
-
-  async function load() {
-    try {
-      setLoading(true);
-      setError(null);
-      const data = await getEnrollmentLeads();
-      setLeads(data);
-      setNotesDraft(Object.fromEntries(data.map(l => [l.lead_id, l.admin_notes ?? ''])));
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load leads');
-    } finally {
-      setLoading(false);
-    }
-  }
-
   async function handleApprove(lead: EnrollmentLead) {
     const fnHeaders = await edgeFunctionUserAuthHeaders();
     if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
@@ -355,7 +354,7 @@ export function AdminEnrollmentLeadsTab() {
       headers: fnHeaders,
     });
     if (error) { toast.error('Failed to send approval'); return; }
-    setLeads(prev => prev.map(l => l.lead_id === lead.lead_id ? { ...l, status: 'approved' as const } : l));
+    queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
     toast.success('Approval sent');
   }
 
@@ -378,7 +377,7 @@ export function AdminEnrollmentLeadsTab() {
       headers: fnHeaders,
     });
     if (error) { toast.error('Failed to send denial'); return; }
-    setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status: 'denied' as const } : l));
+    queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
     setDenyTarget(null);
   }
 
@@ -396,7 +395,7 @@ export function AdminEnrollmentLeadsTab() {
       if (error || !data) { toast.error('Failed to book appointment'); return; }
     }
 
-    await load();
+    queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
     setPickDateTarget(null);
     toast.success('Appointment(s) booked');
   }
@@ -404,8 +403,7 @@ export function AdminEnrollmentLeadsTab() {
   async function handleStatusChange(leadId: string, status: EnrollmentLead['status']) {
     setUpdatingId(leadId);
     try {
-      await updateLeadStatus(leadId, status);
-      setLeads(prev => prev.map(l => l.lead_id === leadId ? { ...l, status } : l));
+      await updateStatus.mutateAsync({ leadId, status });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
@@ -415,7 +413,7 @@ export function AdminEnrollmentLeadsTab() {
 
   async function handleNotesSave(leadId: string) {
     try {
-      await updateLeadAdminNotes(leadId, notesDraft[leadId] ?? '');
+      await updateNotes.mutateAsync({ leadId, notes: notesDraft[leadId] ?? '' });
       setNotesSaved(s => ({ ...s, [leadId]: true }));
       setTimeout(() => setNotesSaved(s => ({ ...s, [leadId]: false })), 2000);
     } catch {
@@ -426,10 +424,7 @@ export function AdminEnrollmentLeadsTab() {
 
   async function handleDismissSilently(lead: EnrollmentLead) {
     try {
-      await dismissLeadSilently(lead.lead_id);
-      setLeads(prev => prev.map(l =>
-        l.lead_id === lead.lead_id ? { ...l, status: 'denied' as const, denied_at: new Date().toISOString() } : l
-      ));
+      await dismissLead.mutateAsync(lead.lead_id);
       toast.success('Lead dismissed');
     } catch {
       toast.error('Failed to dismiss lead');
@@ -439,10 +434,7 @@ export function AdminEnrollmentLeadsTab() {
 
   async function handleDeleteLead(lead: EnrollmentLead) {
     try {
-      await deleteEnrollmentLead(lead.lead_id);
-      setLeads(prev => prev.map(l =>
-        l.lead_id === lead.lead_id ? { ...l, deleted_at: new Date().toISOString() } : l
-      ));
+      await deleteLead.mutateAsync(lead.lead_id);
       toast.success('Lead deleted');
     } catch {
       toast.error('Failed to delete lead');
@@ -1035,7 +1027,7 @@ export function AdminEnrollmentLeadsTab() {
       {showNewLeadModal && (
         <NewLeadModal
           onSuccess={lead => {
-            setLeads(prev => [lead, ...prev]);
+            queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
             setNotesDraft(d => ({ ...d, [lead.lead_id]: lead.admin_notes ?? '' }));
             setShowNewLeadModal(false);
           }}
