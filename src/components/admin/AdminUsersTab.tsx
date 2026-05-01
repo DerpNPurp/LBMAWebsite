@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { getAllProfiles } from '../../lib/supabase/queries';
+import { useState, useMemo } from 'react';
+import { useUsers } from '../../lib/hooks/users';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -36,7 +36,11 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
   const [editingStudent, setEditingStudent] = useState<{ studentId: string; newBeltLevel: string; newStatus: StudentStatus } | null>(null);
   const [editingGuardian, setEditingGuardian] = useState<GuardianRow | null>(null);
   const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
-  const [profileAvatarMap, setProfileAvatarMap] = useState<Map<string, string | null>>(new Map());
+  const { data: usersData = [] } = useUsers();
+  const profileAvatarMap = useMemo(
+    () => new Map(usersData.map((p) => [p.user_id, p.avatar_url ?? null])),
+    [usersData],
+  );
   const {
     filteredFamilies,
     filteredStudents,
@@ -50,14 +54,6 @@ export function AdminUsersTab({ user: _user }: { user: NonNullable<User> }) {
     saveGuardian,
     setPrimaryGuardian,
   } = useAdminFamilies(searchTerm);
-
-  useEffect(() => {
-    getAllProfiles()
-      .then((profiles) => {
-        setProfileAvatarMap(new Map(profiles.map((p) => [p.user_id, p.avatar_url ?? null])));
-      })
-      .catch(console.error);
-  }, []);
 
   const handleViewDetails = async (familyId: string) => {
     try {
