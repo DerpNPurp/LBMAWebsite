@@ -6,9 +6,12 @@ import { Avatar, AvatarFallback } from '../ui/avatar';
 import { MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
-import { getAnnouncements, getAnnouncementComments } from '../../lib/supabase/queries';
-import { createAnnouncementComment, markSectionSeen } from '../../lib/supabase/mutations';
-import { subscribeToAnnouncements, subscribeToAnnouncementComments, unsubscribe } from '../../lib/supabase/realtime';
+import { markSectionSeen } from '../../lib/supabase/mutations';
+import {
+  useAnnouncements,
+  useAnnouncementComments,
+  useCreateAnnouncementComment,
+} from '../../lib/hooks/announcements';
 
 type User = {
   id: string;
@@ -32,115 +35,182 @@ type Announcement = {
   authorName: string;
   createdAt: string;
   imageUrl?: string;
-  comments: Comment[];
   isPinned?: boolean;
 };
 
-export function AnnouncementsTab({ user }: { user: User }) {
-  const [announcements, setAnnouncements] = useState<Announcement[]>([]);
-  const [comments, setComments] = useState<{ [announcementId: string]: Comment[] }>({});
-  const [commentTexts, setCommentTexts] = useState<{ [key: string]: string }>({});
-  const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
-  const [loading, setLoading] = useState(true);
-  const [savingComment, setSavingComment] = useState<string | null>(null);
+function formatDate(dateString: string) {
+  const date = new Date(dateString);
+  const now = new Date();
+  const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
+  if (diffDays === 0) return 'Today';
+  if (diffDays === 1) return 'Yesterday';
+  if (diffDays < 7) return `${diffDays} days ago`;
+  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+}
+
+function AnnouncementCommentSection({ announcementId }: { announcementId: string }) {
+  const [commentText, setCommentText] = useState('');
+  const [savingComment, setSavingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{
-    announcementId: string;
     commentId: string;
     authorName: string;
   } | null>(null);
   const [replyText, setReplyText] = useState('');
 
+  const { data: rawComments = [] } = useAnnouncementComments(announcementId);
+  const createComment = useCreateAnnouncementComment(announcementId);
+
+  const comments: Comment[] = rawComments.map((c: any) => ({
+    id: c.comment_id,
+    authorName: c.profiles?.display_name || 'Unknown',
+    body: c.body,
+    createdAt: c.created_at,
+    parentCommentId: c.parent_comment_id ?? null,
+  }));
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+    setSavingComment(true);
+    try {
+      await createComment.mutateAsync({ body: commentText.trim() });
+      setCommentText('');
+    } catch (error) {
+      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setSavingComment(false);
+    }
+  };
+
+  const handleSendReply = async () => {
+    if (!replyText.trim() || !replyingTo) return;
+    setSavingComment(true);
+    try {
+      await createComment.mutateAsync({ body: replyText.trim(), parentCommentId: replyingTo.commentId });
+      setReplyText('');
+      setReplyingTo(null);
+    } catch {
+      toast.error('Failed to send reply');
+    } finally {
+      setSavingComment(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4 pl-4 border-l-2 border-border">
+      {comments.map((comment) => (
+        <div key={comment.id} className="space-y-1">
+          {comment.parentCommentId && (
+            <p className="text-xs text-muted-foreground pl-2 border-l-2 border-muted mb-1">
+              ↩ Replying to {
+                comments.find(c => c.id === comment.parentCommentId)?.authorName ?? 'comment'
+              }
+            </p>
+          )}
+          <div className="flex items-center gap-2">
+            <Avatar className="h-6 w-6">
+              <AvatarFallback className="text-xs">
+                {comment.authorName[0]}
+              </AvatarFallback>
+            </Avatar>
+            <span className="text-sm font-medium">{comment.authorName}</span>
+            <span className="text-xs text-muted-foreground">
+              {formatDate(comment.createdAt)}
+            </span>
+          </div>
+          <p className="text-sm pl-8">{comment.body}</p>
+          {!comment.parentCommentId && (
+            <button
+              onClick={() => setReplyingTo({
+                commentId: comment.id,
+                authorName: comment.authorName,
+              })}
+              className="text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
+            >
+              Reply
+            </button>
+          )}
+          {replyingTo?.commentId === comment.id && (
+            <div className="ml-8 mt-2 space-y-2">
+              <Textarea
+                autoFocus
+                placeholder={`Reply to ${replyingTo.authorName}…`}
+                value={replyText}
+                onChange={(e) => setReplyText(e.target.value)}
+                className="text-sm min-h-[60px] resize-none"
+                onKeyDown={(e) => {
+                  if (e.key === 'Escape') { setReplyingTo(null); setReplyText(''); }
+                }}
+              />
+              <div className="flex gap-2 justify-end">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => { setReplyingTo(null); setReplyText(''); }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  size="sm"
+                  onClick={handleSendReply}
+                  disabled={!replyText.trim() || savingComment}
+                >
+                  {savingComment ? (
+                    <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                  ) : (
+                    <Send className="h-3.5 w-3.5" />
+                  )}
+                  Send
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      ))}
+
+      {/* Add Comment */}
+      <div className="flex gap-2 pt-2">
+        <Textarea
+          placeholder="Ask a question or leave a comment..."
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          className="min-h-[80px]"
+        />
+        <Button
+          onClick={handleAddComment}
+          disabled={!commentText.trim() || savingComment}
+          size="sm"
+          className="gap-1.5"
+        >
+          {savingComment ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Send className="w-4 h-4" />
+          )}
+          Post
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+export function AnnouncementsTab({ user: _user }: { user: User }) {
+  const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
+
+  const { data: rawAnnouncements = [], isLoading: loading } = useAnnouncements();
+
   useEffect(() => {
     markSectionSeen('announcements').catch(console.error);
   }, []);
 
-  // Load announcements and comments
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const announcementsData = await getAnnouncements();
-      
-      // Convert to UI format
-      const formattedAnnouncements: Announcement[] = announcementsData.map((a: any) => ({
-        id: a.announcement_id,
-        title: a.title,
-        body: a.body,
-        authorName: a.profiles?.display_name || 'Unknown',
-        createdAt: a.created_at,
-        imageUrl: a.image_url || undefined,
-        isPinned: a.is_pinned || false,
-      }));
-
-      setAnnouncements(formattedAnnouncements);
-
-      // Load comments for each announcement
-      const commentsMap: { [key: string]: Comment[] } = {};
-      for (const ann of formattedAnnouncements) {
-        const commentsData = await getAnnouncementComments(ann.id);
-        commentsMap[ann.id] = commentsData.map((c: any) => ({
-          id: c.comment_id,
-          authorName: c.profiles?.display_name || 'Unknown',
-          body: c.body,
-          createdAt: c.created_at,
-          parentCommentId: c.parent_comment_id ?? null,
-        }));
-      }
-      setComments(commentsMap);
-    } catch (error) {
-      console.error('Error loading announcements:', error);
-      toast.error('Error loading announcements: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadData();
-
-    // Set up real-time subscriptions
-    const announcementsChannel = subscribeToAnnouncements((payload) => {
-      if (payload.eventType === 'INSERT' && payload.new) {
-        // Reload announcements when new one is added
-        loadData();
-      }
-    });
-
-    return () => {
-      unsubscribe(announcementsChannel);
-    };
-  }, []);
-
-  // Set up comment subscriptions when comments are expanded
-  useEffect(() => {
-    const channels: any[] = [];
-    
-    Object.keys(expandedComments).forEach((announcementId) => {
-      if (expandedComments[announcementId]) {
-        const channel = subscribeToAnnouncementComments(announcementId, (payload) => {
-          if (payload.eventType === 'INSERT' && payload.new) {
-            // Reload comments for this announcement
-            getAnnouncementComments(announcementId).then((commentsData) => {
-              setComments((prev) => ({
-                ...prev,
-                [announcementId]: commentsData.map((c: any) => ({
-                  id: c.comment_id,
-                  authorName: c.profiles?.display_name || 'Unknown',
-                  body: c.body,
-                  createdAt: c.created_at,
-                  parentCommentId: c.parent_comment_id ?? null,
-                })),
-              }));
-            });
-          }
-        });
-        channels.push(channel);
-      }
-    });
-
-    return () => {
-      channels.forEach(channel => unsubscribe(channel));
-    };
-  }, [expandedComments]);
+  const announcements: Announcement[] = rawAnnouncements.map((a: any) => ({
+    id: a.announcement_id,
+    title: a.title,
+    body: a.body,
+    authorName: a.profiles?.display_name || 'Unknown',
+    createdAt: a.created_at,
+    imageUrl: a.image_url || undefined,
+    isPinned: a.is_pinned || false,
+  }));
 
   // Sort announcements: pinned first, then by date
   const sortedAnnouncements = [...announcements].sort((a, b) => {
@@ -148,60 +218,6 @@ export function AnnouncementsTab({ user }: { user: User }) {
     if (!a.isPinned && b.isPinned) return 1;
     return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
   });
-
-  const handleAddComment = async (announcementId: string) => {
-    const commentText = commentTexts[announcementId];
-    if (!commentText?.trim() || !user) return;
-
-    setSavingComment(announcementId);
-    try {
-      await createAnnouncementComment(announcementId, commentText.trim());
-
-      // Reload comments
-      const commentsData = await getAnnouncementComments(announcementId);
-      setComments((prev) => ({
-        ...prev,
-        [announcementId]: commentsData.map((c: any) => ({
-          id: c.comment_id,
-          authorName: c.profiles?.display_name || 'Unknown',
-          body: c.body,
-          createdAt: c.created_at,
-          parentCommentId: c.parent_comment_id ?? null,
-        })),
-      }));
-
-      setCommentTexts({ ...commentTexts, [announcementId]: '' });
-    } catch (error) {
-      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setSavingComment(null);
-    }
-  };
-
-  async function handleSendReply(announcementId: string) {
-    if (!replyText.trim() || !replyingTo) return;
-    setSavingComment(replyingTo.commentId);
-    try {
-      await createAnnouncementComment(announcementId, replyText.trim(), replyingTo.commentId);
-      setReplyText('');
-      setReplyingTo(null);
-      await loadData();
-    } catch {
-      toast.error('Failed to send reply');
-    } finally {
-      setSavingComment(null);
-    }
-  }
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffDays = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24));
-    if (diffDays === 0) return 'Today';
-    if (diffDays === 1) return 'Yesterday';
-    if (diffDays < 7) return `${diffDays} days ago`;
-    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-  };
 
   const toggleComments = (announcementId: string) => {
     setExpandedComments({
@@ -237,9 +253,7 @@ export function AnnouncementsTab({ user }: { user: User }) {
         </Card>
       ) : (
         <div className="space-y-6">
-          {sortedAnnouncements.map((announcement) => {
-            const announcementComments = comments[announcement.id] || [];
-            return (
+          {sortedAnnouncements.map((announcement) => (
           <Card key={announcement.id}>
             <CardHeader className={announcement.isPinned ? 'bg-secondary/50 border-l-4 border-l-primary' : ''}>
               <div className="flex items-start justify-between">
@@ -267,7 +281,7 @@ export function AnnouncementsTab({ user }: { user: User }) {
             </CardHeader>
             <CardContent className="space-y-4">
               <p className="text-foreground whitespace-pre-line">{announcement.body}</p>
-              
+
               {announcement.imageUrl && (
                 <ImageWithFallback
                   src={announcement.imageUrl}
@@ -278,123 +292,23 @@ export function AnnouncementsTab({ user }: { user: User }) {
 
               {/* Comments Section */}
               <div className="border-t pt-4 space-y-4">
-                  <Button
+                <Button
                   variant="ghost"
                   size="sm"
                   onClick={() => toggleComments(announcement.id)}
                   className="gap-2"
                 >
                   <MessageCircle className="w-4 h-4" />
-                  {announcementComments.length} {announcementComments.length === 1 ? 'Comment' : 'Comments'}
+                  Comments
                 </Button>
 
                 {expandedComments[announcement.id] && (
-                  <div className="space-y-4 pl-4 border-l-2 border-border">
-                    {announcementComments.map((comment) => (
-                      <div key={comment.id} className="space-y-1">
-                        {comment.parentCommentId && (
-                          <p className="text-xs text-muted-foreground pl-2 border-l-2 border-muted mb-1">
-                            ↩ Replying to {
-                              comments[announcement.id]?.find(c => c.id === comment.parentCommentId)?.authorName ?? 'comment'
-                            }
-                          </p>
-                        )}
-                        <div className="flex items-center gap-2">
-                          <Avatar className="h-6 w-6">
-                            <AvatarFallback className="text-xs">
-                              {comment.authorName[0]}
-                            </AvatarFallback>
-                          </Avatar>
-                          <span className="text-sm font-medium">{comment.authorName}</span>
-                          <span className="text-xs text-muted-foreground">
-                            {formatDate(comment.createdAt)}
-                          </span>
-                        </div>
-                        <p className="text-sm pl-8">{comment.body}</p>
-                        {!comment.parentCommentId && (
-                          <button
-                            onClick={() => setReplyingTo({
-                              announcementId: announcement.id,
-                              commentId: comment.id,
-                              authorName: comment.authorName,
-                            })}
-                            className="text-xs text-muted-foreground hover:text-foreground mt-1 transition-colors"
-                          >
-                            Reply
-                          </button>
-                        )}
-                        {replyingTo?.commentId === comment.id && (
-                          <div className="ml-8 mt-2 space-y-2">
-                            <Textarea
-                              autoFocus
-                              placeholder={`Reply to ${replyingTo.authorName}…`}
-                              value={replyText}
-                              onChange={(e) => setReplyText(e.target.value)}
-                              className="text-sm min-h-[60px] resize-none"
-                              onKeyDown={(e) => {
-                                if (e.key === 'Escape') { setReplyingTo(null); setReplyText(''); }
-                              }}
-                            />
-                            <div className="flex gap-2 justify-end">
-                              <Button
-                                variant="ghost"
-                                size="sm"
-                                onClick={() => { setReplyingTo(null); setReplyText(''); }}
-                              >
-                                Cancel
-                              </Button>
-                              <Button
-                                size="sm"
-                                onClick={() => handleSendReply(announcement.id)}
-                                disabled={!replyText.trim() || savingComment === comment.id}
-                              >
-                                {savingComment === comment.id ? (
-                                  <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                                ) : (
-                                  <Send className="h-3.5 w-3.5" />
-                                )}
-                                Send
-                              </Button>
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    ))}
-
-                    {/* Add Comment */}
-                    <div className="flex gap-2 pt-2">
-                      <Textarea
-                        placeholder="Ask a question or leave a comment..."
-                        value={commentTexts[announcement.id] || ''}
-                        onChange={(e) =>
-                          setCommentTexts({
-                            ...commentTexts,
-                            [announcement.id]: e.target.value
-                          })
-                        }
-                        className="min-h-[80px]"
-                      />
-                      <Button
-                        onClick={() => handleAddComment(announcement.id)}
-                        disabled={!commentTexts[announcement.id]?.trim() || savingComment === announcement.id}
-                        size="sm"
-                        className="gap-1.5"
-                      >
-                        {savingComment === announcement.id ? (
-                          <Loader2 className="w-4 h-4 animate-spin" />
-                        ) : (
-                          <Send className="w-4 h-4" />
-                        )}
-                        Post
-                      </Button>
-                    </div>
-                  </div>
+                  <AnnouncementCommentSection announcementId={announcement.id} />
                 )}
               </div>
             </CardContent>
           </Card>
-            );
-          })}
+          ))}
         </div>
       )}
     </div>
