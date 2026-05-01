@@ -1,16 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
-import { Bell, BookOpen, Loader2, MessageCircle, MessageSquare, Trophy, Award } from 'lucide-react';
+import { Bell, BookOpen, Loader2, MessageSquare, Trophy, Award } from 'lucide-react';
 import { useProfile } from '../../hooks/useProfile';
-import {
-  getSectionUnreadCounts,
-  getUnreadMessageCount,
-  getUnreadNotificationCount,
-  getNewFeedbackCount,
-} from '../../lib/supabase/queries';
+import { useHomeCounts } from '../../lib/hooks/notifications';
 
 type User = {
   id: string;
@@ -34,19 +28,16 @@ type HomeTabProps = {
 
 export function HomeTab({ user, onNavigate }: HomeTabProps) {
   const {
-    family,
     students: profileStudents,
     loading: profileLoading,
     error: profileError,
     reload: reloadProfile,
   } = useProfile(user);
-  const [unreadMessages, setUnreadMessages] = useState(0);
-  const [announcementCount, setAnnouncementCount] = useState(0);
-  const [blogCount, setBlogCount] = useState(0);
-  const [commentNotifCount, setCommentNotifCount] = useState(0);
-  const [feedbackCount, setFeedbackCount] = useState(0);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { data: counts, isLoading: loading, error: countsError } = useHomeCounts(user.id);
+  const unreadMessages = counts?.unreadMessages ?? 0;
+  const announcementCount = counts?.announcementCount ?? 0;
+  const blogCount = counts?.blogCount ?? 0;
+  const error = countsError instanceof Error ? countsError.message : null;
 
   const getInitials = (name: string) => {
     return name
@@ -77,59 +68,9 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
     beltLevel: student.belt_level || 'No belt assigned',
   }));
 
-  const loadHomeData = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const [sectionCountsResult, unreadMessagesResult, commentCountResult] = await Promise.allSettled([
-        getSectionUnreadCounts(user.id),
-        getUnreadMessageCount(),
-        getUnreadNotificationCount(),
-      ]);
-
-      if (sectionCountsResult.status === 'rejected') throw sectionCountsResult.reason;
-      if (unreadMessagesResult.status === 'rejected') throw unreadMessagesResult.reason;
-      if (commentCountResult.status === 'rejected') throw commentCountResult.reason;
-
-      const sectionCounts = sectionCountsResult.value;
-      const commentCount = commentCountResult.value;
-
-      setUnreadMessages(unreadMessagesResult.value);
-      setAnnouncementCount(sectionCounts.announcements);
-      setBlogCount(sectionCounts.blog);
-      setCommentNotifCount(commentCount);
-    } catch (err) {
-      console.error('Error loading home dashboard data:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load home dashboard data');
-    } finally {
-      setLoading(false);
-    }
-  }, [user.id]);
-
-  useEffect(() => {
-    loadHomeData();
-  }, [loadHomeData]);
-
-  // Load new feedback count once family is known
-  useEffect(() => {
-    if (!family?.family_id) return;
-    getNewFeedbackCount(user.id, family.family_id)
-      .then(setFeedbackCount)
-      .catch(() => {}); // non-critical
-  }, [family?.family_id, user.id]);
-
-  const newFeedbackCount = feedbackCount;
   const newAnnouncementsCount = announcementCount;
 
   const allNotifications = [
-    {
-      type: 'feedback',
-      count: newFeedbackCount,
-      label: 'Instructor Feedback',
-      icon: Award,
-      action: () => onNavigate('feedback')
-    },
     {
       type: 'messages',
       count: unreadMessages,
@@ -151,17 +92,10 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
       icon: BookOpen,
       action: () => onNavigate('blog'),
     },
-    {
-      type: 'comments',
-      count: commentNotifCount,
-      label: 'New Comment Replies',
-      icon: MessageCircle,
-      action: () => onNavigate('announcements'),
-    },
   ];
 
   const notifications = allNotifications.filter((n) => n.count > 0);
-  const totalNotifications = newFeedbackCount + unreadMessages + newAnnouncementsCount + blogCount + commentNotifCount;
+  const totalNotifications = unreadMessages + newAnnouncementsCount + blogCount;
 
   const isLoading = loading || profileLoading;
   const loadError = error || profileError;
@@ -185,7 +119,6 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
           <Button
             onClick={() => {
               reloadProfile();
-              loadHomeData();
             }}
           >
             Try Again
