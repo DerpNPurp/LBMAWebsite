@@ -28,13 +28,13 @@ export function NotificationBell({ userId, onNavigate }: NotificationBellProps) 
       markSectionSeen('blog'),
       markNotificationsRead(),
     ]);
-    loadSummary();
+    await loadSummary();
   }
 
   async function handleNavigate(tab: string, section?: 'announcements' | 'blog') {
     if (section) {
       await markSectionSeen(section).catch(console.error);
-      loadSummary();
+      await loadSummary();
     }
     onNavigate(tab);
     setOpen(false);
@@ -44,7 +44,7 @@ export function NotificationBell({ userId, onNavigate }: NotificationBellProps) 
     const tab =
       notif.reference_type === 'announcement_comment' ? 'announcements' : 'blog';
     await markNotificationsRead().catch(console.error);
-    loadSummary();
+    await loadSummary();
     onNavigate(tab);
     setOpen(false);
   }

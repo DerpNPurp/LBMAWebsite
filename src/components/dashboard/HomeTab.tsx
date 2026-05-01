@@ -33,7 +33,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
     error: profileError,
     reload: reloadProfile,
   } = useProfile(user);
-  const { data: counts, isLoading: loading, error: countsError } = useHomeCounts(user.id);
+  const { data: counts, isLoading: loading, error: countsError, refetch: reloadCounts } = useHomeCounts(user.id);
   const unreadMessages = counts?.unreadMessages ?? 0;
   const announcementCount = counts?.announcementCount ?? 0;
   const blogCount = counts?.blogCount ?? 0;
@@ -119,6 +119,7 @@ export function HomeTab({ user, onNavigate }: HomeTabProps) {
           <Button
             onClick={() => {
               reloadProfile();
+              reloadCounts();
             }}
           >
             Try Again

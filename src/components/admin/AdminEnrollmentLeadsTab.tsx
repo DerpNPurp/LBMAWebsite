@@ -325,16 +325,6 @@ export function AdminEnrollmentLeadsTab() {
   const [search, setSearch] = useState('');
   const [notesDraft, setNotesDraft] = useState<Record<string, string>>({});
   const [updatingId, setUpdatingId] = useState<string | null>(null);
-
-  useEffect(() => {
-    setNotesDraft(d => {
-      const next = { ...d };
-      for (const l of leads) {
-        if (!(l.lead_id in next)) next[l.lead_id] = l.admin_notes ?? '';
-      }
-      return next;
-    });
-  }, [leads]);
   const [denyTarget, setDenyTarget] = useState<EnrollmentLead | null>(null);
   const [pickDateTarget, setPickDateTarget] = useState<EnrollmentLead | null>(null);
   const [showNewLeadModal, setShowNewLeadModal] = useState(false);
@@ -345,6 +335,16 @@ export function AdminEnrollmentLeadsTab() {
   const [messageExpanded, setMessageExpanded] = useState<Record<string, boolean>>({});
   const [selectedWeekDate, setSelectedWeekDate] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+
+  useEffect(() => {
+    setNotesDraft(d => {
+      const next = { ...d };
+      for (const l of leads) {
+        if (!(l.lead_id in next)) next[l.lead_id] = l.admin_notes ?? '';
+      }
+      return next;
+    });
+  }, [leads]);
 
   async function handleApprove(lead: EnrollmentLead) {
     const fnHeaders = await edgeFunctionUserAuthHeaders();
