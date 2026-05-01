@@ -1,7 +1,5 @@
-import { useState, useEffect } from 'react';
 import { Loader2 } from 'lucide-react';
-import { getReviews } from '../../lib/supabase/queries';
-import type { Review } from '../../lib/types';
+import { useReviews } from '../../lib/hooks/reviews';
 import { V3 } from './design';
 
 function StarRow({ rating }: { rating: number }) {
@@ -31,16 +29,7 @@ function timeAgo(dateStr: string): string {
 }
 
 export function ReviewsPage() {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    getReviews()
-      .then(setReviews)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load reviews.'))
-      .finally(() => setLoading(false));
-  }, []);
+  const { data: reviews = [], isLoading: loading, isError } = useReviews();
 
   const featured = reviews[0] ?? null;
   const rest = reviews.slice(1);
@@ -69,7 +58,7 @@ export function ReviewsPage() {
         <section className="py-32 flex justify-center">
           <Loader2 className="w-6 h-6 animate-spin" style={{ color: V3.primary }} />
         </section>
-      ) : error ? (
+      ) : isError ? (
         <section className="py-32 text-center" style={{ color: V3.muted }}>
           <p>Unable to load reviews. Please try again later.</p>
         </section>
