@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
@@ -9,9 +9,13 @@ import { Label } from '../ui/label';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { toast } from 'sonner';
 import { Edit2, Trash2, MessageCircle, Send, Search, Loader2 } from 'lucide-react';
-import { getBlogPosts, getBlogCommentsForPosts } from '../../lib/supabase/queries';
-import { updateBlogPost, deleteBlogPost, deleteBlogComment, createBlogComment } from '../../lib/supabase/mutations';
-import { subscribeToBlogPosts, unsubscribe } from '../../lib/supabase/realtime';
+import { deleteBlogComment, createBlogComment } from '../../lib/supabase/mutations';
+import {
+  useBlogPosts,
+  useBlogComments,
+  useUpdateBlogPost,
+  useDeleteBlogPost,
+} from '../../lib/hooks/blog';
 
 type User = {
   id: string;
@@ -36,67 +40,114 @@ type BlogPost = {
   comments: Comment[];
 };
 
+function AdminBlogCommentSection({
+  postId,
+  onDeleteComment,
+}: {
+  postId: string;
+  onDeleteComment: (postId: string, commentId: string) => void;
+}) {
+  const [commentText, setCommentText] = useState('');
+  const { data: rawComments = [] } = useBlogComments(postId);
 
-export function AdminBlogTab({ user }: { user: User }) {
-  const [posts, setPosts] = useState<BlogPost[]>([]);
-  const [comments, setComments] = useState<{ [postId: string]: Comment[] }>({});
+  const comments: Comment[] = rawComments.map((c: any) => ({
+    id: c.comment_id,
+    authorName: c.profiles?.display_name || 'Unknown',
+    body: c.body,
+    createdAt: c.created_at,
+  }));
+
+  const handleAddComment = async () => {
+    if (!commentText.trim()) return;
+    try {
+      await createBlogComment(postId, commentText.trim());
+      setCommentText('');
+    } catch (error) {
+      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
+      year: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit'
+    });
+  };
+
+  return (
+    <div className="space-y-4 pl-4 border-l-2 border-border">
+      {comments.map((comment) => (
+        <div key={comment.id} className="space-y-1">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-xs">
+                  {comment.authorName[0]}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-sm font-medium">{comment.authorName}</span>
+              <span className="text-xs text-muted-foreground">
+                {formatDate(comment.createdAt)}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => onDeleteComment(postId, comment.id)}
+            >
+              <Trash2 className="w-3 h-3" />
+            </Button>
+          </div>
+          <p className="text-sm pl-8">{comment.body}</p>
+        </div>
+      ))}
+
+      {/* Add Comment as Admin */}
+      <div className="flex gap-2 pt-2">
+        <Textarea
+          placeholder="Add a comment as admin..."
+          value={commentText}
+          onChange={(e) => setCommentText(e.target.value)}
+          className="min-h-[80px]"
+        />
+        <Button
+          onClick={handleAddComment}
+          disabled={!commentText.trim()}
+          size="sm"
+        >
+          <Send className="w-4 h-4" />
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+
+export function AdminBlogTab({ user: _user }: { user: User }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [editingPost, setEditingPost] = useState<BlogPost | null>(null);
   const [editTitle, setEditTitle] = useState('');
   const [editBody, setEditBody] = useState('');
-  const [commentTexts, setCommentTexts] = useState<{ [key: string]: string }>({});
   const [expandedComments, setExpandedComments] = useState<{ [key: string]: boolean }>({});
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
 
-  const loadPosts = async () => {
-    try {
-      setLoading(true);
-      const postsData = await getBlogPosts();
-      
-      const formatted: BlogPost[] = postsData.map((p: any) => ({
-        id: p.post_id,
-        title: p.title,
-        body: p.body,
-        authorName: p.profiles?.display_name || 'Unknown',
-        createdAt: p.created_at,
-      }));
+  const { data: rawPosts = [], isLoading: loading } = useBlogPosts();
+  const updatePost = useUpdateBlogPost();
+  const deletePost = useDeleteBlogPost();
 
-      setPosts(formatted);
-
-      // Load all comments in a single query
-      const postIds = formatted.map(p => p.id);
-      const rawComments = await getBlogCommentsForPosts(postIds);
-      const commentsMap: { [key: string]: Comment[] } = {};
-      for (const [postId, commentRows] of Object.entries(rawComments)) {
-        commentsMap[postId] = (commentRows as any[]).map(c => ({
-          id: c.comment_id,
-          authorName: c.profiles?.display_name || 'Unknown',
-          body: c.body,
-          createdAt: c.created_at,
-        }));
-      }
-      setComments(commentsMap);
-    } catch (error) {
-      console.error('Error loading blog posts:', error);
-      toast.error('Error loading blog posts: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    loadPosts();
-
-    const channel = subscribeToBlogPosts((payload) => {
-      if (payload.eventType === 'INSERT' || payload.eventType === 'UPDATE' || payload.eventType === 'DELETE') {
-        loadPosts();
-      }
-    });
-
-    return () => unsubscribe(channel);
-  }, []);
+  const posts: BlogPost[] = rawPosts.map((p: any) => ({
+    id: p.post_id,
+    title: p.title,
+    body: p.body,
+    authorName: p.profiles?.display_name || 'Unknown',
+    createdAt: p.created_at,
+    comments: [],
+  }));
 
   const filteredPosts = posts.filter(post =>
     post.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -112,14 +163,16 @@ export function AdminBlogTab({ user }: { user: User }) {
     if (!editingPost || !editTitle.trim() || !editBody.trim()) return;
     setSaving(true);
     try {
-      await updateBlogPost(editingPost.id, {
-        title: editTitle.trim(),
-        body: editBody.trim(),
+      await updatePost.mutateAsync({
+        id: editingPost.id,
+        updates: {
+          title: editTitle.trim(),
+          body: editBody.trim(),
+        } as any,
       });
       setEditingPost(null);
       setEditTitle('');
       setEditBody('');
-      await loadPosts();
       toast.success('Blog post updated!');
     } catch (error) {
       toast.error('Error updating blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -135,8 +188,7 @@ export function AdminBlogTab({ user }: { user: User }) {
       onConfirm: async () => {
         setConfirmState(null);
         try {
-          await deleteBlogPost(id);
-          await loadPosts();
+          await deletePost.mutateAsync(id);
           toast.success('Blog post deleted!');
         } catch (error) {
           toast.error('Error deleting blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -153,7 +205,6 @@ export function AdminBlogTab({ user }: { user: User }) {
         setConfirmState(null);
         try {
           await deleteBlogComment(commentId);
-          await loadPosts();
           toast.success('Comment deleted!');
         } catch (error) {
           toast.error('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
@@ -168,23 +219,11 @@ export function AdminBlogTab({ user }: { user: User }) {
     setEditBody(post.body);
   };
 
-  const handleAddComment = async (postId: string) => {
-    const commentText = commentTexts[postId];
-    if (!commentText?.trim() || !user) return;
-    try {
-      await createBlogComment(postId, commentText.trim());
-      setCommentTexts({ ...commentTexts, [postId]: '' });
-      await loadPosts();
-    } catch (error) {
-      toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    }
-  };
-
   const formatDate = (dateString: string) => {
     const date = new Date(dateString);
-    return date.toLocaleDateString('en-US', { 
-      month: 'long', 
-      day: 'numeric', 
+    return date.toLocaleDateString('en-US', {
+      month: 'long',
+      day: 'numeric',
       year: 'numeric',
       hour: 'numeric',
       minute: '2-digit'
@@ -269,7 +308,7 @@ export function AdminBlogTab({ user }: { user: User }) {
             <Button variant="outline" onClick={() => setEditingPost(null)}>
               Cancel
             </Button>
-            <Button 
+            <Button
               onClick={handleUpdate}
               disabled={!editTitle.trim() || !editBody.trim() || saving}
             >
@@ -295,115 +334,67 @@ export function AdminBlogTab({ user }: { user: User }) {
             </CardContent>
           </Card>
         ) : (
-          sortedPosts.map((post) => {
-            const postComments = comments[post.id] || [];
-            return (
-            <Card key={post.id}>
-              <CardHeader>
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Avatar className="h-8 w-8">
-                        <AvatarFallback>{post.authorName[0]}</AvatarFallback>
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-medium">{post.authorName}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {formatDate(post.createdAt)}
-                        </p>
-                      </div>
+          sortedPosts.map((post) => (
+          <Card key={post.id}>
+            <CardHeader>
+              <div className="flex items-start justify-between">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Avatar className="h-8 w-8">
+                      <AvatarFallback>{post.authorName[0]}</AvatarFallback>
+                    </Avatar>
+                    <div>
+                      <p className="text-sm font-medium">{post.authorName}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {formatDate(post.createdAt)}
+                      </p>
                     </div>
-                    <CardTitle>{post.title}</CardTitle>
                   </div>
-                  <div className="flex gap-2">
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => openEditDialog(post)}
-                    >
-                      <Edit2 className="w-4 h-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => handleDelete(post.id)}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
-                  </div>
+                  <CardTitle>{post.title}</CardTitle>
                 </div>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <p className="text-foreground whitespace-pre-line">{post.body}</p>
-
-                {/* Comments Section */}
-                <div className="border-t pt-4 space-y-4">
+                <div className="flex gap-2">
                   <Button
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    onClick={() => toggleComments(post.id)}
-                    className="gap-2"
+                    onClick={() => openEditDialog(post)}
                   >
-                    <MessageCircle className="w-4 h-4" />
-                    {postComments.length} {postComments.length === 1 ? 'Comment' : 'Comments'}
+                    <Edit2 className="w-4 h-4" />
                   </Button>
-
-                  {expandedComments[post.id] && (
-                    <div className="space-y-4 pl-4 border-l-2 border-border">
-                      {postComments.map((comment) => (
-                        <div key={comment.id} className="space-y-1">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Avatar className="h-6 w-6">
-                                <AvatarFallback className="text-xs">
-                                  {comment.authorName[0]}
-                                </AvatarFallback>
-                              </Avatar>
-                              <span className="text-sm font-medium">{comment.authorName}</span>
-                              <span className="text-xs text-muted-foreground">
-                                {formatDate(comment.createdAt)}
-                              </span>
-                            </div>
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => handleDeleteComment(post.id, comment.id)}
-                            >
-                              <Trash2 className="w-3 h-3" />
-                            </Button>
-                          </div>
-                          <p className="text-sm pl-8">{comment.body}</p>
-                        </div>
-                      ))}
-
-                      {/* Add Comment as Admin */}
-                      <div className="flex gap-2 pt-2">
-                        <Textarea
-                          placeholder="Add a comment as admin..."
-                          value={commentTexts[post.id] || ''}
-                          onChange={(e) =>
-                            setCommentTexts({
-                              ...commentTexts,
-                              [post.id]: e.target.value
-                            })
-                          }
-                          className="min-h-[80px]"
-                        />
-                        <Button
-                          onClick={() => handleAddComment(post.id)}
-                          disabled={!commentTexts[post.id]?.trim()}
-                          size="sm"
-                        >
-                          <Send className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => handleDelete(post.id)}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
                 </div>
-              </CardContent>
-            </Card>
-            );
-          })
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="text-foreground whitespace-pre-line">{post.body}</p>
+
+              {/* Comments Section */}
+              <div className="border-t pt-4 space-y-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => toggleComments(post.id)}
+                  className="gap-2"
+                >
+                  <MessageCircle className="w-4 h-4" />
+                  Comments
+                </Button>
+
+                {expandedComments[post.id] && (
+                  <AdminBlogCommentSection
+                    postId={post.id}
+                    onDeleteComment={handleDeleteComment}
+                  />
+                )}
+              </div>
+            </CardContent>
+          </Card>
+          ))
         )}
       </div>
 
@@ -411,8 +402,8 @@ export function AdminBlogTab({ user }: { user: User }) {
       <Card className="bg-secondary border-primary/20">
         <CardContent className="pt-6">
           <p className="text-sm">
-            <strong>Admin Note:</strong> You can edit or delete any blog post or comment. 
-            Use this power responsibly - only remove content that violates community guidelines. 
+            <strong>Admin Note:</strong> You can edit or delete any blog post or comment.
+            Use this power responsibly - only remove content that violates community guidelines.
             When in doubt, reach out to the family directly first.
           </p>
         </CardContent>
