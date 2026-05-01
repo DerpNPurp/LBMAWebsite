@@ -196,7 +196,7 @@ export function AdminBlogTab({ user: _user }: { user: User }) {
         updates: {
           title: editTitle.trim(),
           body: editBody.trim(),
-        } as any,
+        },
       });
       setEditingPost(null);
       setEditTitle('');

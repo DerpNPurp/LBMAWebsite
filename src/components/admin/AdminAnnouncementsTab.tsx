@@ -45,7 +45,6 @@ type Announcement = {
 
 function AdminAnnouncementCommentSection({ announcementId }: { announcementId: string }) {
   const [commentText, setCommentText] = useState('');
-  const [savingComment, setSavingComment] = useState(false);
 
   const { data: rawComments = [] } = useAnnouncementComments(announcementId);
   const createComment = useCreateAnnouncementComment(announcementId);
@@ -59,14 +58,11 @@ function AdminAnnouncementCommentSection({ announcementId }: { announcementId: s
 
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
-    setSavingComment(true);
     try {
       await createComment.mutateAsync({ body: commentText.trim() });
       setCommentText('');
     } catch (error) {
       toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setSavingComment(false);
     }
   };
 
@@ -104,10 +100,10 @@ function AdminAnnouncementCommentSection({ announcementId }: { announcementId: s
         />
         <Button
           onClick={handleAddComment}
-          disabled={!commentText.trim() || savingComment}
+          disabled={!commentText.trim() || createComment.isPending}
           size="sm"
         >
-          {savingComment ? (
+          {createComment.isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Send className="w-4 h-4" />
@@ -159,7 +155,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
         body: newBody.trim(),
         is_pinned: false,
         image_url: selectedImage || null,
-      } as any);
+      });
       resetForm();
       setIsCreateDialogOpen(false);
       toast.success('Announcement created!');
@@ -181,7 +177,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
           body: newBody.trim(),
           is_pinned: editingAnnouncement.isPinned,
           image_url: selectedImage || null,
-        } as any,
+        },
       });
       resetForm();
       setEditingAnnouncement(null);
@@ -215,7 +211,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
     try {
       await updateAnn.mutateAsync({
         id,
-        updates: { is_pinned: !announcement.isPinned } as any,
+        updates: { is_pinned: !announcement.isPinned },
       });
     } catch (error) {
       toast.error('Error updating pin status: ' + (error instanceof Error ? error.message : 'Unknown error'));

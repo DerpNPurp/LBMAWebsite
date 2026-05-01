@@ -50,7 +50,6 @@ function formatDate(dateString: string) {
 
 function AnnouncementCommentSection({ announcementId }: { announcementId: string }) {
   const [commentText, setCommentText] = useState('');
-  const [savingComment, setSavingComment] = useState(false);
   const [replyingTo, setReplyingTo] = useState<{
     commentId: string;
     authorName: string;
@@ -70,28 +69,22 @@ function AnnouncementCommentSection({ announcementId }: { announcementId: string
 
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
-    setSavingComment(true);
     try {
       await createComment.mutateAsync({ body: commentText.trim() });
       setCommentText('');
     } catch (error) {
       toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setSavingComment(false);
     }
   };
 
   const handleSendReply = async () => {
     if (!replyText.trim() || !replyingTo) return;
-    setSavingComment(true);
     try {
       await createComment.mutateAsync({ body: replyText.trim(), parentCommentId: replyingTo.commentId });
       setReplyText('');
       setReplyingTo(null);
     } catch {
       toast.error('Failed to send reply');
-    } finally {
-      setSavingComment(false);
     }
   };
 
@@ -152,9 +145,9 @@ function AnnouncementCommentSection({ announcementId }: { announcementId: string
                 <Button
                   size="sm"
                   onClick={handleSendReply}
-                  disabled={!replyText.trim() || savingComment}
+                  disabled={!replyText.trim() || createComment.isPending}
                 >
-                  {savingComment ? (
+                  {createComment.isPending ? (
                     <Loader2 className="h-3.5 w-3.5 animate-spin" />
                   ) : (
                     <Send className="h-3.5 w-3.5" />
@@ -177,11 +170,11 @@ function AnnouncementCommentSection({ announcementId }: { announcementId: string
         />
         <Button
           onClick={handleAddComment}
-          disabled={!commentText.trim() || savingComment}
+          disabled={!commentText.trim() || createComment.isPending}
           size="sm"
           className="gap-1.5"
         >
-          {savingComment ? (
+          {createComment.isPending ? (
             <Loader2 className="w-4 h-4 animate-spin" />
           ) : (
             <Send className="w-4 h-4" />
