@@ -7,10 +7,11 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Plus, MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
-import { createBlogPost, markSectionSeen } from '../../lib/supabase/mutations';
+import { markSectionSeen } from '../../lib/supabase/mutations';
 import {
   useBlogPosts,
   useBlogComments,
+  useCreateBlogPost,
   useCreateBlogComment,
 } from '../../lib/hooks/blog';
 
@@ -201,6 +202,7 @@ export function BlogTab({ user }: { user: User }) {
   const [saving, setSaving] = useState(false);
 
   const { data: rawPosts = [], isLoading: loading } = useBlogPosts();
+  const createPost = useCreateBlogPost();
 
   useEffect(() => {
     markSectionSeen('blog').catch(console.error);
@@ -227,7 +229,7 @@ export function BlogTab({ user }: { user: User }) {
 
     setSaving(true);
     try {
-      await createBlogPost({
+      await createPost.mutateAsync({
         author_user_id: user.id,
         title: newPostTitle.trim(),
         body: newPostBody.trim(),

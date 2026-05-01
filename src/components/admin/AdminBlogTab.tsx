@@ -9,12 +9,13 @@ import { Label } from '../ui/label';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { toast } from 'sonner';
 import { Edit2, Trash2, MessageCircle, Send, Search, Loader2 } from 'lucide-react';
-import { deleteBlogComment, createBlogComment } from '../../lib/supabase/mutations';
 import {
   useBlogPosts,
   useBlogComments,
   useUpdateBlogPost,
   useDeleteBlogPost,
+  useCreateBlogComment,
+  useDeleteBlogComment,
 } from '../../lib/hooks/blog';
 
 type User = {
@@ -42,13 +43,14 @@ type BlogPost = {
 
 function AdminBlogCommentSection({
   postId,
-  onDeleteComment,
 }: {
   postId: string;
-  onDeleteComment: (postId: string, commentId: string) => void;
 }) {
   const [commentText, setCommentText] = useState('');
+  const [confirmState, setConfirmState] = useState<{ title: string; description: string; onConfirm: () => void } | null>(null);
   const { data: rawComments = [] } = useBlogComments(postId);
+  const createComment = useCreateBlogComment(postId);
+  const deleteComment = useDeleteBlogComment(postId);
 
   const comments: Comment[] = rawComments.map((c: any) => ({
     id: c.comment_id,
@@ -60,11 +62,27 @@ function AdminBlogCommentSection({
   const handleAddComment = async () => {
     if (!commentText.trim()) return;
     try {
-      await createBlogComment(postId, commentText.trim());
+      await createComment.mutateAsync({ body: commentText.trim() });
       setCommentText('');
     } catch (error) {
       toast.error('Error adding comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
     }
+  };
+
+  const handleDeleteComment = (commentId: string) => {
+    setConfirmState({
+      title: 'Delete comment',
+      description: 'Are you sure you want to delete this comment?',
+      onConfirm: async () => {
+        setConfirmState(null);
+        try {
+          await deleteComment.mutateAsync(commentId);
+          toast.success('Comment deleted!');
+        } catch (error) {
+          toast.error('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
+        }
+      },
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -97,7 +115,7 @@ function AdminBlogCommentSection({
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => onDeleteComment(postId, comment.id)}
+              onClick={() => handleDeleteComment(comment.id)}
             >
               <Trash2 className="w-3 h-3" />
             </Button>
@@ -122,6 +140,16 @@ function AdminBlogCommentSection({
           <Send className="w-4 h-4" />
         </Button>
       </div>
+
+      <ConfirmDialog
+        open={confirmState !== null}
+        title={confirmState?.title ?? ''}
+        description={confirmState?.description ?? ''}
+        confirmLabel="Delete"
+        destructive
+        onConfirm={() => confirmState?.onConfirm()}
+        onCancel={() => setConfirmState(null)}
+      />
     </div>
   );
 }
@@ -192,22 +220,6 @@ export function AdminBlogTab({ user: _user }: { user: User }) {
           toast.success('Blog post deleted!');
         } catch (error) {
           toast.error('Error deleting blog post: ' + (error instanceof Error ? error.message : 'Unknown error'));
-        }
-      },
-    });
-  };
-
-  const handleDeleteComment = (postId: string, commentId: string) => {
-    setConfirmState({
-      title: 'Delete comment',
-      description: 'Are you sure you want to delete this comment?',
-      onConfirm: async () => {
-        setConfirmState(null);
-        try {
-          await deleteBlogComment(commentId);
-          toast.success('Comment deleted!');
-        } catch (error) {
-          toast.error('Error deleting comment: ' + (error instanceof Error ? error.message : 'Unknown error'));
         }
       },
     });
@@ -388,7 +400,6 @@ export function AdminBlogTab({ user: _user }: { user: User }) {
                 {expandedComments[post.id] && (
                   <AdminBlogCommentSection
                     postId={post.id}
-                    onDeleteComment={handleDeleteComment}
                   />
                 )}
               </div>
