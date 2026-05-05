@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
 import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { MessageCircle, Send, Pin, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
@@ -23,6 +23,7 @@ type User = {
 type Comment = {
   id: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   body: string;
   createdAt: string;
   parentCommentId?: string | null;
@@ -33,6 +34,7 @@ type Announcement = {
   title: string;
   body: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   imageUrl?: string;
   isPinned?: boolean;
@@ -68,6 +70,7 @@ function AnnouncementCommentSection({
   const comments: Comment[] = rawComments.map((c: any) => ({
     id: c.comment_id,
     authorName: c.profiles?.display_name || 'Unknown',
+    authorAvatarUrl: c.profiles?.avatar_url ?? null,
     body: c.body,
     createdAt: c.created_at,
     parentCommentId: c.parent_comment_id ?? null,
@@ -113,6 +116,7 @@ function AnnouncementCommentSection({
           )}
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
+              {comment.authorAvatarUrl && <AvatarImage src={comment.authorAvatarUrl} alt={comment.authorName} />}
               <AvatarFallback className="text-xs">
                 {comment.authorName[0]}
               </AvatarFallback>
@@ -213,6 +217,7 @@ export function AnnouncementsTab({ user: _user }: { user: User }) {
     title: a.title,
     body: a.body,
     authorName: a.profiles?.display_name || 'Unknown',
+    authorAvatarUrl: a.profiles?.avatar_url ?? null,
     createdAt: a.created_at,
     imageUrl: a.image_url || undefined,
     isPinned: a.is_pinned || false,
@@ -266,6 +271,7 @@ export function AnnouncementsTab({ user: _user }: { user: User }) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar className="h-8 w-8">
+                      {announcement.authorAvatarUrl && <AvatarImage src={announcement.authorAvatarUrl} alt={announcement.authorName} />}
                       <AvatarFallback>{announcement.authorName[0]}</AvatarFallback>
                     </Avatar>
                     <div>

@@ -183,24 +183,27 @@ export async function getAllStudents(): Promise<Student[]> {
  */
 async function hydrateAuthorNames<T extends { author_user_id: string }>(
   rows: T[]
-): Promise<(T & { profiles: { display_name: string | null } })[]> {
+): Promise<(T & { profiles: { display_name: string | null; avatar_url: string | null } })[]> {
   const authorIds = Array.from(
     new Set(rows.map(r => r.author_user_id).filter((id): id is string => Boolean(id)))
   );
   if (authorIds.length === 0) {
-    return rows.map(r => ({ ...r, profiles: { display_name: null } }));
+    return rows.map(r => ({ ...r, profiles: { display_name: null, avatar_url: null } }));
   }
   const { data: profiles } = await supabase
     .from('profiles')
-    .select('user_id, display_name')
+    .select('user_id, display_name, avatar_url')
     .in('user_id', authorIds);
 
-  const nameById = new Map(
-    (profiles ?? []).map(p => [p.user_id as string, p.display_name as string | null])
+  const profileById = new Map(
+    (profiles ?? []).map(p => [p.user_id as string, p as { display_name: string | null; avatar_url: string | null }])
   );
   return rows.map(r => ({
     ...r,
-    profiles: { display_name: nameById.get(r.author_user_id) ?? null },
+    profiles: {
+      display_name: profileById.get(r.author_user_id)?.display_name ?? null,
+      avatar_url: profileById.get(r.author_user_id)?.avatar_url ?? null,
+    },
   }));
 }
 
@@ -232,7 +235,7 @@ export async function getAnnouncement(announcementId: string): Promise<Announcem
 }
 
 export type AnnouncementCommentWithAuthor = AnnouncementComment & {
-  profiles: { display_name: string | null } | null;
+  profiles: { display_name: string | null; avatar_url: string | null } | null;
 };
 
 export async function getAnnouncementComments(announcementId: string): Promise<AnnouncementCommentWithAuthor[]> {
@@ -241,7 +244,8 @@ export async function getAnnouncementComments(announcementId: string): Promise<A
     .select(`
       ${ANNOUNCEMENT_COMMENT_COLUMNS},
       profiles!announcement_comments_author_user_id_fkey (
-        display_name
+        display_name,
+        avatar_url
       )
     `)
     .eq('announcement_id', announcementId)
@@ -278,7 +282,7 @@ export async function getBlogPost(postId: string): Promise<BlogPost> {
 }
 
 export type BlogCommentWithAuthor = BlogComment & {
-  profiles: { display_name: string | null } | null;
+  profiles: { display_name: string | null; avatar_url: string | null } | null;
 };
 
 export async function getBlogComments(postId: string): Promise<BlogCommentWithAuthor[]> {
@@ -287,7 +291,8 @@ export async function getBlogComments(postId: string): Promise<BlogCommentWithAu
     .select(`
       ${BLOG_COMMENT_COLUMNS},
       profiles!blog_comments_author_user_id_fkey (
-        display_name
+        display_name,
+        avatar_url
       )
     `)
     .eq('post_id', postId)
@@ -311,7 +316,8 @@ export async function getBlogCommentsForPosts(
     .select(`
       ${BLOG_COMMENT_COLUMNS},
       profiles!blog_comments_author_user_id_fkey (
-        display_name
+        display_name,
+        avatar_url
       )
     `)
     .in('post_id', postIds)

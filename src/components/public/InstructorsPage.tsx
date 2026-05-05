@@ -54,6 +54,7 @@ export function InstructorsPage() {
                 <ImageWithFallback
                   src="/photos/kjn-guerra-portrait.jpg"
                   alt="KJN Guerra, head instructor at Los Banos Martial Arts Academy"
+                  fetchPriority="high"
                   style={{
                     width: '100%',
                     height: '100%',
@@ -127,6 +128,7 @@ export function InstructorsPage() {
               <ImageWithFallback
                 src="/photos/kjn-guerra-with-students.jpg"
                 alt="KJN Guerra with students at a tournament"
+                loading="lazy"
                 style={{ width: '100%', height: '100%', objectFit: 'cover' }}
               />
             </div>

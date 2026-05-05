@@ -7,7 +7,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { ConfirmDialog } from '../ui/confirm-dialog';
 import { Label } from '../ui/label';
 import { Plus, Edit2, Trash2, Upload, Pin, PinOff, Loader2, X, MessageCircle, Send } from 'lucide-react';
-import { Avatar, AvatarFallback } from '../ui/avatar';
+import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar';
 import { toast } from 'sonner';
 import {
   useAnnouncements,
@@ -29,6 +29,7 @@ type User = {
 type Comment = {
   id: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   body: string;
   createdAt: string;
 };
@@ -38,6 +39,7 @@ type Announcement = {
   title: string;
   body: string;
   authorName: string;
+  authorAvatarUrl?: string | null;
   createdAt: string;
   imageUrl?: string;
   isPinned?: boolean;
@@ -58,6 +60,7 @@ function AdminAnnouncementCommentSection({
   const comments: Comment[] = rawComments.map((c: any) => ({
     id: c.comment_id,
     authorName: c.profiles?.display_name || 'Unknown',
+    authorAvatarUrl: c.profiles?.avatar_url ?? null,
     body: c.body,
     createdAt: c.created_at,
   }));
@@ -95,6 +98,7 @@ function AdminAnnouncementCommentSection({
         <div key={comment.id} className="space-y-1">
           <div className="flex items-center gap-2">
             <Avatar className="h-6 w-6">
+              {comment.authorAvatarUrl && <AvatarImage src={comment.authorAvatarUrl} alt={comment.authorName} />}
               <AvatarFallback className="text-xs">{comment.authorName[0]}</AvatarFallback>
             </Avatar>
             <span className="text-sm font-medium">{comment.authorName}</span>
@@ -149,6 +153,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
     title: a.title,
     body: a.body,
     authorName: a.profiles?.display_name || 'Unknown',
+    authorAvatarUrl: a.profiles?.avatar_url ?? null,
     createdAt: a.created_at,
     imageUrl: a.image_url || undefined,
     isPinned: a.is_pinned || false,
@@ -479,6 +484,7 @@ export function AdminAnnouncementsTab({ user }: { user: User }) {
                 <div className="flex-1">
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar className="h-8 w-8">
+                      {announcement.authorAvatarUrl && <AvatarImage src={announcement.authorAvatarUrl} alt={announcement.authorName} />}
                       <AvatarFallback>{announcement.authorName[0]}</AvatarFallback>
                     </Avatar>
                     <div>
