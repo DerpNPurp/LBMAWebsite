@@ -26,18 +26,6 @@ dist-ssr
 # Git worktrees
 .worktrees/
 
-# AI tooling
-.claude/
-.mcp.json
-CLAUDE.md
-.cursor/
-.superpowers/
-.agents/
-.impeccable.md
-skills-lock.json
-docs/superpowers/
-.playwright-mcp/
-
 # Root-level screenshots / test artifacts
 /*.png
 /*.jpg
