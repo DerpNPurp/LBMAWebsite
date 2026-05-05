@@ -12,4 +12,5 @@ export const queryKeys = {
   profile: (userId: string) => ['profile', userId] as const,
   users: () => ['users'] as const,
   reviews: () => ['reviews'] as const,
+  admins: () => ['admins'] as const,
 } as const;

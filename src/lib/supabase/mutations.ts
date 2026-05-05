@@ -62,6 +62,24 @@ export async function updateProfileAvatar(userId: string, avatarUrl: string | nu
   return data;
 }
 
+export async function deactivateAdmin(targetUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('deactivate_admin', { target_user_id: targetUserId });
+  if (error) throw error;
+}
+
+export async function reactivateAdmin(targetUserId: string): Promise<void> {
+  const { error } = await supabase.rpc('reactivate_admin', { target_user_id: targetUserId });
+  if (error) throw error;
+}
+
+export async function setOwnerStatus(targetUserId: string, makeOwner: boolean): Promise<void> {
+  const { error } = await supabase.rpc('set_admin_owner_status', {
+    target_user_id: targetUserId,
+    make_owner: makeOwner,
+  });
+  if (error) throw error;
+}
+
 // ============================================
 // FAMILIES
 // ============================================

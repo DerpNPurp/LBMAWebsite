@@ -68,6 +68,17 @@ export async function getAllProfiles(): Promise<Profile[]> {
   return data || [];
 }
 
+export async function getAdminProfiles(): Promise<Profile[]> {
+  const { data, error } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('role', 'admin')
+    .order('created_at', { ascending: true });
+
+  if (error) throw error;
+  return data || [];
+}
+
 // ============================================
 // FAMILIES
 // ============================================
