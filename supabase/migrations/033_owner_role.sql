@@ -99,7 +99,8 @@ BEGIN
   END IF;
   IF NOT make_owner THEN
     SELECT COUNT(*) INTO v_owner_count
-    FROM public.profiles WHERE is_owner = true AND is_active = true AND role = 'admin';
+    FROM public.profiles WHERE is_owner = true AND is_active = true AND role = 'admin'
+    FOR UPDATE;
     IF v_owner_count <= 1 THEN
       RAISE EXCEPTION 'Cannot remove the last owner';
     END IF;
