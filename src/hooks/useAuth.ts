@@ -248,5 +248,6 @@ export function useAuth() {
     accessMessage,
     signOut,
     refreshUser,
+    isOwner: profile?.is_owner ?? false,
   };
 }
