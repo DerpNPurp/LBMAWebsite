@@ -28,6 +28,7 @@ export type Profile = {
   role: UserRole;
   display_name: string;
   is_active: boolean;
+  is_owner: boolean;
   deactivated_at: string | null;
   created_at: string;
   updated_at: string;

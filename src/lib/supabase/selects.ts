@@ -1,4 +1,4 @@
-export const PROFILE_COLUMNS = 'user_id, role, display_name, is_active, deactivated_at, created_at, updated_at, avatar_url';
+export const PROFILE_COLUMNS = 'user_id, role, display_name, is_active, is_owner, deactivated_at, created_at, updated_at, avatar_url';
 
 export const FAMILY_COLUMNS =
   'family_id, owner_user_id, primary_email, account_status, deactivated_at, address, city, state, zip, created_at, updated_at';
