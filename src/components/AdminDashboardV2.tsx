@@ -27,6 +27,7 @@ import { FeedbackTab as AdminFeedbackTab } from './admin/FeedbackTab';
 import { AdminEnrollmentLeadsTab } from './admin/AdminEnrollmentLeadsTab';
 import { AdminAvailabilitySettings } from './admin/AdminAvailabilitySettings';
 import { AdminProfileTab } from './admin/AdminProfileTab';
+import { AdminTeamTab } from './admin/AdminTeamTab';
 import { useSidebarCounts } from '../lib/hooks/notifications';
 import { useRealtimeInvalidation } from '../lib/hooks/useRealtimeInvalidation';
 import { markSectionSeen } from '../lib/supabase/mutations';
@@ -42,6 +43,7 @@ import {
   ClipboardList,
   LogOut,
   MessageSquare,
+  ShieldCheck,
   UserCircle,
   Users,
 } from 'lucide-react';
@@ -61,7 +63,8 @@ type AdminTabId =
   | 'feedback'
   | 'leads'
   | 'availability'
-  | 'profile';
+  | 'profile'
+  | 'team';
 
 const navGroups: {
   label: string;
@@ -92,6 +95,7 @@ const navGroups: {
 ];
 
 function getTabLabel(id: AdminTabId): string {
+  if (id === 'team') return 'Team';
   for (const group of navGroups) {
     const item = group.items.find((i) => i.id === id);
     if (item) return item.label;
@@ -182,6 +186,24 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser, isOwner }: Adm
                       )}
                     </SidebarMenuItem>
                   ))}
+                  {group.label === 'Management' && isOwner && (
+                    <SidebarMenuItem>
+                      <SidebarMenuButton
+                        isActive={activeTab === 'team'}
+                        onClick={() => setActiveTab('team')}
+                        tooltip="Team"
+                        size="lg"
+                        className={
+                          activeTab === 'team'
+                            ? 'border-l-[3px] border-sidebar-primary rounded-tl-none rounded-bl-none pl-[calc(0.5rem-3px)]'
+                            : ''
+                        }
+                      >
+                        <ShieldCheck />
+                        <span>Team</span>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )}
                 </SidebarMenu>
               </SidebarGroupContent>
             </SidebarGroup>
@@ -286,6 +308,7 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser, isOwner }: Adm
           {activeTab === 'profile' && (
             <AdminProfileTab user={user} onClose={() => setActiveTab('announcements')} onRefreshUser={onRefreshUser} />
           )}
+          {activeTab === 'team' && isOwner && <AdminTeamTab user={user} />}
         </main>
       </SidebarInset>
     </SidebarProvider>
