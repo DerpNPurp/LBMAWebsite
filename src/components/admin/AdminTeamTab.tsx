@@ -36,9 +36,11 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
   const [inviteName, setInviteName] = useState('');
   const [inviteEmail, setInviteEmail] = useState('');
   const [isInviting, setIsInviting] = useState(false);
+  const [reactivatingId, setReactivatingId] = useState<string | null>(null);
   const [confirmState, setConfirmState] = useState<{
     title: string;
     description: string;
+    destructive?: boolean;
     onConfirm: () => void;
   } | null>(null);
 
@@ -48,7 +50,7 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
   });
 
   const { data: adminEmails = [] } = useQuery({
-    queryKey: ['admin-emails'],
+    queryKey: queryKeys.adminEmails(),
     queryFn: getAdminEmails,
   });
 
@@ -66,7 +68,7 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: queryKeys.admins() });
-    queryClient.invalidateQueries({ queryKey: ['admin-emails'] });
+    queryClient.invalidateQueries({ queryKey: queryKeys.adminEmails() });
   };
 
   const handleInvite = async () => {
@@ -97,6 +99,7 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
     setConfirmState({
       title: `Deactivate ${admin.display_name}?`,
       description: 'They will lose access to the admin portal immediately.',
+      destructive: true,
       onConfirm: async () => {
         try {
           await deactivateAdmin(admin.user_id);
@@ -112,6 +115,8 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
   };
 
   const handleReactivate = async (admin: AdminRow) => {
+    if (reactivatingId === admin.user_id) return;
+    setReactivatingId(admin.user_id);
     try {
       await reactivateAdmin(admin.user_id);
       toast.success(`${admin.display_name} reactivated`);
@@ -119,6 +124,8 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
     } catch (err) {
       const message = err instanceof Error ? err.message : 'Failed to reactivate';
       toast.error(message);
+    } finally {
+      setReactivatingId(null);
     }
   };
 
@@ -229,7 +236,12 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
                     )}
 
                     {!isYou && !admin.is_active && (
-                      <Button variant="outline" size="sm" onClick={() => handleReactivate(admin)}>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleReactivate(admin)}
+                        disabled={reactivatingId === admin.user_id}
+                      >
                         <UserCheck className="mr-1.5 h-3.5 w-3.5" />
                         Reactivate
                       </Button>
@@ -248,7 +260,6 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
         </CardContent>
       </Card>
 
-      {/* Invite dialog */}
       <Dialog open={isInviteOpen} onOpenChange={setIsInviteOpen}>
         <DialogContent className="sm:max-w-[440px]">
           <DialogHeader>
@@ -291,12 +302,12 @@ export function AdminTeamTab({ user }: { user: NonNullable<User> }) {
         </DialogContent>
       </Dialog>
 
-      {/* Confirm dialog */}
       {confirmState && (
         <ConfirmDialog
           open={true}
           title={confirmState.title}
           description={confirmState.description}
+          destructive={confirmState.destructive}
           onConfirm={confirmState.onConfirm}
           onCancel={() => setConfirmState(null)}
         />

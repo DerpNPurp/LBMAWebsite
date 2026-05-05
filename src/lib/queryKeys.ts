@@ -13,4 +13,5 @@ export const queryKeys = {
   users: () => ['users'] as const,
   reviews: () => ['reviews'] as const,
   admins: () => ['admins'] as const,
+  adminEmails: () => ['admin-emails'] as const,
 } as const;
