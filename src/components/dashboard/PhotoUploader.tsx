@@ -13,6 +13,7 @@ type PhotoUploaderProps = {
   onUpload: (file: File) => Promise<void>;
   onRemove: () => Promise<void>;
   size?: 'sm' | 'md' | 'lg';
+  layout?: 'horizontal' | 'vertical';
   disabled?: boolean;
 };
 
@@ -28,6 +29,7 @@ export function PhotoUploader({
   onUpload,
   onRemove,
   size = 'lg',
+  layout = 'horizontal',
   disabled,
 }: PhotoUploaderProps) {
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -68,8 +70,10 @@ export function PhotoUploader({
 
   const busy = removing;
 
+  const isVertical = layout === 'vertical';
+
   return (
-    <div className="flex items-center gap-4">
+    <div className={isVertical ? 'flex flex-col items-center gap-2 w-full' : 'flex items-center gap-4'}>
       <div className="relative group">
         <Avatar key={currentUrl ?? 'no-image'} className={sizeClasses[size]}>
           {currentUrl && <AvatarImage src={currentUrl} alt="Profile photo" />}
@@ -97,7 +101,7 @@ export function PhotoUploader({
         disabled={disabled}
       />
 
-      <div className="flex flex-col gap-1">
+      <div className={isVertical ? 'flex flex-col gap-1 w-full' : 'flex flex-col gap-1'}>
         {!disabled && (
           <Button
             type="button"
@@ -105,6 +109,7 @@ export function PhotoUploader({
             size="sm"
             onClick={() => fileInputRef.current?.click()}
             disabled={busy}
+            className={isVertical ? 'w-full text-xs' : ''}
           >
             Upload Photo
           </Button>
@@ -116,7 +121,7 @@ export function PhotoUploader({
             size="sm"
             onClick={() => setConfirmRemove(true)}
             disabled={busy}
-            className="text-destructive hover:text-destructive"
+            className={isVertical ? 'w-full text-xs text-destructive hover:text-destructive' : 'text-destructive hover:text-destructive'}
           >
             {removing ? (
               <>
