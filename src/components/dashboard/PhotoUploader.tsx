@@ -125,12 +125,12 @@ export function PhotoUploader({
           >
             {removing ? (
               <>
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                <Loader2 className={isVertical ? 'w-3 h-3 animate-spin' : 'w-4 h-4 mr-2 animate-spin'} />
                 Removing...
               </>
             ) : (
               <>
-                <Trash2 className="w-4 h-4 mr-2" />
+                {!isVertical && <Trash2 className="w-4 h-4 mr-2" />}
                 Remove Photo
               </>
             )}
