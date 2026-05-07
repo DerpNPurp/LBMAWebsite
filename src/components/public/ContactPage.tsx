@@ -54,6 +54,11 @@ export function ContactPage() {
     e.preventDefault();
     setSubmitError(null);
 
+    if (!phone.trim()) {
+      setSubmitError('Please provide a phone number.');
+      return;
+    }
+
     for (const c of children) {
       if (!c.name.trim() || !c.age) {
         setSubmitError('Each child must have a name and age.');
@@ -159,8 +164,7 @@ export function ContactPage() {
                     </div>
                     <div className="flex flex-col gap-2">
                       <Label htmlFor="phone" className="text-sm font-semibold" style={{ color: V3.text }}>
-                        Phone{' '}
-                        <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
+                        Phone <span style={{ color: V3.primary }}>*</span>
                       </Label>
                       <Input
                         id="phone"
@@ -169,6 +173,7 @@ export function ContactPage() {
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         disabled={isSubmitting}
+                        required
                         className="min-h-[48px] text-base"
                         autoComplete="tel"
                       />
