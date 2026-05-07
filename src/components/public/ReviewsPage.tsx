@@ -31,7 +31,7 @@ function timeAgo(dateStr: string): string {
 }
 
 function RatingSummary({ reviews }: { reviews: Review[] }) {
-  if (reviews.length < 2) return null;
+  if (reviews.length < 1) return null;
 
   const avg = reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length;
   const dist = [5, 4, 3, 2, 1].map(star => ({
