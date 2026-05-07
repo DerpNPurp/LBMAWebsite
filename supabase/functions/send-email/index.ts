@@ -11,6 +11,7 @@ const PROGRAM_LABELS: Record<string, string> = {
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM = 'Los Banos Martial Arts Academy <no-reply@notifications.lbmartialarts.com>'
+const LOGO_URL = 'https://qfyeguikxxwwxpxleqrr.supabase.co/storage/v1/object/public/assets/logo.png'
 
 async function sendEmail(to: string, subject: string, html: string): Promise<void> {
   const res = await fetch(RESEND_API_URL, {
@@ -100,7 +101,6 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
   if (error || !lead) throw new Error(`Enrollment lead not found: ${record.lead_id}`)
 
   const appUrl = getAppUrl()
-  const logoUrl = `${appUrl}/logo.png`
   const adminUrl = `${appUrl}/admin`
   const bookingUrl = lead.booking_token ? `${appUrl}/book/${lead.booking_token}` : appUrl
   const _confirmUrl = lead.booking_token ? `${appUrl}/confirm/${lead.booking_token}` : appUrl
@@ -120,7 +120,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
         ? admins.map((a: { email: string }) => a.email)
         : [record.recipient_email]
       subject = `New enrollment inquiry — ${lead.parent_name}`
-      html = enrollmentNotificationHtml(lead, adminUrl, logoUrl)
+      html = enrollmentNotificationHtml(lead, adminUrl, LOGO_URL)
       await Promise.all(recipients.map((to: string) => sendEmail(to, subject, html)))
       await supabase
         .from('enrollment_lead_notifications')
@@ -130,7 +130,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
     }
     case 'submission':
       subject = 'Thank you for your interest in LBMAA'
-      html = submissionConfirmationHtml(lead, logoUrl)
+      html = submissionConfirmationHtml(lead, LOGO_URL)
       break
     case 'approval': {
       const { data: programBookings } = await supabase
@@ -156,15 +156,15 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
             }
           })
         )
-        html = multiProgramApprovalEmailHtml(lead.parent_name, programs, logoUrl)
+        html = multiProgramApprovalEmailHtml(lead.parent_name, programs, LOGO_URL)
       } else {
-        html = approvalEmailHtml(lead, bookingUrl, logoUrl)
+        html = approvalEmailHtml(lead, bookingUrl, LOGO_URL)
       }
       break
     }
     case 'denial':
       subject = 'Your enrollment inquiry at LBMAA'
-      html = denialEmailHtml(lead, logoUrl)
+      html = denialEmailHtml(lead, LOGO_URL)
       break
     case 'booking_confirmation': {
       const appointments = await getLeadAppointments(supabase, record.lead_id, appUrl)
@@ -173,7 +173,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
         return
       }
       subject = appointments.length > 1 ? 'Appointments confirmed — LBMAA' : 'Appointment confirmed — LBMAA'
-      html = bookingConfirmationHtml(lead.parent_name, appointments, logoUrl)
+      html = bookingConfirmationHtml(lead.parent_name, appointments, LOGO_URL)
       break
     }
     case 'reminder': {
@@ -187,7 +187,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
       subject = appointments.length > 1
         ? 'Reminder: your LBMAA appointments are in 2 days'
         : 'Reminder: your LBMAA appointment is in 2 days'
-      html = reminderEmailHtml(lead.parent_name, appointments, reminderConfirmUrl, logoUrl)
+      html = reminderEmailHtml(lead.parent_name, appointments, reminderConfirmUrl, LOGO_URL)
       break
     }
     default:
@@ -230,7 +230,6 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
   const senderName = senderProfile?.display_name ?? 'Someone'
   const appUrl = getAppUrl()
   const portalUrl = `${appUrl}/dashboard?tab=messages`
-  const logoUrl = `${appUrl}/logo.png`
 
   // Check if the recipient has opted out of message emails
   const { data: prefRow } = await supabase
@@ -257,14 +256,13 @@ async function handleMessageNotification(record: MessageRecord): Promise<void> {
   await sendEmail(
     user.email,
     `New message from ${senderName} — LBMAA Portal`,
-    messagingNotificationHtml(senderName, portalUrl, logoUrl)
+    messagingNotificationHtml(senderName, portalUrl, LOGO_URL)
   )
 }
 
 async function handlePortalNotification(record: PortalEmailQueueRecord): Promise<void> {
   const supabase = adminClient()
   const appUrl = getAppUrl()
-  const logoUrl = `${appUrl}/logo.png`
   const tab = record.payload.tab ?? 'announcements'
   const tabUrl = `${appUrl}/dashboard?tab=${tab}`
 
@@ -278,7 +276,7 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
         record.payload.title ?? '',
         record.payload.body ?? '',
         tabUrl,
-        logoUrl
+        LOGO_URL
       )
       break
     case 'blog_post':
@@ -287,7 +285,7 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
         record.payload.title ?? '',
         record.payload.author_name ?? 'A member',
         tabUrl,
-        logoUrl
+        LOGO_URL
       )
       break
     case 'comment_reply':
@@ -296,7 +294,7 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
         record.payload.replier_name ?? 'Someone',
         record.payload.original_snippet ?? '',
         tabUrl,
-        logoUrl
+        LOGO_URL
       )
       break
     case 'post_comment':
@@ -305,7 +303,7 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
         record.payload.commenter_name ?? 'Someone',
         record.payload.post_title ?? 'your post',
         tabUrl,
-        logoUrl
+        LOGO_URL
       )
       break
     default:
