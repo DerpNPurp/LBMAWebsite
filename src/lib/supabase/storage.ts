@@ -101,7 +101,7 @@ export async function uploadProfileImage(path: string, file: File): Promise<stri
     .from(PROFILE_PICTURES_BUCKET)
     .upload(path, file, { cacheControl: '3600', upsert: true });
   if (error) throw error;
-  return getProfilePublicUrl(path);
+  return getProfilePublicUrl(path) + '?t=' + Date.now();
 }
 
 export async function deleteProfileImage(path: string): Promise<void> {
