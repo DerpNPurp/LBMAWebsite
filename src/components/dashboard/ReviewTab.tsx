@@ -4,7 +4,7 @@ import { Button } from '../ui/button';
 import { Textarea } from '../ui/textarea';
 import { Label } from '../ui/label';
 import { Star, Edit2, Check, Loader2 } from 'lucide-react';
-import { getUserReview, getFamilyByOwner } from '../../lib/supabase/queries';
+import { getUserReview, getFamilyByOwner, getGuardiansByFamily } from '../../lib/supabase/queries';
 import { formatDate } from '../../lib/format';
 import { createReview, updateReview } from '../../lib/supabase/mutations';
 import type { User as AppUser, Review } from '../../lib/types';
@@ -22,15 +22,24 @@ export function ReviewTab({ user }: ReviewTabProps) {
   const [rating, setRating] = useState(5);
   const [reviewText, setReviewText] = useState('');
   const [hoveredStar, setHoveredStar] = useState(0);
+  const [primaryName, setPrimaryName] = useState<string | null>(null);
 
   useEffect(() => {
     async function load() {
       try {
-        const data = await getUserReview(user.id);
+        const [data, family] = await Promise.all([
+          getUserReview(user.id),
+          getFamilyByOwner(user.id),
+        ]);
         setExistingReview(data);
         if (data) {
           setRating(data.rating);
           setReviewText(data.review);
+        }
+        if (family) {
+          const guardians = await getGuardiansByFamily(family.family_id);
+          const primary = guardians.find(g => g.is_primary_contact) ?? guardians[0];
+          if (primary) setPrimaryName(`${primary.first_name} ${primary.last_name}`);
         }
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Failed to load review');
@@ -55,7 +64,7 @@ export function ReviewTab({ user }: ReviewTabProps) {
         const created = await createReview({
           family_id: family.family_id,
           author_user_id: user.id,
-          display_name: user.displayName ?? null,
+          display_name: primaryName ?? null,
           rating,
           review: reviewText.trim(),
         });
@@ -195,7 +204,7 @@ export function ReviewTab({ user }: ReviewTabProps) {
 
               <div className="p-4 bg-secondary/50 rounded-lg">
                 <p className="text-sm text-muted-foreground">
-                  <strong>Note:</strong> Your review will be published using your name &ldquo;{user.displayName}&rdquo;
+                  <strong>Note:</strong> Your review will be published using your name &ldquo;{primaryName ?? user.displayName}&rdquo;
                   and will appear publicly on the LBMAA website.
                 </p>
               </div>
@@ -227,7 +236,7 @@ export function ReviewTab({ user }: ReviewTabProps) {
               </div>
 
               <div className="flex items-center justify-between text-xs text-muted-foreground">
-                <span>Published by {user.displayName}</span>
+                <span>Published by {existingReview!.display_name ?? user.displayName}</span>
                 <span>
                   {existingReview!.updated_at !== existingReview!.created_at
                     ? `Updated ${formatDate(existingReview!.updated_at)}`
