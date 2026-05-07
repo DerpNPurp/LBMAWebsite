@@ -3,6 +3,11 @@
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
 
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
 function adminClient() {
   return createClient(
     Deno.env.get('SUPABASE_URL')!,
@@ -39,6 +44,7 @@ async function recalculateLeadStatus(
 }
 
 Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
   if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
 
   const { token } = await req.json()
@@ -53,7 +59,7 @@ Deno.serve(async (req) => {
     .eq('booking_token', token)
     .single()
 
-  if (!programBooking) return new Response('Invalid token', { status: 404 })
+  if (!programBooking) return new Response('Invalid token', { status: 404, headers: CORS_HEADERS })
 
   if (programBooking.status === 'confirmed') {
     return new Response(
@@ -63,12 +69,26 @@ Deno.serve(async (req) => {
         appointment_date: programBooking.appointment_date,
         appointment_time: programBooking.appointment_time,
       }),
-      { status: 200, headers: { 'Content-Type': 'application/json' } }
+      { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     )
   }
 
   if (programBooking.status !== 'scheduled') {
-    return new Response('Cannot confirm from current status', { status: 422 })
+    return new Response('Cannot confirm from current status', { status: 422, headers: CORS_HEADERS })
+  }
+
+  const today = new Date().toISOString().split('T')[0]
+  if (programBooking.appointment_date < today) {
+    return new Response(
+      JSON.stringify({
+        ok: true,
+        past: true,
+        appointment_date: programBooking.appointment_date,
+        appointment_time: programBooking.appointment_time,
+        booking_token: token,
+      }),
+      { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
+    )
   }
 
   const { error } = await supabase
@@ -76,7 +96,7 @@ Deno.serve(async (req) => {
     .update({ status: 'confirmed' })
     .eq('booking_id', programBooking.booking_id)
 
-  if (error) return new Response('Confirmation failed', { status: 500 })
+  if (error) return new Response('Confirmation failed', { status: 500, headers: CORS_HEADERS })
 
   await recalculateLeadStatus(supabase, programBooking.lead_id)
 
@@ -87,6 +107,6 @@ Deno.serve(async (req) => {
       appointment_date: programBooking.appointment_date,
       appointment_time: programBooking.appointment_time,
     }),
-    { status: 200, headers: { 'Content-Type': 'application/json' } }
+    { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
   )
 })
