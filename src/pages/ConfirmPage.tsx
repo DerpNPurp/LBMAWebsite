@@ -1,18 +1,19 @@
 import { useState, useEffect, useRef } from 'react'
 import { useParams } from 'react-router-dom'
-import { Loader2, CheckCircle2 } from 'lucide-react'
+import { Loader2, CheckCircle2, CalendarX2 } from 'lucide-react'
 import { supabase } from '../lib/supabase/client'
 
 interface ConfirmResult {
   ok: boolean
   already_confirmed: boolean
+  past?: boolean
   appointment_date: string | null
   appointment_time: string | null
 }
 
 export function ConfirmPage() {
   const { token } = useParams<{ token: string }>()
-  const [state, setState] = useState<'loading' | 'confirmed' | 'already' | 'invalid'>(
+  const [state, setState] = useState<'loading' | 'confirmed' | 'already' | 'past' | 'invalid'>(
     token ? 'loading' : 'invalid'
   )
   const [apptDate, setApptDate] = useState<string | null>(null)
@@ -27,6 +28,7 @@ export function ConfirmPage() {
       const result = data as ConfirmResult
       setApptDate(result.appointment_date)
       setApptTime(result.appointment_time)
+      if (result.past) { setState('past'); return }
       setState(result.already_confirmed ? 'already' : 'confirmed')
     })
   }, [token])
@@ -67,6 +69,25 @@ export function ConfirmPage() {
           <CheckCircle2 className="w-12 h-12 text-green-600 mx-auto" />
           <h1 className="text-xl font-bold" style={{ fontFamily: 'Lexend, sans-serif' }}>Already confirmed</h1>
           <p className="text-muted-foreground text-sm">You've already confirmed your attendance — see you on {formatDate(apptDate)}!</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (state === 'past') {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="max-w-sm w-full text-center space-y-4">
+          <CalendarX2 className="w-12 h-12 text-muted-foreground mx-auto" />
+          <h1 className="text-xl font-bold" style={{ fontFamily: 'Lexend, sans-serif' }}>This appointment has passed</h1>
+          <p className="text-muted-foreground text-sm">Please use the link below to choose a new date.</p>
+          <a
+            href={`/book/${token}`}
+            className="inline-block w-full bg-[#A01F23] text-white font-bold py-3 px-6 rounded text-sm"
+          >
+            Reschedule
+          </a>
+          <p className="text-xs text-muted-foreground">— LBMAA Team</p>
         </div>
       </div>
     )
