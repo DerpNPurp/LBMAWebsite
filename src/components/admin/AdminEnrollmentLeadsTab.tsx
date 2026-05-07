@@ -127,19 +127,14 @@ const TAB_EXPLANATIONS: Partial<Record<TabId, string>> = {
   approved:              'Booking link sent — waiting for the family to pick a date.',
   appointment_scheduled: 'Date selected — waiting for the appointment day.',
   appointment_confirmed: 'Appointment confirmed — family is coming in.',
-  denied_closed:         'Leads that were denied, closed, or removed.',
+  denied_closed:         'Leads that were denied or closed.',
 };
 
-type ClosedDeniedFilter = 'all' | 'denied' | 'closed' | 'deleted';
+type ClosedDeniedFilter = 'all' | 'denied' | 'closed';
 
 function tabCount(leads: EnrollmentLead[], tab: (typeof TABS)[number]): number {
-  if (!tab.statuses) return leads.filter(l => !l.deleted_at).length;
-  if (tab.id === 'denied_closed') {
-    return leads.filter(l =>
-      (tab.statuses!.includes(l.status) && !l.deleted_at) || !!l.deleted_at
-    ).length;
-  }
-  return leads.filter(l => tab.statuses!.includes(l.status) && !l.deleted_at).length;
+  if (!tab.statuses) return leads.length;
+  return leads.filter(l => tab.statuses!.includes(l.status)).length;
 }
 
 function filterLeads(
@@ -153,24 +148,19 @@ function filterLeads(
   if (tabId === 'denied_closed') {
     switch (closedDeniedFilter) {
       case 'denied':
-        result = leads.filter(l => l.status === 'denied' && !l.deleted_at);
+        result = leads.filter(l => l.status === 'denied');
         break;
       case 'closed':
-        result = leads.filter(l => l.status === 'closed' && !l.deleted_at);
-        break;
-      case 'deleted':
-        result = leads.filter(l => !!l.deleted_at);
+        result = leads.filter(l => l.status === 'closed');
         break;
       default:
-        result = leads.filter(l =>
-          ((l.status === 'denied' || l.status === 'closed') && !l.deleted_at) || !!l.deleted_at
-        );
+        result = leads.filter(l => l.status === 'denied' || l.status === 'closed');
     }
   } else {
     const tab = TABS.find(t => t.id === tabId)!;
     result = tab.statuses
-      ? leads.filter(l => tab.statuses!.includes(l.status) && !l.deleted_at)
-      : leads.filter(l => !l.deleted_at);
+      ? leads.filter(l => tab.statuses!.includes(l.status))
+      : leads;
   }
 
   if (search.trim()) {
@@ -447,9 +437,9 @@ export function AdminEnrollmentLeadsTab() {
   // ─── Derived data ──────────────────────────────────────────────────────────
 
   const visibleLeads = filterLeads(leads, activeTab, search, closedDeniedFilter);
-  const newCount = leads.filter(l => l.status === 'new' && !l.deleted_at).length;
-  const approvedCount = leads.filter(l => l.status === 'approved' && !l.deleted_at).length;
-  const scheduledCount = leads.filter(l => l.status === 'appointment_scheduled' && !l.deleted_at).length;
+  const newCount = leads.filter(l => l.status === 'new').length;
+  const approvedCount = leads.filter(l => l.status === 'approved').length;
+  const scheduledCount = leads.filter(l => l.status === 'appointment_scheduled').length;
 
   const isCalendarTab = activeTab === 'appointment_scheduled' || activeTab === 'appointment_confirmed';
 
@@ -458,7 +448,6 @@ export function AdminEnrollmentLeadsTab() {
   if (isCalendarTab) {
     const tabObj = TABS.find(t => t.id === activeTab);
     for (const lead of leads) {
-      if (lead.deleted_at) continue;
       if (!tabObj?.statuses?.includes(lead.status)) continue;
       const date = getLeadPrimaryDate(lead);
       if (date) appointmentCountsByDate[date] = (appointmentCountsByDate[date] ?? 0) + 1;
@@ -530,7 +519,7 @@ export function AdminEnrollmentLeadsTab() {
       <div
         key={lead.lead_id}
         className={`bg-card rounded-lg border overflow-hidden ${
-          lead.status === 'new' && !lead.deleted_at ? 'border-primary/25' : 'border-border'
+          lead.status === 'new' ? 'border-primary/25' : 'border-border'
         }`}
       >
         <div className="p-4 space-y-3">
@@ -551,12 +540,8 @@ export function AdminEnrollmentLeadsTab() {
               ) : (
                 <>
                   {activeTab === 'new' && <AgingIndicator createdAt={lead.created_at} now={now} />}
-                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${
-                    lead.deleted_at
-                      ? 'bg-[#F1F0EF] text-[#6B6866] border border-[#E8E6E3]'
-                      : BADGE_STYLES[lead.status]
-                  }`}>
-                    {lead.deleted_at ? 'Deleted' : STATUS_LABELS[lead.status]}
+                  <span className={`text-xs font-semibold px-2 py-0.5 rounded-full ${BADGE_STYLES[lead.status]}`}>
+                    {STATUS_LABELS[lead.status]}
                   </span>
                 </>
               )}
@@ -569,14 +554,13 @@ export function AdminEnrollmentLeadsTab() {
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                    disabled={lead.status === 'denied' || !!lead.deleted_at}
+                    disabled={lead.status === 'denied'}
                     onSelect={() => setPendingAction({ type: 'dismiss', lead })}
                   >
                     Dismiss silently
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     className="text-destructive focus:text-destructive focus:bg-destructive/10"
-                    disabled={!!lead.deleted_at}
                     onSelect={() => setPendingAction({ type: 'delete', lead })}
                   >
                     Delete
@@ -685,8 +669,7 @@ export function AdminEnrollmentLeadsTab() {
           )}
 
           {/* Actions */}
-          {!lead.deleted_at && (
-            <div className="flex flex-wrap gap-2">
+          <div className="flex flex-wrap gap-2">
               {lead.status === 'new' && (
                 <>
                   <Button size="sm" onClick={() => handleApprove(lead)}>
@@ -746,7 +729,6 @@ export function AdminEnrollmentLeadsTab() {
                 </Select>
               )}
             </div>
-          )}
 
         </div>
       </div>
@@ -765,7 +747,7 @@ export function AdminEnrollmentLeadsTab() {
             {newCount > 0 && <span className="text-primary font-medium">{newCount} new · </span>}
             {approvedCount > 0 && <span>{approvedCount} approved · </span>}
             {scheduledCount > 0 && <span>{scheduledCount} scheduled · </span>}
-            <span>{leads.filter(l => !l.deleted_at).length} total</span>
+            <span>{leads.length} total</span>
           </p>
         </div>
         <Button onClick={() => setShowNewLeadModal(true)} variant="outline" size="sm" className="gap-2">
@@ -795,7 +777,7 @@ export function AdminEnrollmentLeadsTab() {
                   if (tab.id === 'appointment_scheduled' || tab.id === 'appointment_confirmed') {
                     const tabStatuses = TABS.find(t => t.id === tab.id)!.statuses!;
                     const apptDates = leads
-                      .filter(l => !l.deleted_at && tabStatuses.includes(l.status))
+                      .filter(l => tabStatuses.includes(l.status))
                       .map(l => getLeadPrimaryDate(l))
                       .filter((d): d is string => d !== null);
                     setWeekOffset(findNearestWeekOffset(apptDates) ?? 0);
@@ -843,7 +825,7 @@ export function AdminEnrollmentLeadsTab() {
       {/* Sub-filter for Closed / Denied tab */}
       {activeTab === 'denied_closed' && (
         <div className="flex gap-1.5">
-          {(['all', 'denied', 'closed', 'deleted'] as ClosedDeniedFilter[]).map(f => (
+          {(['all', 'denied', 'closed'] as ClosedDeniedFilter[]).map(f => (
             <button
               key={f}
               onClick={() => setClosedDeniedFilter(f)}
@@ -1001,7 +983,7 @@ export function AdminEnrollmentLeadsTab() {
               <AlertDialogDescription>
                 {pendingAction.type === 'dismiss'
                   ? `This will mark ${pendingAction.lead.parent_name}'s lead as denied without notifying them.`
-                  : `This will hide ${pendingAction.lead.parent_name}'s lead from all views. It can still be found in the Closed / Denied tab under "Deleted".`}
+                  : `This will permanently delete ${pendingAction.lead.parent_name}'s lead. This cannot be undone.`}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>

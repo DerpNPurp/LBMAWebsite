@@ -520,7 +520,7 @@ export async function dismissLeadSilently(leadId: string): Promise<void> {
 export async function deleteEnrollmentLead(leadId: string): Promise<void> {
   const { error } = await supabase
     .from('enrollment_leads')
-    .update({ deleted_at: new Date().toISOString() })
+    .delete()
     .eq('lead_id', leadId);
   if (error) throw error;
 }
