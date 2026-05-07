@@ -49,7 +49,9 @@ function RatingSummary({ reviews }: { reviews: Review[] }) {
           >
             {avg.toFixed(1)}
           </div>
-          <div className="text-amber-400 text-sm my-1">★★★★★</div>
+          <div className="my-1">
+            <StarRow rating={Math.round(avg)} />
+          </div>
           <div
             className="text-white uppercase tracking-wide"
             style={{ fontFamily: "'Barlow Condensed', sans-serif", fontSize: '0.7rem', fontWeight: 700 }}
