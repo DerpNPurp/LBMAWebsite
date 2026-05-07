@@ -77,15 +77,15 @@ Deno.serve(async (req) => {
     return new Response('Cannot confirm from current status', { status: 422, headers: CORS_HEADERS })
   }
 
-  const today = new Date().toISOString().split('T')[0]
-  if (programBooking.appointment_date < today) {
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'America/Los_Angeles' }).format(new Date())
+  if (programBooking.appointment_date && programBooking.appointment_date < today) {
     return new Response(
       JSON.stringify({
         ok: true,
         past: true,
+        already_confirmed: false,
         appointment_date: programBooking.appointment_date,
         appointment_time: programBooking.appointment_time,
-        booking_token: token,
       }),
       { status: 200, headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' } }
     )
