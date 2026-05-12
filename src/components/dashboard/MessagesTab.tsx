@@ -466,7 +466,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
 
         {/* Messages Area */}
         <Card className="md:col-span-2 flex flex-col overflow-hidden">
-          <CardHeader className="border-b shrink-0 pb-3">
+          <CardHeader className="border-b shrink-0 !pb-3">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
                 {selectedConversation?.avatarUrl && selectedConversation.type === 'direct' && (
