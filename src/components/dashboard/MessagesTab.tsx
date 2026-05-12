@@ -342,15 +342,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
   }
 
   return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Messages</h2>
-        <p className="text-muted-foreground mt-1">
-          Connect with instructors and the LBMAA community
-        </p>
-      </div>
-
-      <div className={`grid gap-6 h-[600px] max-h-[calc(100dvh-13rem)] ${showParticipants ? 'grid-cols-4' : 'md:grid-cols-3'}`}>
+    <div className={`grid gap-6 h-full ${showParticipants ? 'grid-cols-4' : 'md:grid-cols-3'}`}>
         {/* Conversations List */}
         <Card className="md:col-span-1 flex flex-col overflow-hidden">
           <CardHeader className="shrink-0">
@@ -812,8 +804,6 @@ export function MessagesTab({ user }: MessagesTabProps) {
             </CardContent>
           </Card>
         )}
-      </div>
-
     </div>
   );
 }
