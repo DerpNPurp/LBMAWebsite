@@ -328,8 +328,8 @@ Deno.serve(async (req) => {
     return new Response('Service misconfigured', { status: 500 })
   }
   const isAuthorized =
-    (serviceRoleKey !== undefined && authHeader === `Bearer ${serviceRoleKey}`) ||
-    (webhookSecret !== undefined && authHeader === `Bearer ${webhookSecret}`)
+    (!!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) ||
+    (!!webhookSecret && authHeader === `Bearer ${webhookSecret}`)
   if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 })
   }
