@@ -14,7 +14,8 @@ CREATE POLICY "Admins can create blog posts"
 
 CREATE POLICY "Admins can update blog posts"
   ON public.blog_posts FOR UPDATE
-  USING (is_admin(auth.uid()));
+  USING (is_admin(auth.uid()))
+  WITH CHECK (is_admin(auth.uid()));
 
 CREATE POLICY "Admins can delete blog posts"
   ON public.blog_posts FOR DELETE
