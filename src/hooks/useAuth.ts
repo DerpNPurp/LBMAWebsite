@@ -28,6 +28,12 @@ export function useAuth() {
           const refreshToken = params.get('refresh_token');
 
           if (accessToken && refreshToken) {
+            // Clear the hash immediately before the async call so the token is
+            // not present in the URL during the setSession round-trip.
+            const url = new URL(window.location.href);
+            if (url.pathname === '/') url.pathname = '/dashboard';
+            window.history.replaceState(window.history.state, '', url.pathname + url.search);
+
             const { data, error } = await supabase.auth.setSession({
               access_token: accessToken,
               refresh_token: refreshToken,
@@ -35,19 +41,6 @@ export function useAuth() {
 
             if (!error) {
               session = data.session;
-
-              // Clean the URL (remove the hash and ensure we stay on /dashboard for magic-link)
-              if (typeof window !== 'undefined') {
-                const url = new URL(window.location.href);
-                if (url.pathname === '/') {
-                  url.pathname = '/dashboard';
-                }
-                window.history.replaceState(
-                  window.history.state,
-                  '',
-                  url.pathname + url.search
-                );
-              }
             } else {
               console.error('Error setting session from magic link:', error);
             }
