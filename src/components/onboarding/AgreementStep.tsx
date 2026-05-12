@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Button } from '../ui/button'
 import { Checkbox } from '../ui/checkbox'
+import { Label } from '../ui/label'
 import { ArrowRight } from 'lucide-react'
 
 interface AgreementStepProps {
@@ -22,7 +23,7 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
         A few things first
       </h2>
 
-      <div className="border-l-2 border-primary bg-secondary rounded-r-xl p-4 mb-6">
+      <div className="border-l-2 border-primary bg-secondary rounded-r-xl p-4 mb-6" role="note">
         <p className="text-sm font-semibold mb-1" style={{ fontFamily: 'var(--font-heading)' }}>
           Enable email notifications on your device
         </p>
@@ -32,14 +33,14 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
         </p>
       </div>
 
-      <label className="flex items-start gap-3 cursor-pointer mb-8">
+      <div className="flex items-start gap-3 mb-8">
         <Checkbox
           id="agree"
           checked={agreed}
           onCheckedChange={(checked) => setAgreed(checked === true)}
           className="mt-0.5 flex-shrink-0"
         />
-        <span className="text-sm text-muted-foreground leading-relaxed">
+        <Label htmlFor="agree" className="text-sm text-muted-foreground leading-relaxed cursor-pointer font-normal">
           I have read and agree to the{' '}
           <a
             href="/terms"
@@ -59,8 +60,8 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
             Privacy Policy
           </a>{' '}
           of the LBMAA Family Portal.
-        </span>
-      </label>
+        </Label>
+      </div>
 
       <Button
         type="button"
