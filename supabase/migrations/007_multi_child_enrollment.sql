@@ -136,7 +136,7 @@ BEGIN
 
   v_notif_email := lower(COALESCE(
     NULLIF(trim(current_setting('app.lbmaa_faculty_notification_email', true)),''),
-    'owner@lbmartialarts.com'
+    'vincethanhdoan@gmail.com'
   ));
 
   INSERT INTO public.enrollment_leads (parent_name, parent_email, phone, message, source_page, notification_status, notified_at)

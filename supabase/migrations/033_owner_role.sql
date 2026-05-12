@@ -120,9 +120,9 @@ GRANT EXECUTE ON FUNCTION public.deactivate_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.reactivate_admin(UUID) TO authenticated;
 GRANT EXECUTE ON FUNCTION public.set_admin_owner_status(UUID, BOOLEAN) TO authenticated;
 
--- 9. Bootstrap: seed owner@lbmartialarts.com as owner
+-- 9. Bootstrap: seed vincethanhdoan@gmail.com as owner
 UPDATE public.profiles
 SET is_owner = true
 WHERE user_id = (
-  SELECT id FROM auth.users WHERE email = 'owner@lbmartialarts.com'
+  SELECT id FROM auth.users WHERE email = 'vincethanhdoan@gmail.com'
 );

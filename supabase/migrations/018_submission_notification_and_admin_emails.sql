@@ -70,7 +70,7 @@ BEGIN
   v_notification_recipient := lower(
     COALESCE(
       NULLIF(trim(current_setting('app.lbmaa_faculty_notification_email', true)), ''),
-      'owner@lbmartialarts.com'
+      'vincethanhdoan@gmail.com'
     )
   );
 
