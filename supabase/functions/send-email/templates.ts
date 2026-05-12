@@ -2,6 +2,11 @@
 
 import type { EnrollmentLead, AppointmentInfo } from './types.ts'
 
+function escHtml(s: string | null | undefined): string {
+  if (!s) return ''
+  return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
+}
+
 const STRIPE = `<div style="height:4px;background:#A01F23;"></div>`
 
 function makeHeader(logoUrl?: string, subtitle?: string): string {
@@ -52,11 +57,11 @@ function ctaButton(href: string, label: string): string {
 
 export function enrollmentNotificationHtml(lead: EnrollmentLead, adminUrl: string, logoUrl?: string, subtitle = 'Admin Portal'): string {
   const rows = [
-    `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Parent</td><td style="padding:4px 0;color:#555;">${lead.parent_name}</td></tr>`,
-    `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Email</td><td style="padding:4px 0;color:#555;">${lead.parent_email}</td></tr>`,
-    lead.phone ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Phone</td><td style="padding:4px 0;color:#555;">${lead.phone}</td></tr>` : '',
-    lead.student_name ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Student</td><td style="padding:4px 0;color:#555;">${lead.student_name}${lead.student_age ? ` (age ${lead.student_age})` : ''}</td></tr>` : '',
-    lead.message ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;vertical-align:top;">Message</td><td style="padding:4px 0;color:#555;">${lead.message}</td></tr>` : '',
+    `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Parent</td><td style="padding:4px 0;color:#555;">${escHtml(lead.parent_name)}</td></tr>`,
+    `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Email</td><td style="padding:4px 0;color:#555;">${escHtml(lead.parent_email)}</td></tr>`,
+    lead.phone ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Phone</td><td style="padding:4px 0;color:#555;">${escHtml(lead.phone)}</td></tr>` : '',
+    lead.student_name ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Student</td><td style="padding:4px 0;color:#555;">${escHtml(lead.student_name)}${lead.student_age ? ` (age ${lead.student_age})` : ''}</td></tr>` : '',
+    lead.message ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;vertical-align:top;">Message</td><td style="padding:4px 0;color:#555;">${escHtml(lead.message)}</td></tr>` : '',
   ].join('')
 
   return wrap(`
@@ -71,7 +76,7 @@ export function messagingNotificationHtml(senderName: string, portalUrl: string,
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">You have a new message</p>
     <p style="margin:0 0 22px;color:#555;font-size:13px;line-height:1.65;">
-      <strong>${senderName}</strong> sent you a message in the LBMAA portal.
+      <strong>${escHtml(senderName)}</strong> sent you a message in the LBMAA portal.
     </p>
     ${ctaButton(portalUrl, 'Read Message')}
     <p style="margin:0 0 18px;font-size:12px;color:#595959;text-align:center;">Reply directly in the portal — do not reply to this email.</p>
@@ -86,15 +91,15 @@ export function multiProgramApprovalEmailHtml(
 ): string {
   const sections = programs.map(p => `
     <div style="margin-bottom:20px;">
-      <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1a1a2e;">${p.programLabel}${p.childNames ? ` — ${p.childNames}` : ''}</p>
-      ${ctaButton(p.bookingUrl, `Book ${p.programLabel} Intro`)}
+      <p style="margin:0 0 4px;font-size:13px;font-weight:700;color:#1a1a2e;">${escHtml(p.programLabel)}${p.childNames ? ` — ${escHtml(p.childNames)}` : ''}</p>
+      ${ctaButton(p.bookingUrl, `Book ${escHtml(p.programLabel)} Intro`)}
     </div>
   `).join('')
 
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Your enrollment request has been approved!</p>
     <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">
-      Hi ${parentName}! We'd love to welcome your family to Los Banos Martial Arts Academy.
+      Hi ${escHtml(parentName)}! We'd love to welcome your family to Los Banos Martial Arts Academy.
       Use the buttons below to choose an appointment date for each program.
     </p>
     ${sections}
@@ -108,7 +113,7 @@ export function approvalEmailHtml(lead: EnrollmentLead, bookingUrl: string, logo
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Your enrollment request has been approved!</p>
     <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">
-      Hi ${lead.parent_name}! We'd love to welcome your family to Los Banos Martial Arts Academy.
+      Hi ${escHtml(lead.parent_name)}! We'd love to welcome your family to Los Banos Martial Arts Academy.
       Use the button below to choose an appointment date that works for you.
     </p>
     ${ctaButton(bookingUrl, 'Book Your Appointment')}
@@ -122,8 +127,8 @@ export function denialEmailHtml(lead: EnrollmentLead, logoUrl?: string, subtitle
   const message = lead.denial_message ?? 'Thank you for your interest in LBMAA. Unfortunately, we are unable to accommodate your enrollment request at this time.'
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Your enrollment inquiry — LBMAA</p>
-    <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">Hi ${lead.parent_name},</p>
-    <p style="margin:0 0 22px;color:#555;font-size:13px;line-height:1.65;">${message}</p>
+    <p style="margin:0 0 18px;color:#555;font-size:13px;line-height:1.65;">Hi ${escHtml(lead.parent_name)},</p>
+    <p style="margin:0 0 22px;color:#555;font-size:13px;line-height:1.65;">${escHtml(message)}</p>
   `, logoUrl, subtitle)
 }
 
@@ -131,10 +136,10 @@ export function bookingConfirmationHtml(parentName: string, appointments: Appoin
   const cards = appointments.map(a => `
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A01F23;margin-bottom:6px;">
-        ${a.programLabel}${a.childNames ? ` — ${a.childNames}` : ''}
+        ${escHtml(a.programLabel)}${a.childNames ? ` — ${escHtml(a.childNames)}` : ''}
       </div>
-      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
-      <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
+      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${escHtml(a.date)}</div>
+      <div style="font-size:13px;color:#555;margin-top:4px;">${escHtml(a.time)}</div>
       <p style="margin:10px 0 0;font-size:12px;color:#595959;">
         Need to reschedule? <a href="${a.rebookingUrl}" style="color:#A01F23;text-decoration:none;">Click here</a>
       </p>
@@ -146,7 +151,7 @@ export function bookingConfirmationHtml(parentName: string, appointments: Appoin
 
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${heading}</p>
-    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
+    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${escHtml(parentName)}, ${intro}</p>
     ${cards}
   `, logoUrl, subtitle)
 }
@@ -155,10 +160,10 @@ export function reminderEmailHtml(parentName: string, appointments: AppointmentI
   const cards = appointments.map(a => `
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 18px;margin:0 0 12px;">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#A01F23;margin-bottom:6px;">
-        ${a.programLabel}${a.childNames ? ` — ${a.childNames}` : ''}
+        ${escHtml(a.programLabel)}${a.childNames ? ` — ${escHtml(a.childNames)}` : ''}
       </div>
-      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${a.date}</div>
-      <div style="font-size:13px;color:#555;margin-top:4px;">${a.time}</div>
+      <div style="font-size:16px;font-weight:700;color:#1a1a2e;">${escHtml(a.date)}</div>
+      <div style="font-size:13px;color:#555;margin-top:4px;">${escHtml(a.time)}</div>
       <p style="margin:10px 0 0;font-size:12px;color:#595959;">
         Need to reschedule? <a href="${a.rebookingUrl}" style="color:#A01F23;text-decoration:none;">Click here</a>
       </p>
@@ -174,7 +179,7 @@ export function reminderEmailHtml(parentName: string, appointments: AppointmentI
 
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${heading}</p>
-    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${parentName}, ${intro}</p>
+    <p style="margin:0 0 16px;color:#555;font-size:13px;">Hi ${escHtml(parentName)}, ${intro}</p>
     ${cards}
     ${ctaButton(confirmUrl, 'Confirm My Attendance')}
   `, logoUrl, subtitle)
@@ -184,14 +189,14 @@ export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: strin
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">Thank you for your interest in LBMAA!</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
-      Hi ${lead.parent_name}, we received your enrollment inquiry and will review it shortly.
+      Hi ${escHtml(lead.parent_name)}, we received your enrollment inquiry and will review it shortly.
       You can expect to hear back from us within 1–2 business days.
     </p>
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 18px;margin:0 0 20px;">
       <div style="font-size:12px;font-weight:700;text-transform:uppercase;letter-spacing:1px;color:#595959;margin-bottom:8px;">Your inquiry details</div>
       <table style="width:100%;border-collapse:collapse;">
-        ${lead.student_name ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Student</td><td style="padding:4px 0;color:#555;">${lead.student_name}${lead.student_age ? ` (age ${lead.student_age})` : ''}</td></tr>` : ''}
-        <tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Contact</td><td style="padding:4px 0;color:#555;">${lead.parent_email}</td></tr>
+        ${lead.student_name ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Student</td><td style="padding:4px 0;color:#555;">${escHtml(lead.student_name)}${lead.student_age ? ` (age ${lead.student_age})` : ''}</td></tr>` : ''}
+        <tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Contact</td><td style="padding:4px 0;color:#555;">${escHtml(lead.parent_email)}</td></tr>
       </table>
     </div>
     <p style="margin:0 0 18px;font-size:13px;color:#555;line-height:1.65;">
@@ -206,8 +211,8 @@ export function announcementNotificationHtml(title: string, body: string, url: s
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New announcement from LBMAA</p>
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 16px;margin-bottom:20px;">
-      <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin:0 0 6px 0;">${title}</p>
-      <p style="font-size:13px;color:#555;margin:0;line-height:1.5;">${body.substring(0, 200)}${body.length > 200 ? '…' : ''}</p>
+      <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin:0 0 6px 0;">${escHtml(title)}</p>
+      <p style="font-size:13px;color:#555;margin:0;line-height:1.5;">${escHtml(body.substring(0, 200))}${body.length > 200 ? '…' : ''}</p>
     </div>
     ${ctaButton(url, 'Read Announcement')}
   `, logoUrl, subtitle)
@@ -217,10 +222,10 @@ export function blogPostNotificationHtml(title: string, authorName: string, url:
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New post in the Parent Blog</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
-      <strong>${authorName}</strong> published a new post:
+      <strong>${escHtml(authorName)}</strong> published a new post:
     </p>
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 16px;margin-bottom:20px;">
-      <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin:0;">${title}</p>
+      <p style="font-size:15px;font-weight:700;color:#1a1a2e;margin:0;">${escHtml(title)}</p>
     </div>
     ${ctaButton(url, 'Read Post')}
   `, logoUrl, subtitle)
@@ -228,10 +233,10 @@ export function blogPostNotificationHtml(title: string, authorName: string, url:
 
 export function commentReplyHtml(replierName: string, originalSnippet: string, url: string, logoUrl?: string, subtitle?: string): string {
   return wrap(`
-    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${replierName} replied to your comment</p>
+    <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">${escHtml(replierName)} replied to your comment</p>
     <p style="margin:0 0 12px;color:#555;font-size:13px;line-height:1.65;">Your comment:</p>
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:12px 16px;margin-bottom:20px;">
-      <p style="font-size:13px;color:#595959;margin:0;font-style:italic;">"${originalSnippet}${originalSnippet.length >= 100 ? '…' : ''}"</p>
+      <p style="font-size:13px;color:#595959;margin:0;font-style:italic;">"${escHtml(originalSnippet)}${originalSnippet.length >= 100 ? '…' : ''}"</p>
     </div>
     ${ctaButton(url, 'View Reply')}
   `, logoUrl, subtitle)
@@ -241,10 +246,10 @@ export function postCommentHtml(commenterName: string, postTitle: string, url: s
   return wrap(`
     <p style="margin:0 0 8px;font-size:15px;font-weight:700;color:#1a1a2e;">New comment on your post</p>
     <p style="margin:0 0 16px;color:#555;font-size:13px;line-height:1.65;">
-      <strong>${commenterName}</strong> commented on:
+      <strong>${escHtml(commenterName)}</strong> commented on:
     </p>
     <div style="background:#f5f2ef;border:1px solid #e2dbd5;border-radius:6px;padding:14px 16px;margin-bottom:20px;">
-      <p style="font-size:15px;font-weight:600;color:#1a1a2e;margin:0;">${postTitle}</p>
+      <p style="font-size:15px;font-weight:600;color:#1a1a2e;margin:0;">${escHtml(postTitle)}</p>
     </div>
     ${ctaButton(url, 'View Comment')}
   `, logoUrl, subtitle)
