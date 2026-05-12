@@ -4,6 +4,7 @@ import type { Relationship } from '../../lib/types'
 import { GuardianStep } from './GuardianStep'
 import { ChildrenStep } from './ChildrenStep'
 import { AddressStep } from './AddressStep'
+import { AgreementStep } from './AgreementStep'
 import { updateProfile, createFamily, createGuardian, createStudent } from '../../lib/supabase/mutations'
 import { ArrowRight, CheckCircle } from 'lucide-react'
 import { Button } from '../ui/button'
@@ -42,10 +43,10 @@ interface FamilyOnboardingProps {
   onLogout: () => Promise<void>
 }
 
-const PROGRESS: Record<1 | 2 | 3, number> = { 1: 33, 2: 66, 3: 90 }
+const PROGRESS: Record<0 | 1 | 2 | 3, number> = { 0: 8, 1: 33, 2: 66, 3: 90 }
 
 export function FamilyOnboarding({ user, onComplete, onLogout }: FamilyOnboardingProps) {
-  const [step, setStep] = useState<1 | 2 | 3 | 'done'>(1)
+  const [step, setStep] = useState<0 | 1 | 2 | 3 | 'done'>(0)
   const [guardian, setGuardian] = useState<GuardianForm>({
     firstName: '', lastName: '', phone: '', relationship: '',
   })
@@ -63,7 +64,7 @@ export function FamilyOnboarding({ user, onComplete, onLogout }: FamilyOnboardin
     hasAddress: boolean
   } | null>(null)
 
-  const progressPct = step === 'done' ? 100 : PROGRESS[step as 1 | 2 | 3]
+  const progressPct = step === 'done' ? 100 : PROGRESS[step as 0 | 1 | 2 | 3]
 
   async function handleSubmit(skipAddress: boolean) {
     setSubmitting(true)
@@ -169,6 +170,9 @@ export function FamilyOnboarding({ user, onComplete, onLogout }: FamilyOnboardin
       {/* Step area */}
       <div className="flex justify-center px-4 py-10">
         <div className="w-full max-w-md">
+          {step === 0 && (
+            <AgreementStep onNext={() => setStep(1)} />
+          )}
           {step === 1 && (
             <GuardianStep
               email={user.email}
