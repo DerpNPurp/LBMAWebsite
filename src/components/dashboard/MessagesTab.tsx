@@ -342,7 +342,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
   }
 
   return (
-    <div className={`grid gap-6 h-full ${showParticipants ? 'grid-cols-4' : 'md:grid-cols-3'}`}>
+    <div className={`grid gap-6 h-[calc(100dvh-3.5rem)] ${showParticipants ? 'grid-cols-4' : 'md:grid-cols-3'}`}>
         {/* Conversations List */}
         <Card className="md:col-span-1 flex flex-col overflow-hidden">
           <CardHeader className="shrink-0">
