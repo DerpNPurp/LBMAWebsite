@@ -473,7 +473,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
         </Card>
 
         {/* Messages Area */}
-        <Card className="md:col-span-2 flex flex-col overflow-hidden">
+        <Card className="md:col-span-2 flex flex-col">
           <CardHeader className="border-b">
             <div className="flex items-center gap-3">
               <Avatar className="h-10 w-10">
@@ -521,7 +521,7 @@ export function MessagesTab({ user }: MessagesTabProps) {
 
           <CardContent className="flex-1 flex flex-col p-0">
             {/* Messages */}
-            <ScrollArea className="flex-1 min-h-0 p-4">
+            <ScrollArea className="flex-1 p-4">
               <div>
                 {currentMessages.length === 0 ? (
                   <p className="text-center text-muted-foreground py-8">
