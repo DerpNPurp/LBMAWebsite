@@ -8,6 +8,8 @@ import { PublicWebsiteV2 } from './experimental/publicV2/PublicWebsiteV2';
 import { PublicWebsite } from './components/PublicWebsite';
 import { BookingPage } from './pages/BookingPage';
 import { ConfirmPage } from './pages/ConfirmPage';
+import { PrivacyPage } from './pages/PrivacyPage';
+import { TermsPage } from './pages/TermsPage';
 import { AuthCallback } from './components/AuthCallback';
 import { useAuth } from './hooks/useAuth';
 import { Alert, AlertDescription } from './components/ui/alert';
@@ -135,6 +137,8 @@ function AppRoutes() {
         <Route path="/auth/callback" element={<AuthCallback />} />
         <Route path="/book/:token" element={<BookingPage />} />
         <Route path="/confirm/:token" element={<ConfirmPage />} />
+        <Route path="/privacy" element={<PrivacyPage />} />
+        <Route path="/terms" element={<TermsPage />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </>
