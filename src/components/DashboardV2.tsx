@@ -94,7 +94,7 @@ export function DashboardV2({ user, onLogout, onRefreshUser }: DashboardV2Props)
         <SidebarSeparator />
 
         {/* ── Navigation ── */}
-        <SidebarContent className="py-2">
+        <SidebarContent className="py-2 [scrollbar-width:thin] [scrollbar-color:var(--sidebar-accent)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-sidebar-accent [&::-webkit-scrollbar-thumb]:rounded-full">
           <SidebarGroup>
             <SidebarGroupContent>
               <SidebarMenu>

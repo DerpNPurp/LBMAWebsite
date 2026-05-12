@@ -138,7 +138,7 @@ export function AdminDashboardV2({ user, onLogout, onRefreshUser, isOwner }: Adm
         <SidebarSeparator />
 
         {/* ── Grouped navigation ── */}
-        <SidebarContent className="py-2">
+        <SidebarContent className="py-2 [scrollbar-width:thin] [scrollbar-color:var(--sidebar-accent)_transparent] [&::-webkit-scrollbar]:w-1.5 [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-sidebar-accent [&::-webkit-scrollbar-thumb]:rounded-full">
           {navGroups.map((group) => (
             <SidebarGroup key={group.label}>
               <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
