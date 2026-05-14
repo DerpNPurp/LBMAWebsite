@@ -323,13 +323,16 @@ Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
   const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
   const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  if (!serviceRoleKey && !webhookSecret) {
-    console.error('send-email: neither SUPABASE_SERVICE_ROLE_KEY nor WEBHOOK_SECRET is configured')
+  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
+  if (!serviceRoleKey && !webhookSecret && !anonKey) {
+    console.error('send-email: no auth credentials configured')
     return new Response('Service misconfigured', { status: 500 })
   }
+  // DB webhooks (configured via Supabase dashboard) send the anon key as their auth header
   const isAuthorized =
     (!!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) ||
-    (!!webhookSecret && authHeader === `Bearer ${webhookSecret}`)
+    (!!webhookSecret && authHeader === `Bearer ${webhookSecret}`) ||
+    (!!anonKey && authHeader === `Bearer ${anonKey}`)
   if (!isAuthorized) {
     return new Response('Unauthorized', { status: 401 })
   }
