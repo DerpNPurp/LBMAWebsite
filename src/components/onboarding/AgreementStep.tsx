@@ -41,7 +41,7 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
           className="mt-0.5 flex-shrink-0"
         />
         <Label htmlFor="agree" className="text-sm text-muted-foreground leading-relaxed cursor-pointer font-normal">
-          I have read and agree to the{' '}
+          I agree to LBMAA's{' '}
           <a
             href="/terms"
             target="_blank"
@@ -58,8 +58,8 @@ export function AgreementStep({ onNext }: AgreementStepProps) {
             className="text-foreground underline underline-offset-2 hover:text-primary transition-colors"
           >
             Privacy Policy
-          </a>{' '}
-          of the LBMAA Family Portal.
+          </a>
+          .
         </Label>
       </div>
 
