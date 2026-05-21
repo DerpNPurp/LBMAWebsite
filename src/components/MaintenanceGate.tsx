@@ -95,7 +95,7 @@ export function MaintenanceGate({ children }: { children: ReactNode }) {
                 color: 'oklch(52% 0.010 30)',
               }}
             >
-              Website is under maintenance. Enter the password below to take a look.
+              Website is under maintenance.
             </p>
           </div>
           <form onSubmit={handleSubmit} style={{ width: '100%' }}>
