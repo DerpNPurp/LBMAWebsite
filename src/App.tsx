@@ -15,6 +15,7 @@ import { useAuth } from './hooks/useAuth';
 import { Alert, AlertDescription } from './components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { Toaster } from './components/ui/sonner';
+import { MaintenanceGate } from './components/MaintenanceGate';
 
 function ProtectedRoute({
   children,
@@ -149,7 +150,9 @@ export default function App() {
   return (
     <QueryProvider>
       <BrowserRouter>
-        <AppRoutes />
+        <MaintenanceGate>
+          <AppRoutes />
+        </MaintenanceGate>
         <Toaster richColors position="top-right" />
       </BrowserRouter>
     </QueryProvider>
