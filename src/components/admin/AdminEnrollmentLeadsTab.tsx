@@ -1,12 +1,12 @@
 import { useState, useEffect } from 'react';
 import { Button } from '../ui/button';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../ui/select';
-import { Loader2, Mail, Phone, Calendar, Plus, Search, MoreVertical, Check, Pencil, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Loader2, Mail, Phone, Calendar, Plus, Search, MoreVertical, Check, Pencil, ChevronLeft, ChevronRight, Clock, AlertCircle, Send } from 'lucide-react';
 import { toast } from 'sonner';
 import { edgeFunctionUserAuthHeaders, supabase } from '../../lib/supabase/client';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '../ui/dropdown-menu';
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '../ui/alert-dialog';
-import type { EnrollmentLead } from '../../lib/types';
+import type { EnrollmentLead, EnrollmentLeadReminderNotification } from '../../lib/types';
 import { useEnrollmentLeads, useUpdateLeadStatus, useUpdateLeadNotes, useDismissLead, useDeleteLead } from '../../lib/hooks/leads';
 import { useQueryClient } from '@tanstack/react-query';
 import { queryKeys } from '../../lib/queryKeys';
@@ -40,6 +40,31 @@ function formatProgramBookingStatus(booking: { status: string; appointment_date:
   return booking.status
 }
 
+
+function ReminderStatusBadge({ notification }: { notification: EnrollmentLeadReminderNotification }) {
+  if (notification.status === 'sent') {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#14532D] border border-[#86EFAC]">
+        <Check className="w-3 h-3 flex-shrink-0" />
+        <span>Confirmation sent{notification.sent_at ? ` · ${formatDate(notification.sent_at)}` : ''}</span>
+      </div>
+    )
+  }
+  if (notification.status === 'queued') {
+    return (
+      <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-[#FEF3C7] text-[#92400E] border border-[#FDE68A]">
+        <Clock className="w-3 h-3 flex-shrink-0" />
+        <span>Confirmation queued</span>
+      </div>
+    )
+  }
+  return (
+    <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-[#FFF0F0] text-[#A01F23] border border-[rgba(160,31,35,0.2)]">
+      <AlertCircle className="w-3 h-3 flex-shrink-0" />
+      <span>Confirmation email failed</span>
+    </div>
+  )
+}
 
 function ChildrenSection({ lead }: { lead: EnrollmentLead }) {
   const hasChildren = lead.children && lead.children.length > 0
@@ -325,6 +350,7 @@ export function AdminEnrollmentLeadsTab() {
   const [messageExpanded, setMessageExpanded] = useState<Record<string, boolean>>({});
   const [selectedWeekDate, setSelectedWeekDate] = useState<string | null>(null);
   const [weekOffset, setWeekOffset] = useState(0);
+  const [sendingReminderId, setSendingReminderId] = useState<string | null>(null);
 
   useEffect(() => {
     setNotesDraft(d => {
@@ -390,6 +416,31 @@ export function AdminEnrollmentLeadsTab() {
     queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
     setPickDateTarget(null);
     toast.success('Appointment(s) booked');
+  }
+
+  async function handleSendReminder(lead: EnrollmentLead) {
+    setSendingReminderId(lead.lead_id);
+    try {
+      const fnHeaders = await edgeFunctionUserAuthHeaders();
+      if (!fnHeaders) { toast.error('Session expired. Please sign in again.'); return; }
+      const { error } = await supabase.functions.invoke('send-appointment-reminder', {
+        body: { leadId: lead.lead_id },
+        headers: fnHeaders,
+      });
+      if (error) {
+        const status = (error as { context?: { status?: number } }).context?.status;
+        if (status === 409) {
+          toast.error('Confirmation email already sent or queued');
+        } else {
+          toast.error('Failed to send confirmation email');
+        }
+        return;
+      }
+      queryClient.invalidateQueries({ queryKey: queryKeys.enrollmentLeads() });
+      toast.success('Confirmation email sent');
+    } finally {
+      setSendingReminderId(null);
+    }
   }
 
   async function handleStatusChange(leadId: string, status: EnrollmentLead['status']) {
@@ -604,6 +655,11 @@ export function AdminEnrollmentLeadsTab() {
             </div>
           )}
 
+          {/* Confirmation email status */}
+          {(lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.reminderNotification && lead.reminderNotification.status !== 'failed' && (
+            <ReminderStatusBadge notification={lead.reminderNotification} />
+          )}
+
           {/* Appointment date — shown on non-calendar tabs only */}
           {!isCalendarTab && (lead.status === 'appointment_scheduled' || lead.status === 'appointment_confirmed') && lead.appointment_date && (
             <div className="text-xs text-muted-foreground flex items-center gap-1">
@@ -711,6 +767,23 @@ export function AdminEnrollmentLeadsTab() {
                   <Button size="sm" variant="outline" onClick={() => setPickDateTarget(lead)}>
                     Pick New Date
                   </Button>
+                  {(!lead.reminderNotification || lead.reminderNotification.status === 'failed') && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      disabled={sendingReminderId === lead.lead_id}
+                      onClick={() => handleSendReminder(lead)}
+                      className="gap-1.5"
+                    >
+                      {sendingReminderId === lead.lead_id ? (
+                        <><Loader2 className="w-3.5 h-3.5 animate-spin" />Sending…</>
+                      ) : lead.reminderNotification?.status === 'failed' ? (
+                        <><AlertCircle className="w-3.5 h-3.5 text-[#A01F23]" />Retry Confirmation</>
+                      ) : (
+                        <><Send className="w-3.5 h-3.5" />Send Confirmation</>
+                      )}
+                    </Button>
+                  )}
                 </>
               )}
               {(lead.status === 'enrolled' || lead.status === 'closed') && (

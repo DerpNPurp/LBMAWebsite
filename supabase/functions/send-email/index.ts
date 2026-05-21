@@ -319,21 +319,28 @@ async function handlePortalNotification(record: PortalEmailQueueRecord): Promise
     .eq('queue_id', record.queue_id)
 }
 
+function isAuthorized(authHeader: string | null): boolean {
+  if (!authHeader?.startsWith('Bearer ')) return false
+  const token = authHeader.slice(7)
+
+  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+  if (serviceRoleKey && token === serviceRoleKey) return true
+
+  const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
+  if (webhookSecret && token === webhookSecret) return true
+
+  // Accept any JWT issued by this Supabase project — avoids brittle env-var string comparison
+  try {
+    const payload = JSON.parse(atob(token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')))
+    return payload.iss === 'supabase' && payload.ref === 'qfyeguikxxwwxpxleqrr'
+  } catch {
+    return false
+  }
+}
+
 Deno.serve(async (req) => {
   const authHeader = req.headers.get('Authorization')
-  const webhookSecret = Deno.env.get('WEBHOOK_SECRET')
-  const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
-  const anonKey = Deno.env.get('SUPABASE_ANON_KEY')
-  if (!serviceRoleKey && !webhookSecret && !anonKey) {
-    console.error('send-email: no auth credentials configured')
-    return new Response('Service misconfigured', { status: 500 })
-  }
-  // DB webhooks (configured via Supabase dashboard) send the anon key as their auth header
-  const isAuthorized =
-    (!!serviceRoleKey && authHeader === `Bearer ${serviceRoleKey}`) ||
-    (!!webhookSecret && authHeader === `Bearer ${webhookSecret}`) ||
-    (!!anonKey && authHeader === `Bearer ${anonKey}`)
-  if (!isAuthorized) {
+  if (!isAuthorized(authHeader)) {
     return new Response('Unauthorized', { status: 401 })
   }
 

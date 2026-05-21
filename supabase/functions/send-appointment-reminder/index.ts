@@ -1,0 +1,83 @@
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+
+const CORS_HEADERS = {
+  'Access-Control-Allow-Origin': Deno.env.get('APP_URL') ?? 'https://lbmartialarts.com',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+}
+
+function adminClient() {
+  return createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!,
+    { auth: { persistSession: false } }
+  )
+}
+
+Deno.serve(async (req) => {
+  if (req.method === 'OPTIONS') return new Response('ok', { headers: CORS_HEADERS })
+  if (req.method !== 'POST') return new Response('Method not allowed', { status: 405 })
+
+  const authHeader = req.headers.get('Authorization')
+  if (!authHeader) return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
+
+  const userClient = createClient(
+    Deno.env.get('SUPABASE_URL')!,
+    Deno.env.get('SUPABASE_ANON_KEY')!,
+    { global: { headers: { Authorization: authHeader } }, auth: { persistSession: false } }
+  )
+  const { data: { user }, error: userError } = await userClient.auth.getUser()
+  if (userError || !user) return new Response('Unauthorized', { status: 401, headers: CORS_HEADERS })
+
+  const supabase = adminClient()
+
+  const { data: isAdmin } = await supabase.rpc('is_admin', { user_uuid: user.id })
+  if (!isAdmin) return new Response('Forbidden', { status: 403, headers: CORS_HEADERS })
+
+  const { leadId } = await req.json()
+  if (!leadId) return new Response('Missing leadId', { status: 400, headers: CORS_HEADERS })
+
+  const { data: lead } = await supabase
+    .from('enrollment_leads')
+    .select('lead_id, status, parent_email')
+    .eq('lead_id', leadId)
+    .single()
+
+  if (!lead) return new Response('Lead not found', { status: 404, headers: CORS_HEADERS })
+
+  if (lead.status !== 'appointment_scheduled' && lead.status !== 'appointment_confirmed') {
+    return new Response('Lead is not scheduled or confirmed', { status: 422, headers: CORS_HEADERS })
+  }
+
+  // Only block if a reminder was already successfully sent or is queued — failed reminders can be retried
+  const { data: existing } = await supabase
+    .from('enrollment_lead_notifications')
+    .select('notification_id')
+    .eq('lead_id', leadId)
+    .eq('type', 'reminder')
+    .in('status', ['sent', 'queued'])
+    .maybeSingle()
+
+  if (existing) {
+    return new Response('Reminder already sent or queued', { status: 409, headers: CORS_HEADERS })
+  }
+
+  const { error: notifError } = await supabase
+    .from('enrollment_lead_notifications')
+    .insert({
+      lead_id: leadId,
+      recipient_email: lead.parent_email,
+      channel: 'email',
+      type: 'reminder',
+      status: 'queued',
+    })
+
+  if (notifError) {
+    console.error('[send-appointment-reminder] notification insert error:', notifError)
+    return new Response('Failed to queue reminder', { status: 500, headers: CORS_HEADERS })
+  }
+
+  return new Response(JSON.stringify({ ok: true }), {
+    status: 200,
+    headers: { ...CORS_HEADERS, 'Content-Type': 'application/json' },
+  })
+})
