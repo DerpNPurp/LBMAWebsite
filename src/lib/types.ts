@@ -152,7 +152,7 @@ export type MessageAttachment = {
 export type EnrollmentLeadReminderNotification = {
   notification_id: string;
   status: 'queued' | 'sent' | 'failed';
-  sent_at: string | null;
+  created_at: string;
 };
 
 export type EnrollmentLead = {

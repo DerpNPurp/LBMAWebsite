@@ -46,7 +46,7 @@ function ReminderStatusBadge({ notification }: { notification: EnrollmentLeadRem
     return (
       <div className="inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full bg-[#DCFCE7] text-[#14532D] border border-[#86EFAC]">
         <Check className="w-3 h-3 flex-shrink-0" />
-        <span>Confirmation sent{notification.sent_at ? ` · ${formatDate(notification.sent_at)}` : ''}</span>
+        <span>Confirmation sent · {formatDate(notification.created_at)}</span>
       </div>
     )
   }

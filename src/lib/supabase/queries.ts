@@ -507,13 +507,13 @@ export async function getEnrollmentLeads(): Promise<EnrollmentLead[]> {
       ${ENROLLMENT_LEAD_COLUMNS},
       children:enrollment_lead_children(child_id, lead_id, name, age, program_type, created_at),
       programBookings:enrollment_lead_program_bookings(booking_id, lead_id, program_type, booking_token, appointment_slot_id, appointment_date, appointment_time, status, created_at),
-      notifications:enrollment_lead_notifications(notification_id, type, status, sent_at)
+      notifications:enrollment_lead_notifications(notification_id, type, status, created_at)
     `)
     .order('created_at', { ascending: false });
 
   if (error) throw error;
   return (data ?? []).map(row => {
-    const r = row as typeof row & { notifications?: Array<{ notification_id: string; type: string; status: string; sent_at: string | null }> };
+    const r = row as typeof row & { notifications?: Array<{ notification_id: string; type: string; status: string; created_at: string }> };
     const reminder = (r.notifications ?? []).find(n => n.type === 'reminder') ?? null;
     return {
       ...row,
