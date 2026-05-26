@@ -97,15 +97,15 @@ export function ContactPage() {
       {/* ── PAGE HERO ── */}
       <section className="py-16 lg:py-24" style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}>
         <div className="max-w-6xl mx-auto px-6 md:px-10">
-          <p className="v3-eyebrow mb-5">Get In Touch</p>
+          <p className="v3-eyebrow mb-5">Try It Out</p>
           <h1
             className="v3-h font-black leading-none mb-6"
             style={{ fontSize: 'clamp(3rem, 7vw, 5.5rem)', color: V3.text, maxWidth: '18ch' }}
           >
-            We'd Love to<br />Hear From You
+            Request<br />a Trial
           </h1>
           <p className="text-lg leading-relaxed" style={{ color: V3.muted, maxWidth: '52ch' }}>
-            Questions about our programs or ready to book a free trial? We'll respond within one business day — no sales calls, no pressure.
+            We offer a five-day trial for <strong style={{ color: V3.text }}>$20 per child</strong> — that covers all student fees and includes a uniform to keep. Come see if LBMAA is the right fit. No commitment required.
           </p>
         </div>
       </section>
