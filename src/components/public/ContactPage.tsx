@@ -121,10 +121,10 @@ export function ContactPage() {
                 className="v3-h font-black mb-1"
                 style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', color: V3.text }}
               >
-                Send Us a Message
+                Book Your Trial
               </h2>
               <p className="text-base mb-8" style={{ color: V3.muted }}>
-                Fill out the form and we'll be in touch within one business day.
+                Fill this out and we'll reach out within one business day to confirm your child's first class.
               </p>
 
               {submitted ? (
@@ -136,10 +136,10 @@ export function ContactPage() {
                     <CheckCircle2 className="w-8 h-8" style={{ color: V3.primary }} />
                   </div>
                   <h3 className="v3-h font-black mb-2" style={{ fontSize: '1.75rem', color: V3.text }}>
-                    We Got Your Message
+                    Trial Request Received
                   </h3>
                   <p className="text-base max-w-sm mx-auto leading-relaxed" style={{ color: V3.muted }}>
-                    We'll be in touch within 24 hours to answer your questions and get your child scheduled for a free trial class.
+                    We'll be in touch within 24 hours to confirm your child's first class and answer any questions.
                   </p>
                 </div>
               ) : (
@@ -300,7 +300,7 @@ export function ContactPage() {
                         padding: '0.9rem 2rem',
                       }}
                     >
-                      {isSubmitting ? 'Sending…' : 'Send Message'}
+                      {isSubmitting ? 'Requesting…' : 'Request Trial'}
                     </button>
                     <p className="text-sm text-center" style={{ color: V3.muted }}>
                       * Required. We'll never share your information.
