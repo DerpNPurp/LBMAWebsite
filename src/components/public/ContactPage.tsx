@@ -95,7 +95,7 @@ export function ContactPage() {
   return (
     <div>
       {/* ── PAGE HERO ── */}
-      <section className="py-16 lg:py-24" style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}>
+      <section className="py-16 lg:py-24" style={{ backgroundColor: 'white', borderBottom: `1px solid ${V3.border}` }}>
         <div className="max-w-6xl mx-auto px-6 md:px-10">
           <p className="v3-eyebrow mb-5">Try It Out</p>
           <h1
