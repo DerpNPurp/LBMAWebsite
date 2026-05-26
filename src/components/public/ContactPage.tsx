@@ -13,9 +13,8 @@ const CONTACT_INFO = [
 ];
 
 const HOURS = [
-  { day: 'Mon – Fri', time: '3:00 – 8:30 PM' },
-  { day: 'Saturday',  time: '9:00 AM – 2:00 PM' },
-  { day: 'Sunday',    time: 'Closed' },
+  { day: 'Mon – Fri', time: '4:30 – 9:00 PM' },
+  { day: 'Sat – Sun', time: 'Closed' },
 ];
 
 type ChildRow = { name: string; age: string };
@@ -336,6 +335,9 @@ export function ContactPage() {
                       <span style={{ color: V3.mutedOnDark }}>{time}</span>
                     </div>
                   ))}
+                  <p className="text-sm mt-3" style={{ color: V3.mutedOnDark, fontStyle: 'italic' }}>
+                    Your child's specific class time depends on their program — we'll confirm when we reach out.
+                  </p>
                 </div>
               </div>
 
