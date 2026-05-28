@@ -2,58 +2,73 @@ import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { V3 } from './design';
 
 const VALUES = [
-  { label: 'Honor',   desc: 'Integrity in everything we do, on and off the mat.' },
-  { label: 'Loyalty', desc: 'Standing by your school, your instructors, and your fellow students.' },
-  { label: 'Family',  desc: 'Our academy is a community — every student belongs here.' },
-  { label: 'Bravery', desc: 'The courage to try, to fail, and to keep going.' },
+  { label: 'Honor',   desc: 'Doing the right thing with respect, honesty, and responsibility — on and off the mat.' },
+  { label: 'Loyalty', desc: 'Staying committed to your training, your goals, and the people around you.' },
+  { label: 'Family',  desc: 'A supportive community where every student is welcomed and every family belongs.' },
+  { label: 'Bravery', desc: 'The courage to try, make mistakes, face challenges, and keep going anyway.' },
+];
+
+const DISCIPLINES = [
+  'Practical self-defense',
+  'Korean Tae Kwon Do',
+  'Boxing & kickboxing',
+  'Grappling & ground fighting',
+  'Filipino stick & knife fighting',
+  'Japanese & Chinese weapons',
+  'Fitness & conditioning',
+  'Character development',
 ];
 
 const FOUNDERS = [
   {
-    name: 'Grandmaster Ernie Reyes Sr.',
-    role: 'ERWCMAA Founder',
-    bio: 'World-renowned martial arts champion, actor, and stunt coordinator. Grandmaster Reyes founded the ERWCMAA system to share the transformative power of martial arts with communities everywhere. His system has trained champions on the world stage for over 40 years.',
+    name: 'Master Ernie Reyes Sr.',
+    role: 'WCWMA Founder',
+    image: '/photos/founder-reyes.jpg',
+    bio: "Master Reyes co-founded the WCWMA system with the belief that martial arts is one of the greatest ways to create positive change in people's lives.",
   },
   {
     name: 'Master Tony Thompson',
-    role: 'ERWCMAA Co-Founder',
-    bio: 'Master Thompson co-founded the ERWCMAA system and has dedicated his life to spreading the martial arts philosophy of developing the whole person — physically, mentally, and spiritually. His teaching methods form the foundation of every ERWCMAA-affiliated school.',
+    role: 'WCWMA Co-Founder',
+    image: '/photos/founder-thompson.jpg',
+    bio: 'Master Thompson trained alongside Master Reyes for decades, helping build the WCWMA system from the ground up — a shared journey built on respect, discipline, and a commitment to impacting lives.',
   },
 ];
 
-const PURPOSES = [
-  { num: '01', label: 'Physical',      desc: 'Strength, coordination, flexibility, and conditioning through structured martial arts training.' },
-  { num: '02', label: 'Mental',        desc: 'Focus, discipline, and the confidence to set goals and achieve them.' },
-  { num: '03', label: 'Spiritual',     desc: 'Character, integrity, and the inner strength to do what is right.' },
-  { num: '04', label: 'Good Character', desc: 'We develop the whole person — not just a martial artist, but a leader in life.' },
+const PILLARS = [
+  { n: '01', title: 'Physical',  body: 'Movement, strength, coordination, flexibility, and conditioning through structured martial arts training.' },
+  { n: '02', title: 'Mental',    body: 'Focus, self-control, patience, discipline, and the perseverance to keep improving.' },
+  { n: '03', title: 'Character', body: 'Respect, responsibility, confidence, and the habits that define who you are off the mat.' },
 ];
 
 export function AboutPage() {
   return (
     <div>
 
-      {/* ── PAGE HERO ── */}
-      <section className="py-14" style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}>
+      {/* ── HERO ── */}
+      <section style={{ backgroundColor: 'white', borderBottom: `1px solid ${V3.border}` }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div className="grid md:grid-cols-2 gap-12 items-center max-w-5xl mx-auto">
-            <div>
-              <p className="v3-eyebrow mb-4">About LBMAA</p>
+          <div
+            className="grid md:grid-cols-2 md:items-stretch"
+            style={{ minHeight: '500px' }}
+          >
+            <div className="py-14 md:py-20 flex flex-col justify-center md:pr-14">
+              <p className="v3-eyebrow mb-5">About LBMAA</p>
               <h1
-                className="v3-h font-black leading-[1.0] mb-6"
-                style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
+                className="v3-h font-black mb-6"
+                style={{ fontSize: 'clamp(2.75rem, 6vw, 4.75rem)', color: V3.text, lineHeight: 1.05 }}
               >
-                A School That Feels Like Family
+                Building Black Belts in Life
               </h1>
-              <p className="text-base leading-relaxed" style={{ color: V3.muted }}>
-                Los Banos Martial Arts Academy is an ERWCMAA-affiliated school built around one
-                belief: that every student deserves a place where they feel safe, challenged, and
-                supported. We know every student by name.
+              <p className="text-base leading-relaxed" style={{ color: V3.muted, maxWidth: '38ch' }}>
+                Los Banos Martial Arts Academy helps students build confidence, discipline, respect,
+                focus, fitness, and self-defense skills. We follow the Ernie Reyes' WCWMA system —
+                a proven program that trains not just martial artists, but stronger people.
               </p>
             </div>
-            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+            <div className="overflow-hidden rounded-xl md:rounded-none aspect-[4/3] md:aspect-auto bg-gray-100 mb-14 md:mb-0">
               <ImageWithFallback
-                src="/photos/34-IMG_5055.jpg"
-                alt="LBMAA dojo"
+                src="/photos/kjn-guerra-with-students.jpg"
+                alt="LBMAA instructor with students"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -61,8 +76,8 @@ export function AboutPage() {
         </div>
       </section>
 
-      {/* ── MISSION QUOTE ── */}
-      <section className="py-10" style={{ backgroundColor: V3.primary }}>
+      {/* ── MISSION ── */}
+      <section className="py-16" style={{ backgroundColor: V3.primary }}>
         <div className="max-w-3xl mx-auto px-6 text-center">
           <p
             className="text-xs font-bold uppercase tracking-[0.2em] mb-6"
@@ -71,81 +86,56 @@ export function AboutPage() {
             Our Mission
           </p>
           <blockquote
-            className="v3-h font-black leading-[1.05]"
-            style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', color: 'white' }}
+            className="v3-h font-black"
+            style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', color: 'white', lineHeight: 1.1 }}
           >
             "Impact and Empower Through Martial Arts — Developing Black Belts in Life"
           </blockquote>
         </div>
       </section>
 
-      {/* ── FOUR PILLARS ── */}
-      <section className="py-16" style={{ backgroundColor: 'white' }}>
+      {/* ── TRAINING THE WHOLE PERSON ── */}
+      <section className="py-20" style={{ backgroundColor: 'white' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <p className="v3-eyebrow mb-4">What We Develop</p>
-          <h2
-            className="v3-h font-black leading-[1.0] mb-10"
-            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
-          >
-            Our Four Pillars
-          </h2>
-          <div className="grid md:grid-cols-4 gap-0 max-w-5xl">
-            {PURPOSES.map(({ num, label, desc }, i) => (
-              <div
-                key={num}
-                className="py-6 pr-8"
-                style={{
-                  borderTop: `2px solid ${i === 0 ? V3.primary : V3.border}`,
-                }}
-              >
-                <div className="v3-h text-4xl font-black mb-3" style={{ color: V3.surface }}>
-                  {num}
-                </div>
-                <h3 className="v3-h text-xl font-bold mb-3" style={{ color: V3.text }}>
-                  {label}
-                </h3>
-                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
-                  {desc}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── STORY ── */}
-      <section className="py-24" style={{ backgroundColor: V3.surface }}>
-        <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl mx-auto">
+          <div className="grid md:grid-cols-[1fr_340px] gap-14 items-start max-w-5xl">
             <div>
-              <p className="v3-eyebrow mb-4">Our Story</p>
+              <p className="v3-eyebrow mb-4">Our Approach</p>
               <h2
-                className="v3-h font-black leading-[1.0] mb-6"
-                style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+                className="v3-h font-black mb-10"
+                style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text, lineHeight: 1.05 }}
               >
-                Built for the Community
+                Training the Whole Person
               </h2>
-              <div className="flex flex-col gap-4 text-[0.95rem] leading-relaxed" style={{ color: V3.muted }}>
-                <p>
-                  LBMAA is part of the Ernie Reyes World Combat Martial Arts Association (ERWCMAA) —
-                  an organization that has trained champions for over 40 years. Our curriculum is
-                  built on the World Chun Woo Martial Arts (WCWMA) system.
-                </p>
-                <p>
-                  Our instructors aren't just skilled martial artists. They're mentors who
-                  understand students — how to challenge them without discouraging them, and how to
-                  make every student feel like they belong.
-                </p>
-                <p>
-                  Whether your child needs a confidence boost, more focus, or just something
-                  positive to be part of — we meet them where they are.
-                </p>
-              </div>
+              {PILLARS.map(({ n, title, body }, i) => (
+                <div
+                  key={n}
+                  className="py-7 flex gap-6 items-start"
+                  style={{ borderTop: `2px solid ${V3.border}` }}
+                >
+                  <span
+                    className="v3-h text-2xl font-black flex-shrink-0"
+                    style={{ color: 'oklch(82% 0.009 30)', marginTop: '2px' }}
+                  >
+                    {n}
+                  </span>
+                  <div>
+                    <h3 className="v3-h text-xl font-bold mb-2" style={{ color: V3.text }}>
+                      {title}
+                    </h3>
+                    <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                      {body}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
-            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+            <div
+              className="rounded-xl overflow-hidden bg-gray-100"
+              style={{ aspectRatio: '3/4' }}
+            >
               <ImageWithFallback
-                src="/photos/59-_MG_4959.jpg"
-                alt="LBMAA training floor"
+                src="/photos/kjn-guerra-portrait.jpg"
+                alt="LBMAA head instructor"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -153,26 +143,99 @@ export function AboutPage() {
         </div>
       </section>
 
+      {/* ── PHOTO STRIP ── */}
+      <div
+        className="grid"
+        style={{
+          gridTemplateColumns: '1.5fr 1fr 1fr',
+          height: '300px',
+          gap: '3px',
+          backgroundColor: V3.surface,
+        }}
+      >
+        {[
+          { src: '/photos/1-_MG_5182.jpg',  alt: 'Students in class' },
+          { src: '/photos/20-IMG_5092.jpg', alt: 'Training on the mat' },
+          { src: '/photos/59-_MG_4959.jpg', alt: 'LBMAA training floor' },
+        ].map(({ src, alt }) => (
+          <div key={src} className="overflow-hidden bg-gray-200">
+            <ImageWithFallback src={src} alt={alt} className="w-full h-full object-cover" />
+          </div>
+        ))}
+      </div>
+
+      {/* ── WHAT WE TEACH ── */}
+      <section className="py-20" style={{ backgroundColor: 'white' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl">
+            <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
+              <ImageWithFallback
+                src="/photos/34-IMG_5055.jpg"
+                alt="LBMAA class in session"
+                className="w-full h-full object-cover"
+              />
+            </div>
+            <div>
+              <p className="v3-eyebrow mb-4">What We Teach</p>
+              <h2
+                className="v3-h font-black mb-5"
+                style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text, lineHeight: 1.05 }}
+              >
+                A Well-Rounded System
+              </h2>
+              <p className="text-[0.95rem] leading-relaxed mb-7" style={{ color: V3.muted }}>
+                The WCWMA system blends traditional and modern martial arts — creating versatile
+                students who can adapt across styles. Students train their bodies and learn to
+                carry themselves with confidence, discipline, and purpose.
+              </p>
+              <ul className="grid grid-cols-2 gap-y-2.5 gap-x-6">
+                {DISCIPLINES.map((d) => (
+                  <li key={d} className="flex items-start gap-2">
+                    <span
+                      className="flex-shrink-0 rounded-full"
+                      style={{
+                        width: '6px',
+                        height: '6px',
+                        backgroundColor: V3.primary,
+                        marginTop: '6px',
+                      }}
+                    />
+                    <span className="text-sm leading-snug" style={{ color: V3.muted }}>
+                      {d}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
       {/* ── VALUES ── */}
-      <section className="py-16" style={{ backgroundColor: 'white' }}>
+      <section className="py-16" style={{ backgroundColor: V3.surface }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <p className="v3-eyebrow mb-4">Core Values</p>
           <h2
-            className="v3-h font-black leading-[1.0] mb-10"
-            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
+            className="v3-h font-black mb-10"
+            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text, lineHeight: 1.05 }}
           >
-            What We Teach Every Day
+            What We Stand For
           </h2>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 max-w-4xl">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-0 max-w-5xl">
             {VALUES.map(({ label, desc }) => (
-              <div key={label}>
-                <div
-                  className="v3-h text-5xl font-black mb-3 leading-none"
-                  style={{ color: V3.primary }}
+              <div
+                key={label}
+                className="py-7 pr-8"
+                style={{ borderTop: `2px solid ${V3.border}` }}
+              >
+                <h3
+                  className="v3-h font-black mb-3"
+                  style={{
+                    fontSize: 'clamp(1.5rem, 2.5vw, 2rem)',
+                    color: V3.text,
+                    lineHeight: 1.1,
+                  }}
                 >
-                  {label[0]}
-                </div>
-                <h3 className="v3-h text-xl font-bold mb-2" style={{ color: V3.text }}>
                   {label}
                 </h3>
                 <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
@@ -184,65 +247,68 @@ export function AboutPage() {
         </div>
       </section>
 
-      {/* ── FOUNDERS ── */}
-      <section className="py-14" style={{ backgroundColor: V3.surface }}>
+      {/* ── WCWMA HERITAGE ── */}
+      <section className="py-16" style={{ backgroundColor: 'white' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <p className="v3-eyebrow mb-4">Our Foundation</p>
-          <h2
-            className="v3-h font-black leading-[1.0] mb-8"
-            style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text }}
-          >
-            Built on a Legacy of Excellence
-          </h2>
-          <div className="grid md:grid-cols-2 gap-8 max-w-4xl">
-            {FOUNDERS.map(({ name, role, bio }) => (
-              <div
-                key={name}
-                className="p-7 rounded-xl"
-                style={{ backgroundColor: V3.surface, border: `1px solid ${V3.border}` }}
-              >
-                <div
-                  className="w-14 h-14 rounded-full flex items-center justify-center mb-5"
-                  style={{ backgroundColor: V3.primaryBg }}
+          <div className="max-w-5xl">
+            <div className="flex items-center gap-5 mb-8">
+              <img
+                src="/logo.png"
+                alt="WCWMA Logo"
+                className="h-12 w-auto flex-shrink-0"
+              />
+              <div>
+                <p className="v3-eyebrow mb-1">Our Foundation</p>
+                <h2
+                  className="v3-h font-black"
+                  style={{ fontSize: 'clamp(1.5rem, 3vw, 2.25rem)', color: V3.text, lineHeight: 1.05 }}
                 >
-                  <span className="v3-h text-xl font-black" style={{ color: V3.primary }}>
-                    {name.split(' ').pop()![0]}
-                  </span>
-                </div>
-                <h3 className="v3-h text-xl font-bold mb-1" style={{ color: V3.text }}>
-                  {name}
-                </h3>
-                <p className="text-sm font-semibold mb-4" style={{ color: V3.primary }}>
-                  {role}
-                </p>
-                <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
-                  {bio}
-                </p>
+                  Built on a Legacy of Excellence
+                </h2>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── AFFILIATION ── */}
-      <section className="py-10" style={{ backgroundColor: V3.surface, borderTop: `1px solid ${V3.border}`, borderBottom: `1px solid ${V3.border}` }}>
-        <div className="max-w-5xl mx-auto px-6 md:px-10">
-          <div className="flex flex-col md:flex-row items-center gap-6 text-center md:text-left">
-            <img src="/logo.png" alt="ERWCMAA Logo" className="h-14 w-auto flex-shrink-0" />
-            <div>
-              <h3 className="v3-h text-lg font-bold mb-1" style={{ color: V3.text }}>
-                Ernie Reyes World Combat Martial Arts Association
-              </h3>
-              <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
-                LBMAA is proudly affiliated with the ERWCMAA — one of the most respected martial
-                arts organizations in the world. Our curriculum, standards, and instructor
-                certifications are backed by 40+ years of proven excellence.
-              </p>
+            </div>
+            <p
+              className="text-[0.95rem] leading-relaxed mb-10 max-w-2xl"
+              style={{ color: V3.muted }}
+            >
+              LBMAA is affiliated with the Ernie Reyes' West Coast World Martial Arts Association
+              (WCWMA) — founded by Master Ernie Reyes Sr. and Master Tony Thompson. Their goal
+              was simple: impact and empower as many lives as possible through martial arts.
+            </p>
+            <div className="grid md:grid-cols-2 gap-6">
+              {FOUNDERS.map(({ name, role, image, bio }) => (
+                <div
+                  key={name}
+                  className="rounded-xl overflow-hidden"
+                  style={{
+                    backgroundColor: V3.surface,
+                    border: `1px solid ${V3.border}`,
+                  }}
+                >
+                  <div className="aspect-[4/3] bg-gray-100">
+                    <ImageWithFallback
+                      src={image}
+                      alt={name}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  </div>
+                  <div className="p-7">
+                    <h3 className="v3-h text-xl font-bold mb-1" style={{ color: V3.text }}>
+                      {name}
+                    </h3>
+                    <p className="text-sm font-semibold mb-4" style={{ color: V3.primary }}>
+                      {role}
+                    </p>
+                    <p className="text-sm leading-relaxed" style={{ color: V3.muted }}>
+                      {bio}
+                    </p>
+                  </div>
+                </div>
+              ))}
             </div>
           </div>
         </div>
       </section>
-
 
     </div>
   );

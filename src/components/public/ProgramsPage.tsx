@@ -76,7 +76,7 @@ export function ProgramsPage() {
       {/* ── PAGE HERO ── */}
       <section
         className="py-14"
-        style={{ backgroundColor: V3.surface, borderBottom: `1px solid ${V3.border}` }}
+        style={{ backgroundColor: 'white', borderBottom: `1px solid ${V3.border}` }}
       >
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <p className="v3-eyebrow mb-4">Our Programs</p>
