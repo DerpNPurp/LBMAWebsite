@@ -1,6 +1,6 @@
 // supabase/functions/send-email/templates.ts
 
-import type { EnrollmentLead, AppointmentInfo, ChildRecord } from './types.ts'
+import type { EnrollmentLead, AppointmentInfo } from './types.ts'
 
 function escHtml(s: string | null | undefined): string {
   if (!s) return ''
