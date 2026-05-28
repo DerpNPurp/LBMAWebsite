@@ -1,13 +1,8 @@
 // supabase/functions/send-email/index.ts
 
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
-import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead, PortalEmailQueueRecord, AppointmentInfo } from './types.ts'
-import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, multiProgramApprovalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml, announcementNotificationHtml, blogPostNotificationHtml, commentReplyHtml, postCommentHtml } from './templates.ts'
-
-const PROGRAM_LABELS: Record<string, string> = {
-  little_dragons: 'Little Dragons',
-  youth: 'Youth Program',
-}
+import type { WebhookPayload, EnrollmentLeadNotificationRecord, MessageRecord, EnrollmentLead, PortalEmailQueueRecord, AppointmentInfo, ChildRecord } from './types.ts'
+import { enrollmentNotificationHtml, messagingNotificationHtml, approvalEmailHtml, multiProgramApprovalEmailHtml, denialEmailHtml, bookingConfirmationHtml, reminderEmailHtml, submissionConfirmationHtml, announcementNotificationHtml, blogPostNotificationHtml, commentReplyHtml, postCommentHtml, PROGRAM_LABELS } from './templates.ts'
 
 const RESEND_API_URL = 'https://api.resend.com/emails'
 const FROM = 'Los Banos Martial Arts Academy <no-reply@notifications.lbmartialarts.com>'
@@ -105,6 +100,13 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
   const bookingUrl = lead.booking_token ? `${appUrl}/book/${lead.booking_token}` : appUrl
   const _confirmUrl = lead.booking_token ? `${appUrl}/confirm/${lead.booking_token}` : appUrl
 
+  const { data: childRows } = await supabase
+    .from('enrollment_lead_children')
+    .select('name, age, program_type')
+    .eq('lead_id', record.lead_id)
+    .order('created_at', { ascending: true })
+  const enrichedLead: EnrollmentLead = { ...lead, children: (childRows ?? []) as ChildRecord[] }
+
   let subject: string
   let html: string
 
@@ -120,7 +122,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
         ? admins.map((a: { email: string }) => a.email)
         : [record.recipient_email]
       subject = `New enrollment inquiry — ${lead.parent_name}`
-      html = enrollmentNotificationHtml(lead, adminUrl, LOGO_URL)
+      html = enrollmentNotificationHtml(enrichedLead, adminUrl, LOGO_URL)
       await Promise.all(recipients.map((to: string) => sendEmail(to, subject, html)))
       await supabase
         .from('enrollment_lead_notifications')
@@ -130,7 +132,7 @@ async function handleEnrollmentNotification(record: EnrollmentLeadNotificationRe
     }
     case 'submission':
       subject = 'Thank you for your interest in LBMAA'
-      html = submissionConfirmationHtml(lead, LOGO_URL)
+      html = submissionConfirmationHtml(enrichedLead, LOGO_URL)
       break
     case 'approval': {
       const { data: programBookings } = await supabase

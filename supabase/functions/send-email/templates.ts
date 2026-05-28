@@ -7,7 +7,7 @@ function escHtml(s: string | null | undefined): string {
   return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;')
 }
 
-const PROGRAM_LABELS: Record<string, string> = {
+export const PROGRAM_LABELS: Record<string, string> = {
   little_dragons: 'Little Dragons',
   youth: 'Youth Program',
 }
