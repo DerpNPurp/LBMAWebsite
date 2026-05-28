@@ -42,6 +42,13 @@ export interface EnrollmentLead {
   appointment_time: string | null
   denial_message: string | null
   created_at: string
+  children?: ChildRecord[]
+}
+
+export interface ChildRecord {
+  name: string
+  age: number
+  program_type: string
 }
 
 export interface PortalEmailQueueRecord {
