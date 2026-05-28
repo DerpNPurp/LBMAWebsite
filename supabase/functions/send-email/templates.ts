@@ -66,7 +66,7 @@ export function enrollmentNotificationHtml(lead: EnrollmentLead, adminUrl: strin
     `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Email</td><td style="padding:4px 0;color:#555;">${escHtml(lead.parent_email)}</td></tr>`,
     lead.phone ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Phone</td><td style="padding:4px 0;color:#555;">${escHtml(lead.phone)}</td></tr>` : '',
     lead.children && lead.children.length > 0
-      ? lead.children.map((c: ChildRecord) =>
+      ? lead.children.map(c =>
           `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;">Child</td><td style="padding:4px 0;color:#555;">${escHtml(c.name)}, age ${c.age} — ${PROGRAM_LABELS[c.program_type] ?? c.program_type}</td></tr>`
         ).join('')
       : lead.student_name
@@ -208,7 +208,7 @@ export function submissionConfirmationHtml(lead: EnrollmentLead, logoUrl?: strin
       <table style="width:100%;border-collapse:collapse;">
         ${lead.phone ? `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Phone</td><td style="padding:4px 0;color:#555;">${escHtml(lead.phone)}</td></tr>` : ''}
         ${lead.children && lead.children.length > 0
-          ? lead.children.map((c: ChildRecord) =>
+          ? lead.children.map(c =>
               `<tr><td style="padding:4px 0;font-weight:700;color:#1a1a2e;width:110px;">Child</td><td style="padding:4px 0;color:#555;">${escHtml(c.name)}, age ${c.age} — ${PROGRAM_LABELS[c.program_type] ?? c.program_type}</td></tr>`
             ).join('')
           : lead.student_name
