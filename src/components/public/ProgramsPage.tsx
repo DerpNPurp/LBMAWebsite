@@ -5,49 +5,62 @@ import { BASE, V3 } from './design';
 
 const PROGRAMS = [
   {
-    name: 'Kids Martial Arts',
-    ages: 'Ages 4–12',
-    summary: 'Our flagship program combines Taekwondo, boxing, and kickboxing into a structured, age-appropriate curriculum with two class tracks: Little Dragons (4–6) and Juniors (7–12).',
+    name: 'Little Dragons',
+    ages: 'Ages 4–7',
+    summary: 'Fun, structured classes that build listening, coordination, early discipline, and fitness. Our youngest students learn in an age-appropriate environment where confidence and character are built alongside martial arts fundamentals.',
     highlights: [
-      'Age-split classes: Little Dragons (4–6) and Juniors (7–12)',
-      'Clear belt progression with defined skill standards',
-      'Emphasis on focus, respect, and self-control',
-      'Anti-bullying principles woven throughout',
+      'Structured classes designed for young learners',
+      'Builds listening skills, coordination, and early discipline',
+      'Age-appropriate curriculum in a safe, fun environment',
+      'Develops physical fitness and motor skills',
       'Small class sizes for individual attention',
     ],
-    photo: '/photos/42-IMG_5020.jpg',
-    photoAlt: 'Kids martial arts class at LBMAA',
+    photo: '/photos/16-IMG_5107.jpg',
+    photoAlt: 'Little Dragons class at LBMAA',
     photoRight: false,
   },
   {
-    name: 'Teens & Adults',
-    ages: 'Ages 13+',
-    summary: 'Advanced training for teens and adults in a high-energy, welcoming environment. The curriculum includes striking, grappling, and Filipino stick fighting with a strong emphasis on leadership and real-world self-defense.',
+    name: 'Youth Program',
+    ages: 'Ages 8–17',
+    summary: 'Dynamic, goal-oriented classes that build self-defense, discipline, fitness, coordination, confidence, and a strong mind and body. Students follow a clear belt progression with a curriculum that grows with them through the junior and teen years.',
     highlights: [
-      'Full WCWMA mixed martial arts curriculum',
-      'Fitness conditioning built into every session',
-      'Clear path toward Black Belt and beyond',
-      'Leadership and mentorship opportunities',
-      'All experience levels welcome',
+      'Goal-oriented training in self-defense and martial arts',
+      'Builds discipline, fitness, and coordination',
+      'Develops confidence and a strong mind and body',
+      'Clear belt progression with defined skill standards',
+      'Separate class tracks for juniors and teens',
     ],
-    photo: '/photos/50-IMG_4978.jpg',
-    photoAlt: 'Adult martial arts training at LBMAA',
+    photo: '/photos/1-_MG_5182.jpg',
+    photoAlt: 'Youth martial arts class at LBMAA',
     photoRight: true,
   },
   {
-    name: 'Kickboxing Fitness',
+    name: 'Extreme Performance',
     ages: 'All Ages',
-    summary: 'A high-energy fitness class combining kickboxing fundamentals with cardio conditioning. No martial arts background required — just show up ready to move.',
+    summary: 'Invite-only advanced training for handpicked students in gymnastics, weapons, creative forms, and individual and team performance. Selected students train at a higher intensity and compete at regional and national events.',
     highlights: [
-      'No prior experience needed',
-      'Full-body cardio workout every class',
-      'Real kickboxing technique instruction',
-      'Supportive group atmosphere',
-      'Flexible scheduling',
+      'Invite-only — students are selected by instructors',
+      'Advanced gymnastics and acrobatics training',
+      'Weapons and creative forms curriculum',
+      'Individual and team performance preparation',
+      'Competitive team opportunities at regional and national events',
     ],
-    photo: '/photos/55-IMG_4969.jpg',
-    photoAlt: 'Kickboxing fitness class at LBMAA',
+    photo: '/photos/29-IMG_5072.jpg',
+    photoAlt: 'Extreme Performance team at LBMAA',
     photoRight: false,
+  },
+];
+
+const COMING_SOON = [
+  {
+    name: 'Adults',
+    ages: 'Ages 18+',
+    desc: 'Dynamic, goal-oriented classes that build self-defense, strength, fitness, confidence, and stress relief.',
+  },
+  {
+    name: 'Endurance Fitness Kickboxing',
+    ages: 'Ages 16+',
+    desc: 'High-energy cardio kickboxing classes focused on building stamina, strength, coordination, and overall fitness.',
   },
 ];
 
@@ -87,8 +100,8 @@ export function ProgramsPage() {
             Training for Every Stage of Life
           </h1>
           <p className="text-base leading-relaxed max-w-xl" style={{ color: V3.muted }}>
-            From our youngest Little Dragons to adult black belt candidates — every program
-            is built around what students at that stage actually need.
+            From our youngest Little Dragons to advanced Extreme Performance competitors — every
+            program is built around what students at that stage actually need.
           </p>
         </div>
       </section>
@@ -156,6 +169,40 @@ export function ProgramsPage() {
           </div>
         </section>
       ))}
+
+      {/* ── COMING SOON ── */}
+      <section className="py-16" style={{ backgroundColor: 'oklch(16% 0.014 30)' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
+          <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
+            <p className="v3-eyebrow mb-3" style={{ color: 'oklch(60% 0.007 30)' }}>Coming Soon</p>
+            <h2
+              className="v3-h font-black mb-8"
+              style={{ fontSize: 'clamp(1.75rem, 3vw, 2.25rem)', color: 'oklch(72% 0.005 30)', lineHeight: 1.0 }}
+            >
+              More Programs on the Way
+            </h2>
+            <div className="grid md:grid-cols-2 gap-4">
+              {COMING_SOON.map((p) => (
+                <div
+                  key={p.name}
+                  style={{
+                    borderRadius: '10px',
+                    backgroundColor: 'oklch(22% 0.014 30)',
+                    padding: '28px 32px',
+                  }}
+                >
+                  <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ display: 'inline-block', fontFamily: "'Nunito', sans-serif", fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: 'oklch(74% 0.11 54)', backgroundColor: 'oklch(74% 0.11 54 / 0.14)', padding: '2px 8px', borderRadius: '999px' }}>Coming Soon</span>
+                    <span style={{ display: 'inline-block', fontFamily: "'Nunito', sans-serif", fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: 'oklch(52% 0.007 30)', backgroundColor: 'oklch(29% 0.012 30)', padding: '2px 8px', borderRadius: '999px' }}>{p.ages}</span>
+                  </div>
+                  <h3 className="v3-h font-black mb-2" style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)', color: 'oklch(72% 0.005 30)', lineHeight: 1.05 }}>{p.name}</h3>
+                  <p style={{ fontFamily: "'Nunito', sans-serif", fontSize: '0.85rem', lineHeight: 1.55, color: 'oklch(46% 0.007 30)' }}>{p.desc}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </section>
 
       {/* ── BELT SYSTEM ── */}
       <section className="py-16" style={{ backgroundColor: V3.surface }}>

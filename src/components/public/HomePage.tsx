@@ -1,39 +1,47 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { BASE, V3 } from './design';
 
+const COMING_SOON = [
+  {
+    name: 'Adults',
+    ages: 'Ages 18+',
+    desc: 'Dynamic, goal-oriented classes that build self-defense, strength, fitness, confidence, and stress relief.',
+  },
+  {
+    name: 'Endurance Fitness Kickboxing',
+    ages: 'Ages 16+',
+    desc: 'High-energy cardio kickboxing classes focused on building stamina, strength, coordination, and overall fitness.',
+  },
+];
+
 const PROGRAMS = [
   {
     name: 'Little Dragons',
-    ages: 'Ages 4–6',
+    ages: 'Ages 4–7',
     image: '/photos/16-IMG_5107.jpg',
-    desc: 'Fun, structured classes that build listening, coordination, and early discipline.',
+    desc: 'Fun, structured classes that build listening, coordination, early discipline, and fitness.',
   },
   {
-    name: 'Kids Martial Arts',
-    ages: 'Ages 7–12',
+    name: 'Youth Program',
+    ages: 'Ages 8–17',
     image: '/photos/1-_MG_5182.jpg',
-    desc: 'Real belt progression earned through skill — not a fixed calendar.',
+    desc: 'Dynamic, goal-oriented classes that build self-defense, discipline, fitness, coordination, confidence, and a strong mind and body.',
   },
   {
-    name: 'Teens & Adults',
-    ages: 'Ages 13+',
+    name: 'Extreme Performance',
+    ages: 'All Ages',
     image: '/photos/29-IMG_5072.jpg',
-    desc: 'The full WCWMA curriculum — self-defense, striking, grappling, and conditioning.',
+    desc: 'Invite-only advanced training for handpicked students in gymnastics, weapons, creative forms, and individual and team performance.',
   },
 ];
 
-const VALUES = [
-  { label: 'Honor',      desc: 'Doing the right thing, even when no one is watching.' },
-  { label: 'Loyalty',    desc: 'Staying committed to your training, your goals, and the people around you.' },
-  { label: 'Family',     desc: 'A school where students are welcomed, supported, and known by name.' },
-  { label: 'Bravery',    desc: 'The courage to try, make mistakes in front of others, and keep going.' },
-  { label: 'Respect',    desc: 'The foundation of everything we do — shown through attitude and effort.' },
-  { label: 'Discipline', desc: 'Staying focused when something is hard. The habit that makes everything else possible.' },
-];
+const VALUES = ['Honor', 'Loyalty', 'Family', 'Bravery'];
 
 export function HomePage() {
   const navigate = useNavigate();
+  const [hoveredValue, setHoveredValue] = useState<number | null>(null);
 
   return (
     <div>
@@ -76,22 +84,18 @@ export function HomePage() {
                 className="leading-relaxed mb-8"
                 style={{ color: 'oklch(82% 0.007 30)', maxWidth: '42ch', fontSize: '1rem' }}
               >
-                Structured martial arts for kids, teens, and adults in Los Banos — building
-                discipline, respect, and confidence that carries beyond the mat.
+                Healthier active lifestyle through martial arts. <br />Start Your black belt journey today. <br />English and Spanish speaking.
               </p>
 
               <div className="flex flex-col sm:flex-row gap-3 mb-6">
                 <button className="v3-btn-primary" onClick={() => navigate(`${BASE}/contact`)}>
-                  Book a Free Trial Class
+                  Book a Trial Class
                 </button>
                 <button className="v3-btn-ghost" onClick={() => navigate(`${BASE}/programs`)}>
                   Explore Programs
                 </button>
               </div>
 
-              <p style={{ color: 'oklch(52% 0.007 30)', fontSize: '0.72rem', fontFamily: "'Nunito', sans-serif" }}>
-                No commitment · No uniform needed · First class is free
-              </p>
             </div>
           </div>
         </div>
@@ -105,7 +109,7 @@ export function HomePage() {
             style={{ maxWidth: '1040px', margin: '0 auto' }}
           >
             <div>
-              <p className="v3-eyebrow mb-5">About LBMAA</p>
+              <p className="v3-eyebrow mb-5">About</p>
               <h2
                 className="v3-h font-black mb-6"
                 style={{
@@ -115,23 +119,24 @@ export function HomePage() {
                   letterSpacing: '-0.015em',
                 }}
               >
-                More Than Kicks<br />and Punches
+                More Than Kicking<br />and Punching.<br /><span style={{ color: V3.primary }}>It's a Way of Life.</span>
               </h2>
               <p
                 className="leading-relaxed mb-4"
                 style={{ color: V3.muted, fontSize: '0.95rem', maxWidth: '50ch' }}
               >
                 The physical training matters — your child gets stronger, more coordinated,
-                and more capable. But what stays with them is the discipline to show up when
-                something is hard, the respect for the people around them, and the confidence
-                that comes from earning something real.
+                and more capable. However, what stays with them is the discipline to show up when
+                something becomes challenging, the respect for the people around them, and the
+                confidence that comes with earning an Ernie Reyes West Coast World martial arts
+                black belt.
               </p>
               <p
                 className="leading-relaxed mb-8"
                 style={{ color: V3.muted, fontSize: '0.95rem', maxWidth: '50ch' }}
               >
-                LBMAA has been part of the Ernie Reyes' West Coast World Martial Arts Association
-                for over 40 years — a system built on exactly those values.
+                Our academy has been part of a legacy spanning over 40 years at Ernie Reyes'
+                West Coast World Martial Arts Association.
               </p>
               <button
                 onClick={() => navigate(`${BASE}/about`)}
@@ -263,6 +268,35 @@ export function HomePage() {
             ))}
           </div>
 
+          {/* Coming soon strips */}
+          <div
+            style={{
+              maxWidth: '1040px',
+              margin: '6px auto 0',
+              display: 'grid',
+              gridTemplateColumns: '1fr 1fr',
+              gap: '6px',
+            }}
+          >
+            {COMING_SOON.map((p) => (
+              <div
+                key={p.name}
+                style={{
+                  borderRadius: '10px',
+                  backgroundColor: 'oklch(22% 0.014 30)',
+                  padding: '28px 32px',
+                }}
+              >
+                <div style={{ display: 'flex', gap: '6px', alignItems: 'center', marginBottom: '12px', flexWrap: 'wrap' }}>
+                  <span style={{ display: 'inline-block', fontFamily: "'Nunito', sans-serif", fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: 'oklch(74% 0.11 54)', backgroundColor: 'oklch(74% 0.11 54 / 0.14)', padding: '2px 8px', borderRadius: '999px' }}>Coming Soon</span>
+                  <span style={{ display: 'inline-block', fontFamily: "'Nunito', sans-serif", fontSize: '0.6rem', fontWeight: 700, letterSpacing: '0.15em', textTransform: 'uppercase' as const, color: 'oklch(52% 0.007 30)', backgroundColor: 'oklch(29% 0.012 30)', padding: '2px 8px', borderRadius: '999px' }}>{p.ages}</span>
+                </div>
+                <h3 className="v3-h font-black mb-2" style={{ fontSize: 'clamp(1.1rem, 1.6vw, 1.35rem)', color: 'oklch(72% 0.005 30)', lineHeight: 1.05 }}>{p.name}</h3>
+                <p style={{ fontFamily: "'Nunito', sans-serif", fontSize: '0.78rem', lineHeight: 1.55, color: 'oklch(46% 0.007 30)' }}>{p.desc}</p>
+              </div>
+            ))}
+          </div>
+
           <div className="mt-6 md:hidden" style={{ maxWidth: '1040px', margin: '24px auto 0' }}>
             <button
               onClick={() => navigate(`${BASE}/programs`)}
@@ -276,12 +310,12 @@ export function HomePage() {
       </section>
 
       {/* ── VALUES ── */}
-      <section className="py-20" style={{ backgroundColor: 'white' }}>
+      <section className="py-14" style={{ backgroundColor: 'white' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
-            <p className="v3-eyebrow mb-4">What We Stand For</p>
+            <p className="v3-eyebrow mb-3">What We Stand For</p>
             <h2
-              className="v3-h font-black mb-12"
+              className="v3-h font-black mb-8"
               style={{
                 fontSize: 'clamp(1.9rem, 3.5vw, 2.75rem)',
                 color: V3.text,
@@ -289,33 +323,73 @@ export function HomePage() {
                 letterSpacing: '-0.015em',
               }}
             >
-              Six Values That Shape Everything
+              Our Martial Arts Values
             </h2>
-            <div className="grid sm:grid-cols-2 md:grid-cols-3">
-              {VALUES.map(({ label, desc }) => (
+
+            <div
+              className="grid grid-cols-2 md:grid-cols-4 gap-px"
+              style={{ backgroundColor: V3.border }}
+            >
+              {VALUES.map((label, i) => (
                 <div
                   key={label}
+                  className="cursor-default relative overflow-hidden"
                   style={{
-                    borderTop: `2px solid ${V3.border}`,
-                    paddingTop: '24px',
-                    paddingBottom: '28px',
-                    paddingRight: '32px',
+                    backgroundColor: hoveredValue === i ? 'white' : 'var(--v3-surface)',
+                    padding: '20px 20px 28px',
+                    transition: 'background-color 0.25s ease',
                   }}
+                  onMouseEnter={() => setHoveredValue(i)}
+                  onMouseLeave={() => setHoveredValue(null)}
                 >
-                  <h3
-                    className="v3-h font-black mb-2"
+                  {/* Ghost ordinal cropped at bottom-right for depth */}
+                  <span
+                    aria-hidden
                     style={{
-                      fontSize: 'clamp(2rem, 3vw, 2.75rem)',
+                      position: 'absolute',
+                      bottom: '-10px',
+                      right: '6px',
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      fontWeight: 900,
+                      fontSize: '5.5rem',
+                      lineHeight: 1,
+                      letterSpacing: '-0.06em',
                       color: V3.text,
+                      opacity: 0.055,
+                      userSelect: 'none',
+                      pointerEvents: 'none',
+                    }}
+                  >
+                    {String(i + 1).padStart(2, '0')}
+                  </span>
+
+                  <span
+                    style={{
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      fontWeight: 900,
+                      fontSize: '0.6rem',
+                      letterSpacing: '0.2em',
+                      color: V3.muted,
+                      opacity: 0.55,
+                      display: 'block',
+                      marginBottom: '8px',
+                    }}
+                  >
+                    0{i + 1}
+                  </span>
+                  <span
+                    className="v3-h font-black relative"
+                    style={{
+                      fontSize: 'clamp(1.6rem, 2.8vw, 2.25rem)',
+                      color: hoveredValue === i ? V3.primary : V3.text,
                       lineHeight: 1.0,
-                      letterSpacing: '-0.01em',
+                      letterSpacing: '-0.02em',
+                      display: 'block',
+                      transition: 'color 0.25s ease',
                     }}
                   >
                     {label}
-                  </h3>
-                  <p style={{ fontSize: '0.82rem', lineHeight: 1.65, color: V3.muted, fontFamily: "'Nunito', sans-serif" }}>
-                    {desc}
-                  </p>
+                  </span>
                 </div>
               ))}
             </div>
@@ -326,7 +400,7 @@ export function HomePage() {
       {/* ── CTA ── */}
       <section className="py-20" style={{ backgroundColor: V3.primary }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div style={{ maxWidth: '44ch' }}>
+          <div style={{ maxWidth: '44ch', margin: '0 auto', textAlign: 'center' }}>
             <p
               style={{
                 fontFamily: "'Nunito', sans-serif",
@@ -349,15 +423,15 @@ export function HomePage() {
                 letterSpacing: '-0.015em',
               }}
             >
-              Your Child's First Class Is Free
+              One Week Trial Offer
             </h2>
             <p
               className="leading-relaxed mb-8"
               style={{ color: 'oklch(88% 0.032 22)', fontSize: '0.95rem' }}
             >
-              Come in, meet the instructors, and let your child try a class — no pressure,
-              no obligation. We'll answer your questions before class and talk with you
-              afterward about which program is the right fit.
+              To try our program is $30 with a uniform included for 5 consecutive training days.
+              Come in, meet the instructors, and let your child try a class. We'll answer your
+              questions before class and after class.
             </p>
             <button onClick={() => navigate(`${BASE}/contact`)} className="v3-btn-white">
               Contact Us to Get Started
@@ -370,7 +444,7 @@ export function HomePage() {
                 fontFamily: "'Nunito', sans-serif",
               }}
             >
-              No commitment · No uniform needed · We'll guide you through it
+              We'll guide you through it
             </p>
           </div>
         </div>

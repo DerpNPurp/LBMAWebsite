@@ -31,7 +31,7 @@ export function Footer() {
             <img src="/logo.png" alt="ERWCMAA Logo" className="h-12 w-auto mb-5" />
             <p className="text-sm leading-relaxed max-w-[220px]" style={{ color: V3.mutedOnDark }}>
               Los Banos Martial Arts Academy develops champions in life — physically, mentally,
-              and spiritually. ERWCMAA Affiliated.
+              and spiritually.
             </p>
           </div>
 
@@ -83,17 +83,17 @@ export function Footer() {
               Get In Touch
             </h4>
             <div className="flex flex-col gap-3 text-sm" style={{ color: V3.mutedOnDark }}>
-              <a href="tel:+12095550123" className="transition-colors hover:text-white">
-                (209) 555-0123
+              <a href="tel:+14086200252" className="transition-colors hover:text-white">
+                (408) 620-0252
               </a>
-              <a href="mailto:info@lbmaa.com" className="transition-colors hover:text-white">
-                info@lbmaa.com
+              <a href="mailto:westcoastlosbanos@gmail.com" className="transition-colors hover:text-white">
+                westcoastlosbanos@gmail.com
               </a>
-              <p>Los Banos, CA</p>
+              <p>1209 South 6th Street Suite E<br />Los Banos, CA 93635</p>
               <div style={{ borderTop: `1px solid ${V3.borderDark}`, paddingTop: '0.75rem', marginTop: '0.25rem' }}>
-                <p>Mon–Fri: 3:00 – 8:30 PM</p>
-                <p>Saturday: 9:00 AM – 2:00 PM</p>
-                <p>Sunday: Closed</p>
+                <p>Mon–Fri: 4:00 – 9:00 PM</p>
+                <p>Weekends: Closed</p>
+                <p>Federal Holidays: Closed</p>
               </div>
             </div>
           </div>
@@ -104,7 +104,7 @@ export function Footer() {
           className="mt-12 pt-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-xs"
           style={{ borderTop: `1px solid ${V3.borderDark}`, color: V3.mutedOnDark }}
         >
-          <span>© 2026 Los Banos Martial Arts Academy · ERWCMAA Certified</span>
+          <span>© 2026 Los Banos Martial Arts Academy</span>
           <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(`${BASE}/contact`)}
