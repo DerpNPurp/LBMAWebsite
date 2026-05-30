@@ -20,7 +20,7 @@ const PROGRAMS = [
   {
     name: 'Little Dragons',
     ages: 'Ages 4–7',
-    image: '/photos/16-IMG_5107.jpg',
+    image: '/photos/29-IMG_5072.jpg',
     desc: 'Fun, structured classes that build listening, coordination, early discipline, and fitness.',
   },
   {
@@ -32,7 +32,7 @@ const PROGRAMS = [
   {
     name: 'Extreme Performance',
     ages: 'All Ages',
-    image: '/photos/29-IMG_5072.jpg',
+    image: '/photos/ep-team-dojo.jpg',
     desc: 'Invite-only advanced training for handpicked students in gymnastics, weapons, creative forms, and individual and team performance.',
   },
 ];
@@ -54,7 +54,7 @@ export function HomePage() {
       {/* ── HERO ── */}
       <section className="relative overflow-hidden" style={{ minHeight: 'max(88svh, 580px)' }}>
         <ImageWithFallback
-          src="/photos/33-_MG_5061.jpg"
+          src="/photos/class-synchronized.jpg"
           alt="Los Banos Martial Arts Academy"
           className="absolute inset-0 w-full h-full object-cover"
         />
@@ -154,7 +154,7 @@ export function HomePage() {
 
             <div className="rounded-xl overflow-hidden bg-gray-100 order-first md:order-last" style={{ aspectRatio: '4/5' }}>
               <ImageWithFallback
-                src="/photos/12-IMG_5132.jpg"
+                src="/photos/kjn-guerra-portrait.jpg"
                 alt="LBMAA instructor with students"
                 className="w-full h-full object-cover"
               />

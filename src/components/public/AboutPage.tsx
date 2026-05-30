@@ -68,7 +68,7 @@ export function AboutPage() {
             <div className="overflow-hidden rounded-xl md:rounded-none aspect-[4/3] md:aspect-auto bg-gray-100 mb-14 md:mb-0">
               <ImageWithFallback
                 src="/photos/kjn-guerra-with-students.jpg"
-                alt="LBMAA instructor with students"
+                alt="LBMAA students with trophies at the dojo"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -135,7 +135,7 @@ export function AboutPage() {
             >
               <ImageWithFallback
                 src="/photos/kjn-guerra-portrait.jpg"
-                alt="LBMAA head instructor"
+                alt="KJN Guerra, LBMAA head instructor"
                 className="w-full h-full object-cover"
               />
             </div>
@@ -154,9 +154,9 @@ export function AboutPage() {
         }}
       >
         {[
-          { src: '/photos/1-_MG_5182.jpg',  alt: 'Students in class' },
-          { src: '/photos/20-IMG_5092.jpg', alt: 'Training on the mat' },
-          { src: '/photos/59-_MG_4959.jpg', alt: 'LBMAA training floor' },
+          { src: '/photos/1-_MG_5182.jpg',          alt: 'Students in class' },
+          { src: '/photos/students-trophy-dojo.jpg', alt: 'LBMAA students with trophies' },
+          { src: '/photos/59-_MG_4959.jpg',          alt: 'LBMAA training floor' },
         ].map(({ src, alt }) => (
           <div key={src} className="overflow-hidden bg-gray-200">
             <ImageWithFallback src={src} alt={alt} className="w-full h-full object-cover" />
@@ -170,7 +170,7 @@ export function AboutPage() {
           <div className="grid md:grid-cols-2 gap-14 items-center max-w-5xl">
             <div className="rounded-xl overflow-hidden aspect-[4/3] bg-gray-100">
               <ImageWithFallback
-                src="/photos/34-IMG_5055.jpg"
+                src="/photos/youth-class.jpg"
                 alt="LBMAA class in session"
                 className="w-full h-full object-cover"
               />

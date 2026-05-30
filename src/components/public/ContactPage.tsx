@@ -268,12 +268,12 @@ export function ContactPage() {
 
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="message" className="text-sm font-semibold" style={{ color: V3.text }}>
-                      Questions, Notes, or Medical Conditions{' '}
+                      Questions, Notes, or Medical Awareness{' '}
                       <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
                     </Label>
                     <Textarea
                       id="message"
-                      placeholder="Please share any questions, notes, or medical conditions we should be aware of so we can best support your child."
+                      placeholder="Please share any questions, notes, or medical awareness information we should know so we can best support your child."
                       rows={4}
                       value={message}
                       onChange={e => setMessage(e.target.value)}
