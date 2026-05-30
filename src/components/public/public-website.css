@@ -129,3 +129,16 @@
   outline-offset: 2px;
   border-radius: 4px;
 }
+
+/* Student carousel */
+@keyframes v3-student-scroll {
+  0%   { transform: translateX(0); }
+  100% { transform: translateX(-2052px); }
+}
+
+.v3-student-track {
+  display: flex;
+  animation: v3-student-scroll 28s linear infinite;
+  will-change: transform;
+}
+

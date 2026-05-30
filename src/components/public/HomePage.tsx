@@ -37,6 +37,21 @@ const PROGRAMS = [
   },
 ];
 
+const STUDENT_PHOTOS = [
+  '/photos/IMG_1361.jpg',
+  '/photos/IMG_1366.jpg',
+  '/photos/IMG_1368.jpg',
+  '/photos/IMG_1374.jpg',
+  '/photos/IMG_1378.jpg',
+  '/photos/IMG_1380.jpg',
+  '/photos/IMG_1387.jpg',
+  '/photos/IMG_1389.jpg',
+  '/photos/IMG_1393.jpg',
+  '/photos/IMG_1395.jpg',
+  '/photos/IMG_1399.jpg',
+  '/photos/IMG_1403.jpg',
+];
+
 const VALUES = [
   { label: 'Honor',   desc: 'We act with integrity on and off the mat.' },
   { label: 'Loyalty', desc: 'We stand by our school, our team, and each other.' },
@@ -57,6 +72,7 @@ export function HomePage() {
           src="/photos/class-synchronized.jpg"
           alt="Los Banos Martial Arts Academy"
           className="absolute inset-0 w-full h-full object-cover"
+          style={{ objectPosition: 'center 70%' }}
         />
         <div
           className="absolute inset-0"
@@ -163,26 +179,41 @@ export function HomePage() {
         </div>
       </section>
 
-      {/* ── PHOTO STRIP ── */}
+      {/* ── STUDENT CAROUSEL ── */}
       <div
+        className="v3-student-carousel"
         style={{
-          display: 'grid',
-          gridTemplateColumns: '1.4fr 1fr 0.85fr 1.15fr',
-          height: '280px',
-          gap: '3px',
-          backgroundColor: V3.surface,
+          position: 'relative',
+          overflow: 'hidden',
+          backgroundColor: 'oklch(10% 0.012 28)',
+          height: '220px',
         }}
       >
-        {[
-          { src: '/photos/18-IMG_5097.jpg', alt: 'Students training' },
-          { src: '/photos/20-IMG_5092.jpg', alt: 'Martial arts class' },
-          { src: '/photos/10-IMG_5137.jpg', alt: 'LBMAA students' },
-          { src: '/photos/59-_MG_4959.jpg', alt: 'Training floor' },
-        ].map(({ src, alt }) => (
-          <div key={src} style={{ overflow: 'hidden', backgroundColor: V3.border }}>
-            <ImageWithFallback src={src} alt={alt} className="w-full h-full object-cover" />
-          </div>
-        ))}
+        <div className="v3-student-track">
+          {[...STUDENT_PHOTOS, ...STUDENT_PHOTOS].map((src, i) => (
+            <div
+              key={i}
+              style={{
+                flexShrink: 0,
+                width: '165px',
+                height: '220px',
+                marginRight: '6px',
+                overflow: 'hidden',
+              }}
+            >
+              <ImageWithFallback
+                src={src}
+                alt="LBMAA student"
+                style={{ width: '100%', height: '100%', objectFit: 'cover', objectPosition: 'center 12%' }}
+              />
+            </div>
+          ))}
+        </div>
+        {/* Fade edges */}
+        <div style={{
+          position: 'absolute', inset: 0, pointerEvents: 'none',
+          background: 'linear-gradient(to right, oklch(10% 0.012 28) 0%, transparent 8%, transparent 92%, oklch(10% 0.012 28) 100%)',
+        }} />
       </div>
 
       {/* ── PROGRAMS ── */}
