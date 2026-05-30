@@ -37,7 +37,12 @@ const PROGRAMS = [
   },
 ];
 
-const VALUES = ['Honor', 'Loyalty', 'Family', 'Bravery'];
+const VALUES = [
+  { label: 'Honor',   desc: 'We act with integrity on and off the mat.' },
+  { label: 'Loyalty', desc: 'We stand by our school, our team, and each other.' },
+  { label: 'Family',  desc: 'We train together and grow together.' },
+  { label: 'Bravery', desc: 'We face every challenge and never give up.' },
+];
 
 export function HomePage() {
   const navigate = useNavigate();
@@ -310,86 +315,136 @@ export function HomePage() {
       </section>
 
       {/* ── VALUES ── */}
-      <section className="py-14" style={{ backgroundColor: 'white' }}>
+      <section style={{ backgroundColor: V3.surface, padding: '72px 0' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <div style={{ maxWidth: '1040px', margin: '0 auto' }}>
-            <p className="v3-eyebrow mb-3">What We Stand For</p>
-            <h2
-              className="v3-h font-black mb-8"
-              style={{
-                fontSize: 'clamp(1.9rem, 3.5vw, 2.75rem)',
-                color: V3.text,
-                lineHeight: 1.0,
-                letterSpacing: '-0.015em',
-              }}
-            >
-              Our Martial Arts Values
-            </h2>
+
+            <div style={{ marginBottom: '36px' }}>
+              <p className="v3-eyebrow mb-3">What We Stand For</p>
+              <h2
+                className="v3-h font-black"
+                style={{
+                  fontSize: 'clamp(1.9rem, 3.5vw, 2.75rem)',
+                  color: V3.text,
+                  lineHeight: 1.0,
+                  letterSpacing: '-0.015em',
+                }}
+              >
+                Our Martial Arts Values
+              </h2>
+            </div>
 
             <div
-              className="grid grid-cols-2 md:grid-cols-4 gap-px"
-              style={{ backgroundColor: V3.border }}
+              style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(4, 1fr)',
+                gap: '6px',
+              }}
             >
-              {VALUES.map((label, i) => (
+              {VALUES.map((v, i) => (
                 <div
-                  key={label}
-                  className="cursor-default relative overflow-hidden"
-                  style={{
-                    backgroundColor: hoveredValue === i ? 'white' : 'var(--v3-surface)',
-                    padding: '20px 20px 28px',
-                    transition: 'background-color 0.25s ease',
-                  }}
+                  key={v.label}
                   onMouseEnter={() => setHoveredValue(i)}
                   onMouseLeave={() => setHoveredValue(null)}
+                  style={{
+                    position: 'relative',
+                    overflow: 'hidden',
+                    borderRadius: '10px',
+                    backgroundColor: [
+                      'oklch(20% 0.014 30)',
+                      'oklch(23% 0.015 30)',
+                      'oklch(18% 0.013 28)',
+                      'oklch(25% 0.014 32)',
+                    ][i],
+                    padding: '36px 28px 32px',
+                    cursor: 'default',
+                    minHeight: '200px',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'flex-end',
+                    transition: 'transform 0.2s ease',
+                    transform: hoveredValue === i ? 'scale(1.02)' : 'scale(1)',
+                  }}
                 >
-                  {/* Ghost ordinal cropped at bottom-right for depth */}
+                  {/* Giant first-letter watermark */}
                   <span
                     aria-hidden
                     style={{
                       position: 'absolute',
-                      bottom: '-10px',
-                      right: '6px',
+                      top: '-0.15em',
+                      right: '-0.05em',
                       fontFamily: "'Barlow Condensed', sans-serif",
                       fontWeight: 900,
-                      fontSize: '5.5rem',
+                      fontSize: '10rem',
                       lineHeight: 1,
                       letterSpacing: '-0.06em',
-                      color: V3.text,
-                      opacity: 0.055,
+                      color: hoveredValue === i ? V3.primary : 'white',
+                      opacity: hoveredValue === i ? 0.12 : 0.06,
                       userSelect: 'none',
                       pointerEvents: 'none',
+                      transition: 'color 0.2s ease, opacity 0.2s ease',
                     }}
                   >
-                    {String(i + 1).padStart(2, '0')}
+                    {v.label[0]}
                   </span>
 
+                  {/* Ordinal */}
                   <span
                     style={{
+                      display: 'block',
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontWeight: 900,
+                      fontWeight: 700,
                       fontSize: '0.6rem',
                       letterSpacing: '0.2em',
-                      color: V3.muted,
-                      opacity: 0.55,
-                      display: 'block',
-                      marginBottom: '8px',
+                      color: V3.primary,
+                      marginBottom: '10px',
                     }}
                   >
                     0{i + 1}
                   </span>
-                  <span
-                    className="v3-h font-black relative"
+
+                  {/* Value word */}
+                  <p
+                    className="v3-h font-black"
                     style={{
-                      fontSize: 'clamp(1.6rem, 2.8vw, 2.25rem)',
-                      color: hoveredValue === i ? V3.primary : V3.text,
+                      fontSize: 'clamp(1.9rem, 3vw, 2.6rem)',
+                      color: 'oklch(94% 0.005 30)',
                       lineHeight: 1.0,
-                      letterSpacing: '-0.02em',
-                      display: 'block',
-                      transition: 'color 0.25s ease',
+                      letterSpacing: '-0.025em',
+                      marginBottom: '12px',
                     }}
                   >
-                    {label}
-                  </span>
+                    {v.label}
+                  </p>
+
+                  {/* Descriptor — reveals on hover */}
+                  <div
+                    style={{
+                      overflow: 'hidden',
+                      maxHeight: hoveredValue === i ? '60px' : '0px',
+                      opacity: hoveredValue === i ? 1 : 0,
+                      transition: 'max-height 0.3s ease, opacity 0.25s ease',
+                    }}
+                  >
+                    <div
+                      style={{
+                        height: '2px',
+                        width: '24px',
+                        backgroundColor: V3.primary,
+                        marginBottom: '8px',
+                      }}
+                    />
+                    <p
+                      style={{
+                        fontFamily: "'Nunito', sans-serif",
+                        fontSize: '0.78rem',
+                        lineHeight: 1.55,
+                        color: 'oklch(60% 0.008 30)',
+                      }}
+                    >
+                      {v.desc}
+                    </p>
+                  </div>
                 </div>
               ))}
             </div>

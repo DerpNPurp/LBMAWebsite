@@ -85,7 +85,7 @@ const FAQ_SECTIONS = [
     items: [
       {
         q: 'Where are you located?',
-        a: '123 Main Street, Los Banos, CA 93635. There is ample parking.',
+        a: '1209 South 6th Street Suite E, Los Banos, CA 93635. There is ample parking.',
       },
       {
         q: 'What are your hours?',

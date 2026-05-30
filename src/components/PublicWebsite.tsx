@@ -39,7 +39,7 @@ export function PublicWebsite() {
           <Route path="reviews"     element={<ReviewsPage />} />
           <Route path="faq"         element={<FAQPage />} />
           <Route path="contact"     element={<ContactPage />} />
-          <Route path="*"           element={<Navigate to="/" replace />} />
+<Route path="*"           element={<Navigate to="/" replace />} />
         </Routes>
       </main>
 

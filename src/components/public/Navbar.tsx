@@ -58,18 +58,12 @@ export function Navbar({ onLogin }: { onLogin: () => void }) {
           aria-label="Los Banos Martial Arts Academy — home"
         >
           <img src="/logo.png" alt="ERWCMAA Logo" className="h-11 w-auto flex-shrink-0" />
-          <div className="text-left leading-snug hidden sm:block">
+          <div className="hidden sm:block">
             <div
-              className="v3-h font-bold text-[15px] uppercase tracking-wide"
+              className="v3-h font-bold text-[19px] uppercase tracking-wide"
               style={{ color: V3.text }}
             >
               Los Banos Martial Arts
-            </div>
-            <div
-              className="text-[10px] uppercase tracking-widest font-semibold"
-              style={{ color: V3.muted }}
-            >
-              ERWCMAA Affiliated Academy
             </div>
           </div>
         </button>

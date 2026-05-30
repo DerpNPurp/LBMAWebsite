@@ -1,11 +1,29 @@
 import { ImageWithFallback } from '../figma/ImageWithFallback';
 import { V3 } from './design';
 
+const STORM_WARM_TONES = [
+  'oklch(82% 0.030 32)',
+  'oklch(78% 0.026 40)',
+  'oklch(75% 0.024 28)',
+  'oklch(80% 0.022 44)',
+  'oklch(77% 0.028 36)',
+  'oklch(73% 0.032 30)',
+  'oklch(81% 0.020 42)',
+];
+
+const STORM_STUDENTS: { name: string; rank: string; photo?: string }[] = [
+  { name: 'Alex M.',    rank: 'Green Belt'  },
+  { name: 'Sofia R.',   rank: 'Blue Belt'   },
+  { name: 'Marcus T.',  rank: 'Red Belt'    },
+  { name: 'Lily C.',    rank: 'Purple Belt' },
+  { name: 'Jordan K.',  rank: 'Brown Belt'  },
+];
+
 const STATS = [
-  { num: '30+', label: 'Years Training',  sub: 'Started at 12, never stopped'     },
-  { num: '5',   label: 'Black Belts',     sub: 'Across five different arts'        },
-  { num: '10',  label: 'Years USMC',      sub: 'Honorably discharged'              },
-  { num: '5',   label: 'Years Teaching',  sub: 'At LBMAA since day one'            },
+  { num: '25+',    label: 'Years Training',     sub: 'Started at age 9'                  },
+  { num: '5th',    label: 'Degree Black Belt',  sub: 'WCWMA system'                      },
+  { num: '1st',    label: 'Degree Black Belt',  sub: 'Marine Corps Martial Arts'         },
+  { num: '2020',   label: 'Est.',               sub: 'LBMAA founded'                     },
 ];
 
 
@@ -16,28 +34,21 @@ export function InstructorsPage() {
       {/* ── HERO ── */}
       <section style={{ backgroundColor: 'white' }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
-          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 md:gap-12 items-end py-9 md:py-12">
+          <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-8 md:gap-12 items-center py-9 md:py-12">
 
             {/* Text */}
             <div className="order-last md:order-first">
-              <p className="v3-eyebrow mb-3">Head Instructor</p>
+              <p className="v3-eyebrow mb-3">Master Instructor</p>
               <h1
-                className="v3-h font-black leading-[0.88] mb-4"
+                className="v3-h font-black leading-[0.88]"
                 style={{
                   fontSize: 'clamp(3.5rem, 9vw, 6rem)',
                   color: V3.text,
                   letterSpacing: '-0.02em',
                 }}
               >
-                KJN<br />Guerra
+                Kwan Jang Nim<br />Eduardo Guerra
               </h1>
-              <p
-                className="text-base leading-relaxed max-w-md"
-                style={{ color: V3.muted }}
-              >
-                Thirty years of training. Ten years in the Marines. Five years teaching kids
-                who've taught me more than I expected.
-              </p>
             </div>
 
             {/* Portrait */}
@@ -74,14 +85,15 @@ export function InstructorsPage() {
         <div className="max-w-7xl mx-auto px-5 md:px-10">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-x-6 gap-y-4 md:gap-x-10 md:gap-y-0 py-5 md:py-6">
             {STATS.map(({ num, label, sub }) => (
-              <div key={label}>
-                <div className="flex items-baseline gap-1.5 mb-0.5">
+              <div key={num + label}>
+                <div className="flex items-baseline gap-1.5 mb-0.5" style={{ flexWrap: 'nowrap' }}>
                   <span
                     className="font-black leading-none"
                     style={{
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: 'clamp(1.5rem, 4vw, 2rem)',
+                      fontSize: 'clamp(1.25rem, 3.5vw, 2rem)',
                       color: 'white',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {num}
@@ -90,10 +102,11 @@ export function InstructorsPage() {
                     className="font-bold"
                     style={{
                       fontFamily: "'Barlow Condensed', sans-serif",
-                      fontSize: '0.8rem',
+                      fontSize: '0.72rem',
                       color: 'white',
                       letterSpacing: '0.06em',
                       textTransform: 'uppercase',
+                      whiteSpace: 'nowrap',
                     }}
                   >
                     {label}
@@ -192,7 +205,141 @@ export function InstructorsPage() {
         </div>
       </section>
 
+      {/* ── STORM ── */}
+      <section style={{ backgroundColor: 'white', padding: '5rem 0 6rem' }}>
+        <div className="max-w-7xl mx-auto px-6 md:px-10">
 
+          {/* Heading */}
+          <div style={{ marginBottom: '3.5rem' }}>
+            <h2
+              className="v3-h font-black"
+              style={{
+                fontSize: 'clamp(5.5rem, 13vw, 10rem)',
+                color: V3.text,
+                lineHeight: 0.85,
+                letterSpacing: '-0.03em',
+                marginBottom: '1.25rem',
+              }}
+            >
+              STORM
+            </h2>
+            <div style={{ height: '2px', backgroundColor: V3.primary, marginBottom: '1.25rem' }} />
+            <div
+              style={{
+                display: 'flex',
+                flexWrap: 'wrap',
+                justifyContent: 'space-between',
+                alignItems: 'flex-start',
+                gap: '1rem 3rem',
+              }}
+            >
+              <p
+                style={{
+                  fontFamily: "'Barlow Condensed', sans-serif",
+                  fontWeight: 700,
+                  fontSize: '0.78rem',
+                  letterSpacing: '0.22em',
+                  textTransform: 'uppercase' as const,
+                  color: V3.primary,
+                }}
+              >
+                Super Team of Role Models
+              </p>
+              <p
+                style={{
+                  fontFamily: "'Nunito', sans-serif",
+                  fontSize: '0.9rem',
+                  lineHeight: 1.75,
+                  color: V3.muted,
+                  maxWidth: '50ch',
+                  textAlign: 'right' as const,
+                }}
+              >
+                These students go above and beyond every single day — passing our values and
+                traditions to the next generation of martial artists.
+              </p>
+            </div>
+          </div>
+
+          {/* Student grid */}
+          <div
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(auto-fill, minmax(155px, 1fr))',
+              gap: '1.5rem',
+            }}
+          >
+            {STORM_STUDENTS.map((student, i) => (
+              <div
+                key={student.name + i}
+                style={{
+                  backgroundColor: V3.surface,
+                  borderRadius: '12px',
+                  overflow: 'hidden',
+                }}
+              >
+                <div style={{ position: 'relative', aspectRatio: '1' }}>
+                  {student.photo ? (
+                    <ImageWithFallback
+                      src={student.photo}
+                      alt={student.name}
+                      loading="lazy"
+                      style={{
+                        width: '100%',
+                        height: '100%',
+                        objectFit: 'cover',
+                        objectPosition: 'top center',
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        position: 'absolute',
+                        inset: 0,
+                        backgroundColor: STORM_WARM_TONES[i % STORM_WARM_TONES.length],
+                        display: 'flex',
+                        alignItems: 'flex-end',
+                        justifyContent: 'center',
+                        overflow: 'hidden',
+                      }}
+                    >
+                      <svg width="62%" height="72%" viewBox="0 0 40 46" fill="none">
+                        <ellipse cx="20" cy="11" rx="9.5" ry="10" fill="oklch(52% 0.016 30 / 0.55)" />
+                        <path d="M0 44 C0 26 40 26 40 44" fill="oklch(52% 0.016 30 / 0.48)" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+                <div style={{ padding: '0.9rem 1rem 1rem' }}>
+                  <p
+                    style={{
+                      fontFamily: "'Barlow Condensed', sans-serif",
+                      fontWeight: 700,
+                      fontSize: '1.08rem',
+                      color: V3.text,
+                      lineHeight: 1.1,
+                      marginBottom: '0.25rem',
+                    }}
+                  >
+                    {student.name}
+                  </p>
+                  <p
+                    style={{
+                      fontFamily: "'Nunito', sans-serif",
+                      fontSize: '0.72rem',
+                      fontStyle: 'italic',
+                      color: V3.muted,
+                    }}
+                  >
+                    {student.rank}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+        </div>
+      </section>
 
     </div>
   );

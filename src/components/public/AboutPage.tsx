@@ -35,9 +35,9 @@ const FOUNDERS = [
 ];
 
 const PILLARS = [
-  { n: '01', title: 'Physical',  body: 'Movement, strength, coordination, flexibility, and conditioning through structured martial arts training.' },
-  { n: '02', title: 'Mental',    body: 'Focus, self-control, patience, discipline, and the perseverance to keep improving.' },
-  { n: '03', title: 'Character', body: 'Respect, responsibility, confidence, and the habits that define who you are off the mat.' },
+  { n: '01', title: 'Physically',  body: 'We train the body through movement, strength, coordination, flexibility, and conditioning — building fitness that carries students well beyond the mat.' },
+  { n: '02', title: 'Mentally',    body: 'We develop focus, self-control, patience, and discipline — sharpening the mind so students can stay calm, think clearly, and push through challenges.' },
+  { n: '03', title: 'Spiritually', body: 'We cultivate inner strength, humility, and a sense of purpose — helping students connect with their values, lift others up, and live with integrity.' },
 ];
 
 export function AboutPage() {
@@ -52,17 +52,17 @@ export function AboutPage() {
             style={{ minHeight: '500px' }}
           >
             <div className="py-14 md:py-20 flex flex-col justify-center md:pr-14">
-              <p className="v3-eyebrow mb-5">About LBMAA</p>
+              <p className="v3-eyebrow mb-5">About</p>
               <h1
                 className="v3-h font-black mb-6"
                 style={{ fontSize: 'clamp(2.75rem, 6vw, 4.75rem)', color: V3.text, lineHeight: 1.05 }}
               >
-                Building Black Belts in Life
+                Creating Champions In Life
               </h1>
               <p className="text-base leading-relaxed" style={{ color: V3.muted, maxWidth: '38ch' }}>
                 Los Banos Martial Arts Academy helps students build confidence, discipline, respect,
                 focus, fitness, and self-defense skills. We follow the Ernie Reyes' WCWMA system —
-                a proven program that trains not just martial artists, but stronger people.
+                through a proven system that is exciting, educational, dynamic, and empowering.
               </p>
             </div>
             <div className="overflow-hidden rounded-xl md:rounded-none aspect-[4/3] md:aspect-auto bg-gray-100 mb-14 md:mb-0">
@@ -89,7 +89,7 @@ export function AboutPage() {
             className="v3-h font-black"
             style={{ fontSize: 'clamp(1.5rem, 4vw, 2.5rem)', color: 'white', lineHeight: 1.1 }}
           >
-            "Impact and Empower Through Martial Arts — Developing Black Belts in Life"
+            "To teach and empower students of all ages by developing black belts in life."
           </blockquote>
         </div>
       </section>
@@ -104,7 +104,7 @@ export function AboutPage() {
                 className="v3-h font-black mb-10"
                 style={{ fontSize: 'clamp(1.75rem, 3.5vw, 2.75rem)', color: V3.text, lineHeight: 1.05 }}
               >
-                Training the Whole Person
+                Our Approach
               </h2>
               {PILLARS.map(({ n, title, body }, i) => (
                 <div

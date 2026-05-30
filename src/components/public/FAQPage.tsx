@@ -1,9 +1,12 @@
 import { useState } from 'react';
-import { V3 } from './design';
+import { useNavigate } from 'react-router-dom';
+import { BASE, V3 } from './design';
 
 const FAQS = [
   {
+    n: '01',
     category: 'Getting Started',
+    subtitle: 'Everything you need to walk through the door',
     items: [
       { q: 'Does my child need any experience?', a: "None at all. Every student starts at the beginning. Our instructors are trained to work with students at every level, from the very first day." },
       { q: 'What should my child wear to the trial class?', a: "Just comfortable athletic clothes. No uniform, no equipment, and no gear needed. We provide everything for the first class." },
@@ -12,7 +15,9 @@ const FAQS = [
     ],
   },
   {
+    n: '02',
     category: 'Programs & Schedule',
+    subtitle: 'What we offer and when classes run',
     items: [
       { q: 'What programs do you offer?', a: "We offer Kids Martial Arts (split into Little Dragons for ages 4–6, and Juniors for ages 7–12), a Teens & Adults program for age 13 and up, and Kickboxing Fitness for all ages. All programs are taught by ERWCMAA-certified instructors." },
       { q: 'What days and times are classes?', a: "Classes run Monday through Friday from 3:00 PM – 8:30 PM, and Saturday from 9:00 AM – 2:00 PM. Specific class times vary by program — contact us and we'll match you with a schedule that works." },
@@ -20,7 +25,9 @@ const FAQS = [
     ],
   },
   {
+    n: '03',
     category: 'Enrollment & Commitment',
+    subtitle: 'No contracts, no pressure',
     items: [
       { q: 'Are there long-term contracts?', a: "No. We're month-to-month. We want families here because they love it, not because they're locked in." },
       { q: 'How much does it cost?', a: "Tuition varies by program. Contact us and we'll walk you through current rates — there's no obligation." },
@@ -28,7 +35,9 @@ const FAQS = [
     ],
   },
   {
+    n: '04',
     category: 'Belt Progression',
+    subtitle: 'How ranks and promotions work',
     items: [
       { q: 'How do belt promotions work?', a: "Students are promoted when their instructor determines they're ready — based on demonstrated skill, effort, and character. There's no fixed schedule or mandatory testing fee cycle." },
       { q: 'How long does it take to earn a black belt?', a: "It varies significantly by student. A dedicated student training consistently might earn a black belt in 4–7 years. But the journey is the point — each rank represents real growth." },
@@ -36,7 +45,9 @@ const FAQS = [
     ],
   },
   {
+    n: '05',
     category: 'Safety',
+    subtitle: 'What we do to keep every student safe',
     items: [
       { q: 'Is martial arts safe for young kids?', a: "Safety is the first thing we teach. All classes are supervised by certified instructors. Training areas are fully padded. Contact is always age-appropriate — Little Dragons, for example, focuses on movement, not sparring." },
       { q: 'Are instructors background-checked?', a: "Yes. All LBMAA instructors are background-checked and certified through the ERWCMAA." },
@@ -49,21 +60,34 @@ function FaqItem({ q, a }: { q: string; a: string }) {
   const [open, setOpen] = useState(false);
 
   return (
-    <div style={{ borderBottom: `1px solid ${V3.border}` }}>
+    <div
+      style={{
+        backgroundColor: 'white',
+        borderRadius: '10px',
+        border: `1px solid ${V3.border}`,
+        overflow: 'hidden',
+      }}
+    >
       <button
-        className="w-full flex items-center justify-between gap-4 min-h-[56px] py-3 text-left"
+        className="w-full flex items-center justify-between gap-4 text-left"
+        style={{ padding: '17px 18px' }}
         onClick={() => setOpen((v) => !v)}
         aria-expanded={open}
       >
-        <span className="text-sm font-semibold leading-snug" style={{ color: V3.text }}>
+        <span className="text-sm font-bold leading-snug" style={{ color: V3.text }}>
           {q}
         </span>
         <span
-          className="flex-shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-base font-bold leading-none transition-colors"
+          className="flex-shrink-0 flex items-center justify-center rounded-full transition-colors"
           style={{
-            backgroundColor: open ? V3.primaryBg : V3.surface,
-            color: open ? V3.primary : V3.muted,
+            width: '28px',
+            height: '28px',
+            backgroundColor: open ? V3.primary : V3.primaryBg,
+            color: open ? 'white' : V3.primary,
             fontFamily: 'monospace',
+            fontSize: '1rem',
+            fontWeight: 700,
+            lineHeight: 1,
           }}
           aria-hidden="true"
         >
@@ -71,7 +95,15 @@ function FaqItem({ q, a }: { q: string; a: string }) {
         </span>
       </button>
       {open && (
-        <p className="pb-5 text-sm leading-relaxed" style={{ color: V3.muted }}>
+        <p
+          style={{
+            padding: '0 18px 16px',
+            fontSize: '0.875rem',
+            lineHeight: 1.75,
+            color: V3.muted,
+            maxWidth: '65ch',
+          }}
+        >
           {a}
         </p>
       )}
@@ -80,52 +112,108 @@ function FaqItem({ q, a }: { q: string; a: string }) {
 }
 
 export function FAQPage() {
+  const navigate = useNavigate();
+
   return (
     <div>
 
-      {/* ── PAGE HERO ── */}
+      {/* ── HERO ── */}
       <section className="py-14" style={{ backgroundColor: 'white', borderBottom: `1px solid ${V3.border}` }}>
         <div className="max-w-7xl mx-auto px-6 md:px-10">
           <p className="v3-eyebrow mb-4">Common Questions</p>
           <h1
-            className="v3-h font-black leading-[1.0] mb-6"
-            style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
+            className="v3-h font-black mb-6"
+            style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text, lineHeight: 1.0, letterSpacing: '-0.01em' }}
           >
             Everything You Need to Know
           </h1>
-          <p className="text-base leading-relaxed max-w-xl" style={{ color: V3.muted }}>
-            If you don't find your answer here, just reach out. We're happy to help.
+          <p style={{ fontSize: '0.95rem', lineHeight: 1.7, color: V3.muted, maxWidth: '48ch' }}>
+            If you don't find your answer here, please reach out. We're here to help you along the way.
           </p>
         </div>
       </section>
 
       {/* ── FAQ SECTIONS ── */}
-      <section className="py-16" style={{ backgroundColor: 'white' }}>
-        <div className="max-w-3xl mx-auto px-6 md:px-10">
-          <div className="flex flex-col gap-10">
-            {FAQS.map(({ category, items }) => (
-              <div key={category}>
+      {FAQS.map(({ n, category, subtitle, items }, idx) => (
+        <section
+          key={category}
+          style={{ backgroundColor: idx % 2 === 0 ? V3.surface : 'white', padding: '68px 0' }}
+        >
+          <div className="max-w-3xl mx-auto px-6 md:px-10">
+
+            <div className="flex items-start gap-4 mb-8">
+              <span
+                className="v3-h font-black flex-shrink-0"
+                style={{
+                  fontSize: '3.5rem',
+                  lineHeight: 1,
+                  color: V3.primary,
+                  opacity: 0.18,
+                  letterSpacing: '-0.03em',
+                  userSelect: 'none',
+                  minWidth: '3rem',
+                }}
+                aria-hidden="true"
+              >
+                {n}
+              </span>
+              <div style={{ width: '2px', height: '52px', backgroundColor: V3.border, flexShrink: 0, marginTop: '4px' }} />
+              <div style={{ paddingTop: '4px' }}>
                 <h2
-                  className="v3-h text-xl font-bold mb-1"
-                  style={{ color: V3.text }}
+                  className="v3-h font-extrabold uppercase"
+                  style={{ fontSize: '1.6rem', color: V3.text, lineHeight: 1.05, letterSpacing: '0.01em', marginBottom: '4px' }}
                 >
                   {category}
                 </h2>
-                <div
-                  className="mb-6"
-                  style={{ width: '2.5rem', height: '3px', backgroundColor: V3.primary, borderRadius: '2px' }}
-                />
-                <div style={{ borderTop: `1px solid ${V3.border}` }}>
-                  {items.map((item) => (
-                    <FaqItem key={item.q} q={item.q} a={item.a} />
-                  ))}
-                </div>
+                <p style={{ fontSize: '0.78rem', color: V3.muted, lineHeight: 1.5 }}>{subtitle}</p>
               </div>
-            ))}
+            </div>
+
+            <div className="flex flex-col gap-2">
+              {items.map((item) => (
+                <FaqItem key={item.q} q={item.q} a={item.a} />
+              ))}
+            </div>
+
           </div>
+        </section>
+      ))}
+
+      {/* ── CTA ── */}
+      <section style={{ backgroundColor: V3.primary, padding: '80px 0' }}>
+        <div className="max-w-3xl mx-auto px-6 md:px-10 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-10">
+          <div>
+            <p
+              style={{
+                fontSize: '0.68rem',
+                fontWeight: 700,
+                letterSpacing: '0.2em',
+                textTransform: 'uppercase',
+                color: 'oklch(84% 0.058 22)',
+                marginBottom: '12px',
+                fontFamily: "'Nunito', sans-serif",
+              }}
+            >
+              We're here to help
+            </p>
+            <h2
+              className="v3-h font-black mb-3"
+              style={{ fontSize: 'clamp(2rem, 4vw, 2.75rem)', color: 'white', lineHeight: 1.0, letterSpacing: '-0.01em' }}
+            >
+              Still have questions?
+            </h2>
+            <p style={{ fontSize: '0.875rem', color: 'oklch(88% 0.032 22)', lineHeight: 1.65, maxWidth: '40ch' }}>
+              Reach out and we'll get back to you quickly. No pressure, no commitment — just an honest conversation.
+            </p>
+          </div>
+          <button
+            className="v3-btn-white flex-shrink-0"
+            onClick={() => navigate(`${BASE}/contact`)}
+          >
+            Contact Us
+          </button>
         </div>
       </section>
-
 
     </div>
   );

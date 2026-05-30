@@ -142,7 +142,7 @@ export function ContactPageV2() {
                     <div>
                       <p className="text-sm font-medium mb-0.5">Location</p>
                       <p className="text-sm text-muted-foreground">
-                        123 Main Street<br />
+                        1209 South 6th Street Suite E<br />
                         Los Banos, CA 93635
                       </p>
                       <p className="text-xs text-muted-foreground mt-0.5">
@@ -332,7 +332,7 @@ export function ContactPageV2() {
           <div className="max-w-5xl mx-auto overflow-hidden rounded-xl border">
             <iframe
               title="LBMAA Location"
-              src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=Los+Banos,CA"
+              src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&q=1209+South+6th+Street+Suite+E+Los+Banos+CA+93635`}
               width="100%"
               height="340"
               style={{ border: 0, display: 'block' }}

@@ -8,13 +8,14 @@ import { submitEnrollmentLeadWithTimeout } from '../../lib/supabase/client';
 import { V3 } from './design';
 
 const CONTACT_INFO = [
-  { label: 'Phone', value: '(209) 555-0123', href: 'tel:+12095550123' },
-  { label: 'Email', value: 'info@lbmaa.com', href: 'mailto:info@lbmaa.com' },
+  { label: 'Phone', value: '(408) 620-0252', href: 'tel:+14086200252' },
+  { label: 'Email', value: 'westcoastlosbanos@gmail.com', href: 'mailto:westcoastlosbanos@gmail.com' },
 ];
 
 const HOURS = [
-  { day: 'Mon – Fri', time: '4:30 – 9:00 PM' },
-  { day: 'Sat – Sun', time: 'Closed' },
+  { day: 'Mon – Fri', time: '4:00 – 9:00 PM' },
+  { day: 'Weekends', time: 'Closed' },
+  { day: 'Federal Holidays', time: 'Closed' },
 ];
 
 type ChildRow = { name: string; age: string };
@@ -102,10 +103,10 @@ export function ContactPage() {
             className="v3-h font-black leading-none mb-6"
             style={{ fontSize: 'clamp(3rem, 7vw, 5.5rem)', color: V3.text, maxWidth: '18ch' }}
           >
-            Request<br />a Trial
+            Current Special Offer Trial
           </h1>
           <p className="text-lg leading-relaxed" style={{ color: V3.muted, maxWidth: '52ch' }}>
-            We offer a five-day trial for <strong style={{ color: V3.text }}>$20 per child</strong> — that covers all student fees and includes a uniform to keep. Come see if LBMAA is the right fit. No commitment required.
+            We're currently offering a five-day trial for <strong style={{ color: V3.text }}>$30 per child</strong>. This includes a uniform to keep and 5 consecutive training days. Come see if our academy is the right fit for you and your family.
           </p>
         </div>
       </section>
@@ -124,7 +125,7 @@ export function ContactPage() {
                 Book Your Trial
               </h2>
               <p className="text-base mb-8" style={{ color: V3.muted }}>
-                Fill this out and we'll reach out within one business day to confirm your child's first class.
+                Please fill out the following information and we will confirm within one business day of your child's first class.
               </p>
 
               {submitted ? (
@@ -152,7 +153,7 @@ export function ContactPage() {
                       </Label>
                       <Input
                         id="parentName"
-                        placeholder="Jane Smith"
+                        placeholder="Destiny Reyes"
                         value={parentName}
                         onChange={e => setParentName(e.target.value)}
                         disabled={isSubmitting}
@@ -168,7 +169,7 @@ export function ContactPage() {
                       <Input
                         id="phone"
                         type="tel"
-                        placeholder="(209) 555-0100"
+                        placeholder="(408) 620-0252"
                         value={phone}
                         onChange={e => setPhone(e.target.value)}
                         disabled={isSubmitting}
@@ -186,7 +187,7 @@ export function ContactPage() {
                     <Input
                       id="parentEmail"
                       type="email"
-                      placeholder="you@example.com"
+                      placeholder="westcoastlosbanos@gmail.com"
                       value={parentEmail}
                       onChange={e => setParentEmail(e.target.value)}
                       disabled={isSubmitting}
@@ -267,12 +268,12 @@ export function ContactPage() {
 
                   <div className="flex flex-col gap-2">
                     <Label htmlFor="message" className="text-sm font-semibold" style={{ color: V3.text }}>
-                      Questions or notes{' '}
+                      Questions, Notes, or Medical Conditions{' '}
                       <span className="font-normal" style={{ color: V3.muted }}>(optional)</span>
                     </Label>
                     <Textarea
                       id="message"
-                      placeholder="Preferred schedule, questions about programs, or anything else on your mind."
+                      placeholder="Please share any questions, notes, or medical conditions we should be aware of so we can best support your child."
                       rows={4}
                       value={message}
                       onChange={e => setMessage(e.target.value)}
@@ -320,7 +321,7 @@ export function ContactPage() {
                 <div className="flex items-start gap-2.5">
                   <MapPin className="w-4 h-4 flex-shrink-0 mt-0.5" style={{ color: V3.mutedOnDark }} />
                   <p className="text-base leading-relaxed" style={{ color: V3.onDark }}>
-                    123 Main Street<br />Los Banos, CA 93635
+                    1209 South 6th Street Suite E<br />Los Banos, CA 93635
                   </p>
                 </div>
               </div>
@@ -336,7 +337,7 @@ export function ContactPage() {
                     </div>
                   ))}
                   <p className="text-sm mt-3" style={{ color: V3.mutedOnDark, fontStyle: 'italic' }}>
-                    Your child's specific class time depends on their program — we'll confirm when we reach out.
+                    Your child's specific class time depends on their program.
                   </p>
                 </div>
               </div>
@@ -368,7 +369,7 @@ export function ContactPage() {
                       </a>
                     </div>
                   ))}
-                  <p className="text-sm" style={{ color: V3.mutedOnDark }}>We reply within 1 business day</p>
+                  <p className="text-sm" style={{ color: V3.mutedOnDark }}>We look forward to you joining our martial arts family.</p>
                 </div>
               </div>
 
@@ -383,7 +384,7 @@ export function ContactPage() {
           <div className="overflow-hidden rounded-xl" style={{ border: `1px solid ${V3.border}` }}>
             <iframe
               title="LBMAA Location"
-              src="https://www.google.com/maps/embed/v1/place?key=YOUR_GOOGLE_MAPS_API_KEY&q=Los+Banos,CA"
+              src={`https://www.google.com/maps/embed/v1/place?key=${import.meta.env.VITE_GOOGLE_MAPS_KEY}&q=1209+South+6th+Street+Suite+E+Los+Banos+CA+93635`}
               width="100%"
               height="320"
               style={{ border: 0, display: 'block' }}

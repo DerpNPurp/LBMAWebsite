@@ -72,7 +72,7 @@ export function FooterV2({ onLogin }: FooterV2Props) {
                   </a>
                 </p>
                 <p>
-                  123 Main Street<br />
+                  1209 South 6th Street Suite E<br />
                   Los Banos, CA 93635
                 </p>
                 <p className="pt-1">

@@ -136,7 +136,7 @@ export function ReviewsPage() {
             className="v3-h font-black leading-[1.0] mb-6"
             style={{ fontSize: 'clamp(2.5rem, 6vw, 4.5rem)', color: V3.text }}
           >
-            From the LBMAA Community
+            Real Reviews From the Community
           </h1>
           <p className="text-base leading-relaxed max-w-xl" style={{ color: V3.muted }}>
             Every review below comes from a parent or student who was exactly where you are
