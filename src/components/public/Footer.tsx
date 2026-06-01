@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { BASE, V3 } from './design';
 
 type Page = 'about' | 'facilities' | 'programs' | 'instructors' | 'reviews' | 'faq' | 'contact';
@@ -106,6 +106,12 @@ export function Footer() {
         >
           <span>© 2026 Los Banos Martial Arts Academy</span>
           <div className="flex items-center gap-4">
+            <Link
+              to="/privacy"
+              className="transition-colors hover:text-white"
+            >
+              Privacy Policy
+            </Link>
             <button
               onClick={() => navigate(`${BASE}/contact`)}
               className="v3-btn-white"
